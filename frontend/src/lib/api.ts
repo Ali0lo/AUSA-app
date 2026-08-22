@@ -9,17 +9,47 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 /**
+ * Fetch authenticated student profile from /api/v1/auth/me.
+ */
+export async function fetchCurrentStudentProfile(
+  token: string
+): Promise<StudentProfile & { id: number; email: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.detail || `Profile fetch failed with status ${response.status}`
+    );
+  }
+
+  return response.json();
+}
+
+/**
  * Send student profile and target program requirements to backend deterministic matching engine.
+ * Automatically attaches Bearer JWT authorization token if available.
  */
 export async function fetchMatchScore(
   student: StudentProfile,
-  program: ProgramRequirements
+  program: ProgramRequirements,
+  token?: string
 ): Promise<MatchResult> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}/matching/evaluate`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({ student, program }),
   });
 
@@ -42,19 +72,27 @@ export interface ChatMessageResponse {
 
 /**
  * Send chat message to backend (RAG guidelines Q&A or LangGraph stateful application agent).
+ * Automatically attaches Bearer JWT authorization token if available.
  */
 export async function sendChatMessage(
   message: string,
   type: "rag" | "agent",
   studentId: string = "std_demo",
-  programId?: string
+  programId?: string,
+  token?: string
 ): Promise<ChatMessageResponse> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   if (type === "rag") {
     const response = await fetch(`${API_BASE_URL}/chat/ask`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         question: message,
         top_k: 5,
@@ -77,9 +115,7 @@ export async function sendChatMessage(
     // Agent endpoint
     const response = await fetch(`${API_BASE_URL}/chat/agent`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         message,
         student_id: studentId,

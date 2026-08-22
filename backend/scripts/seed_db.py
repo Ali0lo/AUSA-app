@@ -1,8 +1,8 @@
 import asyncio
 import datetime
 from sqlalchemy import text
-from app.core.config import settings
 from app.core.database import AsyncSessionLocal, Base, engine
+from app.core.security import get_password_hash
 from app.models.program import Program
 from app.models.student import Student
 
@@ -20,6 +20,13 @@ async def seed_database():
             print("Verified 'vector' (pgvector) extension in PostgreSQL.")
         except Exception as e:
             print(f"Notice: Vector extension check skipped or requires superuser: {e}")
+
+        # Ensure email and hashed_password columns exist on existing students table
+        try:
+            await conn.execute(text("ALTER TABLE students ADD COLUMN IF NOT EXISTS email VARCHAR(255);"))
+            await conn.execute(text("ALTER TABLE students ADD COLUMN IF NOT EXISTS hashed_password VARCHAR(255);"))
+        except Exception as e:
+            print(f"Notice: Column alter check: {e}")
 
         await conn.run_sync(Base.metadata.create_all)
         print("Successfully created/verified all database tables.")
@@ -83,15 +90,16 @@ async def seed_database():
             ]
             session.add_all(mock_programs)
             print("Injected 3 mock university programs (TU Munich, UCL, UvA).")
-        else:
-            print(f"Skipping program seeding ({program_count} programs already exist).")
 
         # Check if student profile already seeded
-        existing_students = await session.execute(text("SELECT COUNT(*) FROM students;"))
-        student_count = existing_students.scalar()
+        existing_student = await session.execute(text("SELECT * FROM students WHERE email = 'student@ausa.edu.az';"))
+        student = existing_student.first()
 
-        if student_count == 0:
+        if not student:
+            mock_pwd_hash = get_password_hash("password123")
             mock_student = Student(
+                email="student@ausa.edu.az",
+                hashed_password=mock_pwd_hash,
                 gpa=3.60,
                 ielts=7.0,
                 toefl=98,
@@ -104,9 +112,7 @@ async def seed_database():
                 goals="Pursue Master's degree in CS in Western Europe with full or partial scholarship support."
             )
             session.add(mock_student)
-            print("Injected 1 mock student profile.")
-        else:
-            print(f"Skipping student seeding ({student_count} students already exist).")
+            print("Injected default student profile (student@ausa.edu.az / password123).")
 
         await session.commit()
         print("Successfully committed database seeding transactions!")

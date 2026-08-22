@@ -5,6 +5,11 @@ pydantic>=2.6.4
 pydantic-settings>=2.2.1
 python-dotenv>=1.0.1
 
+# Security & JWT Auth
+pyjwt>=2.8.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.1.2
+
 # Database & ORM
 sqlalchemy>=2.0.28
 asyncpg>=0.29.0

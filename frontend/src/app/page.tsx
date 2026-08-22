@@ -2,24 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { signIn, useSession } from "next-auth/react";
 import { MatchCard } from "@/components/MatchCard";
-import { fetchMatchScore } from "@/lib/api";
+import { fetchCurrentStudentProfile, fetchMatchScore } from "@/lib/api";
 import {
   MatchResult,
   ProgramRequirements,
   StudentProfile,
 } from "@/types";
-
-// Mock Student Profile State
-const MOCK_STUDENT: StudentProfile = {
-  gpa: 3.6,
-  budget: 18000,
-  ielts: 7.0,
-  toefl: 98,
-  degree_level: "master",
-  field_of_study: "Computer Science",
-  preferred_countries: ["Germany", "Netherlands", "United Kingdom"],
-};
 
 // Hardcoded Mock University Programs for Discovery Column
 const MOCK_PROGRAMS: ProgramRequirements[] = [
@@ -65,33 +55,174 @@ const MOCK_PROGRAMS: ProgramRequirements[] = [
 ];
 
 export default function Dashboard() {
-  const [selectedProgram, setSelectedProgram] = useState<ProgramRequirements>(
-    MOCK_PROGRAMS[0]
-  );
+  const { data: session, status } = useSession();
+
+  // Login Form State
+  const [loginEmail, setLoginEmail] = useState("student@ausa.edu.az");
+  const [loginPassword, setLoginPassword] = useState("password123");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Authenticated Student State
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const [selectedProgram, setSelectedProgram] = useState<ProgramRequirements>(MOCK_PROGRAMS[0]);
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
+  const [evalError, setEvalError] = useState<string | null>(null);
 
-  const evaluateProgram = async (program: ProgramRequirements) => {
-    setSelectedProgram(program);
-    setIsLoading(true);
-    setError(null);
+  // Load student profile when authenticated session is active
+  useEffect(() => {
+    if (session && (session.user as any)?.accessToken) {
+      const token = (session.user as any).accessToken;
+      
+      // If profile is in session, use it immediately
+      if ((session.user as any)?.profile) {
+        setStudentProfile((session.user as any).profile);
+      }
 
-    try {
-      const result = await fetchMatchScore(MOCK_STUDENT, program);
-      setMatchResult(result);
-    } catch (err: any) {
-      setError(
-        err.message || "Unable to reach backend API at http://localhost:8000/api/v1"
-      );
-    } finally {
-      setIsLoading(false);
+      // Fetch fresh profile from API
+      fetchCurrentStudentProfile(token)
+        .then((profile) => {
+          setStudentProfile(profile);
+          evaluateMatchForStudent(profile, MOCK_PROGRAMS[0], token);
+        })
+        .catch(() => {
+          // Fallback to default student profile if offline
+          const fallback: StudentProfile = {
+            gpa: 3.6,
+            budget: 18000,
+            ielts: 7.0,
+            toefl: 98,
+            degree_level: "master",
+            field_of_study: "Computer Science",
+          };
+          setStudentProfile(fallback);
+          evaluateMatchForStudent(fallback, MOCK_PROGRAMS[0], token);
+        });
+    }
+  }, [session]);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    setLoginError(null);
+
+    const result = await signIn("credentials", {
+      email: loginEmail,
+      password: loginPassword,
+      redirect: false,
+    });
+
+    setIsLoggingIn(false);
+
+    if (result?.error) {
+      setLoginError("Invalid email or password. Please verify credentials.");
     }
   };
 
-  useEffect(() => {
-    evaluateProgram(MOCK_PROGRAMS[0]);
-  }, []);
+  const evaluateMatchForStudent = async (
+    student: StudentProfile,
+    program: ProgramRequirements,
+    token?: string
+  ) => {
+    setSelectedProgram(program);
+    setIsEvaluating(true);
+    setEvalError(null);
+
+    try {
+      const result = await fetchMatchScore(student, program, token);
+      setMatchResult(result);
+    } catch (err: any) {
+      setEvalError(
+        err.message || "Failed to evaluate program match."
+      );
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
+
+  // 1. Loading State
+  if (status === "loading") {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center text-slate-500 font-medium text-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <span>Verifying authentication session...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Unauthenticated State (Clean Login Form)
+  if (!session) {
+    return (
+      <div className="max-w-md mx-auto my-12 bg-white border border-gray-200 rounded-2xl p-8 shadow-xl space-y-6">
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white font-bold text-xl flex items-center justify-center mx-auto shadow-md">
+            A
+          </div>
+          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            Sign In to AUSA Platform
+          </h2>
+          <p className="text-xs text-slate-500">
+            Access your personalized student profile and deterministic program matching engine.
+          </p>
+        </div>
+
+        <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Email Address
+            </label>
+            <input
+              type="email"
+              required
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 transition-colors"
+              placeholder="student@ausa.edu.az"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              required
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 transition-colors"
+            />
+          </div>
+
+          {loginError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+              {loginError}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoggingIn}
+            className="w-full py-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-sm transition-all shadow-md shadow-blue-900/20 disabled:opacity-50"
+          >
+            {isLoggingIn ? "Authenticating..." : "Sign In to Dashboard"}
+          </button>
+        </form>
+
+        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 text-center space-y-0.5">
+          <div className="font-semibold text-slate-700">🔑 Default Demo Credentials:</div>
+          <div>Email: <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">student@ausa.edu.az</code></div>
+          <div>Password: <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">password123</code></div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Authenticated State (Dashboard View with Logged-In Student Profile)
+  const token = (session.user as any)?.accessToken;
 
   return (
     <div className="space-y-8">
@@ -99,35 +230,37 @@ export default function Dashboard() {
       <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-semibold border border-blue-200 mb-2">
-            <span>✨ Deterministic Matching Engine</span>
+            <span>🔒 Authenticated Session Active</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Program Discovery & Compatibility Analysis
           </h1>
           <p className="text-slate-600 text-sm mt-1 max-w-2xl">
-            Select a target university program to run pure mathematical matching (Academics: 50%, Budget: 30%, Language: 20%) with zero LLM hallucinations.
+            Welcome back, <strong>{session.user?.email}</strong>. Evaluating program options against your database profile.
           </p>
         </div>
 
-        {/* Student Profile Quick Summary Card */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs space-y-1 text-slate-700 min-w-[240px]">
-          <div className="font-bold text-slate-900 border-b border-slate-200 pb-1 flex justify-between">
-            <span>Student Profile</span>
-            <span className="text-blue-600 font-mono">GPA {MOCK_STUDENT.gpa}</span>
+        {/* Dynamic Logged-In Student Profile Summary Card */}
+        {studentProfile && (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs space-y-1 text-slate-700 min-w-[260px] shadow-sm">
+            <div className="font-bold text-slate-900 border-b border-slate-200 pb-1 flex justify-between">
+              <span>Your Database Profile</span>
+              <span className="text-blue-700 font-mono font-bold">GPA {studentProfile.gpa}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Annual Budget:</span>
+              <span className="font-semibold">${studentProfile.budget.toLocaleString()}/yr</span>
+            </div>
+            <div className="flex justify-between">
+              <span>IELTS / TOEFL:</span>
+              <span className="font-semibold">{studentProfile.ielts || "N/A"} / {studentProfile.toefl || "N/A"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Degree Level:</span>
+              <span className="font-semibold uppercase text-blue-700">{studentProfile.degree_level}</span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span>Budget:</span>
-            <span className="font-semibold">${MOCK_STUDENT.budget.toLocaleString()}/yr</span>
-          </div>
-          <div className="flex justify-between">
-            <span>IELTS / TOEFL:</span>
-            <span className="font-semibold">{MOCK_STUDENT.ielts} / {MOCK_STUDENT.toefl}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Target Level:</span>
-            <span className="font-semibold uppercase text-blue-700">{MOCK_STUDENT.degree_level}</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Split-Screen Grid Layout */}
@@ -139,7 +272,7 @@ export default function Dashboard() {
               Target Programs Discovery
             </h2>
             <span className="text-xs text-slate-500 font-medium">
-              {MOCK_PROGRAMS.length} Available Programs
+              {MOCK_PROGRAMS.length} Programs Available
             </span>
           </div>
 
@@ -151,7 +284,11 @@ export default function Dashboard() {
               return (
                 <div
                   key={program.program_id}
-                  onClick={() => evaluateProgram(program)}
+                  onClick={() => {
+                    if (studentProfile) {
+                      evaluateMatchForStudent(studentProfile, program, token);
+                    }
+                  }}
                   className={`p-5 rounded-2xl cursor-pointer transition-all duration-200 border text-left ${
                     isSelected
                       ? "bg-blue-900 text-white border-blue-800 shadow-lg shadow-blue-900/20 ring-2 ring-blue-600"
@@ -230,16 +367,16 @@ export default function Dashboard() {
             <h2 className="text-lg font-bold text-slate-900">
               Deterministic Compatibility Analysis
             </h2>
-            {isLoading && (
+            {isEvaluating && (
               <span className="text-xs font-semibold text-blue-600 animate-pulse">
-                Evaluating math model...
+                Evaluating match...
               </span>
             )}
           </div>
 
-          {error && (
+          {evalError && (
             <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
-              <strong>Error:</strong> {error}
+              <strong>Error:</strong> {evalError}
             </div>
           )}
 

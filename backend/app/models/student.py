@@ -3,10 +3,12 @@ from app.core.database import Base
 
 
 class Student(Base):
-    """SQLAlchemy ORM model for storing student academic profile."""
+    """SQLAlchemy ORM model for storing student academic profile and authentication credentials."""
     __tablename__ = "students"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    email = Column(String(255), unique=True, index=True, nullable=True)
+    hashed_password = Column(String(255), nullable=True)
     gpa = Column(Float, nullable=True)
     ielts = Column(Float, nullable=True)
     toefl = Column(Integer, nullable=True)
