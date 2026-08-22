@@ -19,20 +19,21 @@ async def seed_database():
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
             print("Verified 'vector' (pgvector) extension in PostgreSQL.")
         except Exception as e:
-            print(f"Notice: Vector extension check skipped or requires superuser: {e}")
-
-        # Ensure email and hashed_password columns exist on existing students table
-        try:
-            await conn.execute(text("ALTER TABLE students ADD COLUMN IF NOT EXISTS email VARCHAR(255);"))
-            await conn.execute(text("ALTER TABLE students ADD COLUMN IF NOT EXISTS hashed_password VARCHAR(255);"))
-        except Exception as e:
-            print(f"Notice: Column alter check: {e}")
+            print(f"Notice: Vector extension check: {e}")
 
         await conn.run_sync(Base.metadata.create_all)
         print("Successfully created/verified all database tables.")
 
     # 2. Inject initial mock records using AsyncSession
     async with AsyncSessionLocal() as session:
+        # Alter columns if missing
+        try:
+            await session.execute(text("ALTER TABLE students ADD COLUMN IF NOT EXISTS email VARCHAR(255);"))
+            await session.execute(text("ALTER TABLE students ADD COLUMN IF NOT EXISTS hashed_password VARCHAR(255);"))
+            await session.commit()
+        except Exception:
+            await session.rollback()
+
         # Check if programs already seeded
         existing_programs = await session.execute(text("SELECT COUNT(*) FROM programs;"))
         program_count = existing_programs.scalar()
@@ -91,15 +92,20 @@ async def seed_database():
             session.add_all(mock_programs)
             print("Injected 3 mock university programs (TU Munich, UCL, UvA).")
 
-        # Check if student profile already seeded
-        existing_student = await session.execute(text("SELECT * FROM students WHERE email = 'student@ausa.edu.az';"))
-        student = existing_student.first()
+        # Check if student profile already seeded with student@ausa.az
+        target_email = "student@ausa.az"
+        existing_student_res = await session.execute(
+            text("SELECT id FROM students WHERE email = :email"),
+            {"email": target_email}
+        )
+        existing_student = existing_student_res.first()
 
-        if not student:
-            mock_pwd_hash = get_password_hash("password123")
+        hashed_pwd = get_password_hash("password123")
+
+        if not existing_student:
             mock_student = Student(
-                email="student@ausa.edu.az",
-                hashed_password=mock_pwd_hash,
+                email=target_email,
+                hashed_password=hashed_pwd,
                 gpa=3.60,
                 ielts=7.0,
                 toefl=98,
@@ -112,7 +118,13 @@ async def seed_database():
                 goals="Pursue Master's degree in CS in Western Europe with full or partial scholarship support."
             )
             session.add(mock_student)
-            print("Injected default student profile (student@ausa.edu.az / password123).")
+            print(f"Injected mock student profile ({target_email} / password123 with bcrypt hash).")
+        else:
+            await session.execute(
+                text("UPDATE students SET hashed_password = :pwd WHERE email = :email"),
+                {"pwd": hashed_pwd, "email": target_email}
+            )
+            print(f"Updated password hash for existing student ({target_email}).")
 
         await session.commit()
         print("Successfully committed database seeding transactions!")

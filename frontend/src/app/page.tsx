@@ -58,7 +58,7 @@ export default function Dashboard() {
   const { data: session, status } = useSession();
 
   // Login Form State
-  const [loginEmail, setLoginEmail] = useState("student@ausa.edu.az");
+  const [loginEmail, setLoginEmail] = useState("student@ausa.az");
   const [loginPassword, setLoginPassword] = useState("password123");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -214,7 +214,7 @@ export default function Dashboard() {
 
         <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 text-center space-y-0.5">
           <div className="font-semibold text-slate-700">🔑 Default Demo Credentials:</div>
-          <div>Email: <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">student@ausa.edu.az</code></div>
+          <div>Email: <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">student@ausa.az</code></div>
           <div>Password: <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800">password123</code></div>
         </div>
       </div>
