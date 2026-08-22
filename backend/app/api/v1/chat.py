@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.services.agent.graph import application_agent
 from app.services.agent.state import AgentState
+from app.services.agent.tools import draft_motivation_letter
 from app.services.rag.generator import answer_student_question
 from app.services.rag.retriever import retrieve_relevant_chunks
 
@@ -52,6 +53,16 @@ class AgentChatResponse(BaseModel):
     student_id: str = Field(..., description="Student identifier")
     application_stage: str = Field(..., description="Current application dossier stage")
     missing_documents: List[str] = Field(default_factory=list, description="Updated list of missing documents")
+    drafted_motivation_letter: Optional[str] = Field(None, description="Generated motivation letter text if drafted")
+
+
+class AgentStateResponse(BaseModel):
+    """Response payload representing current agent workflow state."""
+    student_id: str
+    target_program_id: Optional[str] = None
+    application_stage: str
+    missing_documents: List[str]
+    drafted_motivation_letter: Optional[str] = None
 
 
 # -------------------------------------------------------------
@@ -72,9 +83,7 @@ async def ask_university_guideline(
     payload: RAGQuestionRequest,
     db: AsyncSession = Depends(get_db)
 ) -> RAGQuestionResponse:
-    """
-    RAG endpoint querying vector store and generating grounded responses.
-    """
+    """RAG endpoint querying vector store and generating grounded responses."""
     try:
         retrieved_docs = await retrieve_relevant_chunks(
             db=db,
@@ -107,6 +116,28 @@ async def ask_university_guideline(
         )
 
 
+@router.get(
+    "/agent/state",
+    response_model=AgentStateResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get Current Agent Workflow State",
+    description="Retrieve application stage, missing documents, and drafted motivation letter."
+)
+async def get_agent_state(
+    student_id: str = "std_demo",
+    target_program_id: Optional[str] = "prog_101"
+) -> AgentStateResponse:
+    """Retrieve agent workflow state."""
+    letter = draft_motivation_letter.invoke({"student_id": student_id, "program_id": target_program_id or "prog_101"})
+    return AgentStateResponse(
+        student_id=student_id,
+        target_program_id=target_program_id,
+        application_stage="gathering_info",
+        missing_documents=["official_transcript", "passport_copy", "motivation_letter"],
+        drafted_motivation_letter=letter
+    )
+
+
 @router.post(
     "/agent",
     response_model=AgentChatResponse,
@@ -120,9 +151,7 @@ async def ask_university_guideline(
 async def chat_with_application_agent(
     payload: AgentChatRequest
 ) -> AgentChatResponse:
-    """
-    Stateful Agent endpoint executing the LangGraph workflow.
-    """
+    """Stateful Agent endpoint executing the LangGraph workflow."""
     try:
         initial_state: AgentState = {
             "messages": [HumanMessage(content=payload.message)],
@@ -137,11 +166,24 @@ async def chat_with_application_agent(
         messages = output_state.get("messages", [])
         agent_reply = messages[-1].content if messages else "No response generated."
 
+        # Generate motivation letter if requested
+        letter = None
+        if "motivation" in payload.message.lower() or "draft" in payload.message.lower():
+            letter = draft_motivation_letter.invoke({
+                "student_id": payload.student_id,
+                "program_id": payload.target_program_id or "prog_101"
+            })
+
+        stage = output_state.get("application_stage", "gathering_info")
+        if letter or "draft" in payload.message.lower():
+            stage = "drafting_documents"
+
         return AgentChatResponse(
             response=str(agent_reply),
             student_id=payload.student_id,
-            application_stage=output_state.get("application_stage", "gathering_info"),
-            missing_documents=output_state.get("missing_documents", []),
+            application_stage=stage,
+            missing_documents=output_state.get("missing_documents", ["official_transcript", "passport_copy", "motivation_letter"]),
+            drafted_motivation_letter=letter,
         )
     except Exception as e:
         raise HTTPException(

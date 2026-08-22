@@ -30,9 +30,41 @@ export async function fetchCurrentStudentProfile(
   return response.json();
 }
 
+export interface AgentStateData {
+  student_id: string;
+  target_program_id?: string;
+  application_stage: string;
+  missing_documents: string[];
+  drafted_motivation_letter?: string;
+}
+
+/**
+ * Fetch current LangGraph agent state (stage, missing docs, generated letter).
+ */
+export async function fetchAgentState(
+  studentId: string = "std_demo",
+  programId: string = "prog_101",
+  token?: string
+): Promise<AgentStateData> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/chat/agent/state?student_id=${studentId}&target_program_id=${programId}`,
+    { headers }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch agent state.");
+  }
+
+  return response.json();
+}
+
 /**
  * Send student profile and target program requirements to backend deterministic matching engine.
- * Automatically attaches Bearer JWT authorization token if available.
  */
 export async function fetchMatchScore(
   student: StudentProfile,
@@ -68,11 +100,11 @@ export interface ChatMessageResponse {
   sources?: DocumentSourceInfo[];
   applicationStage?: string;
   missingDocs?: string[];
+  draftedLetter?: string;
 }
 
 /**
  * Send chat message to backend (RAG guidelines Q&A or LangGraph stateful application agent).
- * Automatically attaches Bearer JWT authorization token if available.
  */
 export async function sendChatMessage(
   message: string,
@@ -135,6 +167,7 @@ export async function sendChatMessage(
       reply: data.response,
       applicationStage: data.application_stage,
       missingDocs: data.missing_documents || [],
+      draftedLetter: data.drafted_motivation_letter,
     };
   }
 }

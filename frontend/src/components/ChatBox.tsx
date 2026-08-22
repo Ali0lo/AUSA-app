@@ -7,13 +7,19 @@ import { ChatMessage } from "@/types";
 interface ChatBoxProps {
   studentId?: string;
   programId?: string;
+  lockedMode?: "rag" | "agent";
+  token?: string;
+  onStateUpdate?: (stage: string, missingDocs: string[], draftedLetter?: string) => void;
 }
 
 export const ChatBox: React.FC<ChatBoxProps> = ({
   studentId = "std_demo",
-  programId = "prog_demo",
+  programId = "prog_101",
+  lockedMode,
+  token,
+  onStateUpdate,
 }) => {
-  const [mode, setMode] = useState<"rag" | "agent">("rag");
+  const [mode, setMode] = useState<"rag" | "agent">(lockedMode || "rag");
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -21,7 +27,9 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
       id: "welcome-1",
       role: "assistant",
       content:
-        "Salam! I am your AUSA AI Advisor. You can ask me general questions about university guidelines and scholarships, or switch to Application Guide mode for step-by-step application assistance.",
+        lockedMode === "agent"
+          ? "Salam! I am your AI Application Assistant. I can help audit missing documents, verify deadlines, and draft your motivation letter. How would you like to proceed?"
+          : "Salam! I am your AUSA AI Advisor. You can ask me general questions about university guidelines and scholarships, or switch to Application Guide mode for step-by-step application assistance.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -54,7 +62,8 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await sendChatMessage(userText, mode, studentId, programId);
+      const activeMode = lockedMode || mode;
+      const response = await sendChatMessage(userText, activeMode, studentId, programId, token);
 
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
@@ -67,6 +76,15 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
+
+      // Notify parent page of agent state updates (stepper stage, missing docs checklist, motivation letter)
+      if (onStateUpdate && (response.applicationStage || response.missingDocs)) {
+        onStateUpdate(
+          response.applicationStage || "gathering_info",
+          response.missingDocs || [],
+          response.draftedLetter
+        );
+      }
     } catch (error: any) {
       const errorMsg: ChatMessage = {
         id: `error-${Date.now()}`,
@@ -80,46 +98,56 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
     }
   };
 
+  const activeMode = lockedMode || mode;
+
   return (
-    <div className="w-full flex flex-col h-[600px] rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden backdrop-blur-md">
-      {/* Top Header & Mode Toggle Bar */}
-      <div className="p-4 bg-slate-950/80 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="w-full flex flex-col h-[650px] rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden backdrop-blur-md">
+      {/* Top Header & Mode Bar */}
+      <div className="p-4 bg-slate-950/90 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
-          <h3 className="font-bold text-white text-base">AUSA AI Advisor</h3>
+          <h3 className="font-bold text-white text-base">
+            {lockedMode === "agent" ? "LangGraph Application Agent" : "AUSA AI Advisor"}
+          </h3>
         </div>
 
-        {/* Dual Mode Toggle Buttons */}
-        <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => setMode("rag")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              mode === "rag"
-                ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            🔍 General Q&A (RAG)
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("agent")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              mode === "agent"
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            🤖 Application Guide (Agent)
-          </button>
-        </div>
+        {/* Dual Mode Toggle Buttons (Hidden if lockedMode is set) */}
+        {!lockedMode ? (
+          <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setMode("rag")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                mode === "rag"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              🔍 General Q&A (RAG)
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("agent")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                mode === "agent"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              🤖 Application Guide (Agent)
+            </button>
+          </div>
+        ) : (
+          <span className="text-xs font-mono px-3 py-1 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700/60">
+            🔒 Locked: Agent Mode
+          </span>
+        )}
       </div>
 
       {/* Mode Sub-banner Info */}
-      <div className="px-4 py-2 bg-slate-900/60 border-b border-slate-800/80 text-xs text-slate-400 flex items-center justify-between">
+      <div className="px-4 py-2 bg-slate-900/80 border-b border-slate-800 text-xs text-slate-400 flex items-center justify-between">
         <span>
-          {mode === "rag"
+          {activeMode === "rag"
             ? "Mode: Strictly grounded document guidelines search (PostgreSQL pgvector RAG)."
             : "Mode: Stateful application dossier advisor & motivation letter drafting tool."}
         </span>
@@ -135,7 +163,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
             }`}
           >
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+              className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                 msg.role === "user"
                   ? "bg-blue-600 text-white rounded-br-none shadow-lg shadow-blue-600/20"
                   : "bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700/60 shadow-md"
@@ -203,7 +231,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
               <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce delay-150" />
               <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce delay-300" />
               <span className="text-xs">
-                {mode === "rag" ? "Searching guidelines vector DB..." : "Agent processing workflow..."}
+                {activeMode === "rag" ? "Searching guidelines vector DB..." : "Agent executing tool calls..."}
               </span>
             </div>
           </div>
@@ -222,7 +250,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           placeholder={
-            mode === "rag"
+            activeMode === "rag"
               ? "Ask a question (e.g. 'What is the IELTS requirement for DAAD scholarship?')..."
               : "Ask the application guide (e.g. 'Draft my motivation letter')..."
           }

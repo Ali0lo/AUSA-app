@@ -1,33 +1,90 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { ApplicationStage, ApplicationStepper } from "@/components/ApplicationStepper";
 import { ChatBox } from "@/components/ChatBox";
+import { DocumentChecklist } from "@/components/DocumentChecklist";
+import { fetchAgentState } from "@/lib/api";
 
 export default function ApplicationAssistantPage() {
-  // Stateful tracker mirroring LangGraph state
-  const [applicationStage, setApplicationStage] = useState<
-    "gathering_info" | "drafting_documents" | "ready_to_submit"
-  >("gathering_info");
+  const { data: session } = useSession();
+  const token = (session?.user as any)?.accessToken;
 
+  // Agent State
+  const [applicationStage, setApplicationStage] =
+    useState<ApplicationStage>("gathering_info");
   const [missingDocuments, setMissingDocuments] = useState<string[]>([
     "official_transcript",
     "passport_copy",
     "motivation_letter",
   ]);
+  const [draftedLetter, setDraftedLetter] = useState<string | null>(null);
+  const [isLoadingState, setIsLoadingState] = useState<boolean>(true);
+  const [copied, setCopied] = useState<boolean>(false);
 
-  const stages = [
-    { id: "gathering_info", label: "1. Gathering Info & Audit", desc: "Audit required dossier files" },
-    { id: "drafting_documents", label: "2. Drafting Documents", desc: "Prepare motivation letter & SOP" },
-    { id: "ready_to_submit", label: "3. Ready to Submit", desc: "Final verification before submission" },
-  ];
+  // Fetch initial Agent state on mount
+  useEffect(() => {
+    fetchAgentState("std_demo", "prog_101", token)
+      .then((data) => {
+        if (data.application_stage) {
+          setApplicationStage(data.application_stage as ApplicationStage);
+        }
+        if (data.missing_documents) {
+          setMissingDocuments(data.missing_documents);
+        }
+        if (data.drafted_motivation_letter) {
+          setDraftedLetter(data.drafted_motivation_letter);
+        }
+      })
+      .catch(() => {
+        // Fallback default state if offline
+      })
+      .finally(() => {
+        setIsLoadingState(false);
+      });
+  }, [token]);
+
+  // Callback triggered when Agent executes a tool call in ChatBox
+  const handleAgentStateUpdate = (
+    stage: string,
+    docs: string[],
+    newLetter?: string
+  ) => {
+    if (stage) {
+      setApplicationStage(stage as ApplicationStage);
+    }
+    if (docs) {
+      setMissingDocuments(docs);
+    }
+    if (newLetter) {
+      setDraftedLetter(newLetter);
+    }
+  };
+
+  const handleToggleDocument = (docName: string) => {
+    const updated = missingDocuments.filter((d) => d !== docName);
+    setMissingDocuments(updated);
+    if (updated.length === 0) {
+      setApplicationStage("ready_to_submit");
+    }
+  };
+
+  const handleCopyLetter = () => {
+    if (draftedLetter) {
+      navigator.clipboard.writeText(draftedLetter);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <div className="space-y-8">
       {/* Header Banner */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200 mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-semibold border border-blue-200 mb-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Stateful LangGraph Workflow Active</span>
           </div>
@@ -35,7 +92,7 @@ export default function ApplicationAssistantPage() {
             Application Preparation Assistant
           </h1>
           <p className="text-slate-600 text-sm mt-1 max-w-2xl">
-            Track your application stage, audit missing documents, verify official deadlines, and draft customized motivation letters with AI assistance.
+            Track your application stage, audit missing documents, and converse with the LangGraph AI Agent to draft your motivation letter.
           </p>
         </div>
 
@@ -47,123 +104,89 @@ export default function ApplicationAssistantPage() {
         </Link>
       </div>
 
-      {/* Split-Screen Grid Layout */}
+      {/* Two-Column Dashboard Layout (60% Left / 40% Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Workflow Status Tracker (4 Cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Stage Progress Bar Card */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center justify-between">
-              <span>Application Stage</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                {applicationStage}
-              </span>
-            </h3>
+        {/* Left Column (60% Width -> 7 cols on lg grid) */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* 1. Progress Stepper Component */}
+          <ApplicationStepper currentStage={applicationStage} />
 
-            {/* Step Indicators */}
-            <div className="space-y-3 pt-1">
-              {stages.map((st, idx) => {
-                const isActive = applicationStage === st.id;
-                return (
-                  <div
-                    key={st.id}
-                    onClick={() => setApplicationStage(st.id as any)}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                      isActive
-                        ? "bg-blue-900 text-white border-blue-800 shadow-md"
-                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between font-bold text-xs">
-                      <span>{st.label}</span>
-                      {isActive && <span className="text-emerald-400">Active</span>}
-                    </div>
-                    <p
-                      className={`text-[11px] mt-0.5 ${
-                        isActive ? "text-blue-200" : "text-slate-500"
-                      }`}
-                    >
-                      {st.desc}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {/* 2. Missing Documents Checklist Component */}
+          <DocumentChecklist
+            missingDocuments={missingDocuments}
+            onToggleDocument={handleToggleDocument}
+          />
 
-          {/* Missing Documents Tracker Card */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>📋 Dossier Missing Documents</span>
-              </h3>
-              <span className="text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                {missingDocuments.length} Required
-              </span>
-            </div>
+          {/* 3. Generated Documents Section (Drafted Motivation Letter) */}
+          <div className="w-full bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                  <span>✉️ Generated Documents</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Customized application materials drafted by the LangGraph agent
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              {missingDocuments.map((doc, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 rounded-xl bg-amber-50/60 border border-amber-200 text-xs text-amber-900 font-medium"
+              {draftedLetter && (
+                <button
+                  onClick={handleCopyLetter}
+                  className="px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-amber-600">⏳</span>
-                    <span className="capitalize font-mono">
-                      {doc.replace("_", " ")}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() =>
-                      setMissingDocuments(missingDocuments.filter((d) => d !== doc))
-                    }
-                    className="text-[10px] text-amber-700 hover:text-emerald-700 underline font-semibold"
-                  >
-                    Mark Ready ✓
-                  </button>
-                </div>
-              ))}
-
-              {missingDocuments.length === 0 && (
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs text-center font-medium">
-                  🎉 All required dossier documents prepared!
-                </div>
+                  <span>{copied ? "Copied! ✓" : "Copy Draft"}</span>
+                </button>
               )}
             </div>
-          </div>
 
-          {/* Target Program Info Card */}
-          <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-sm space-y-2 border border-slate-800">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-blue-400">
-              Active Application Dossier
-            </span>
-            <h4 className="font-bold text-base text-white">
-              MSc Computer Science
-            </h4>
-            <p className="text-xs text-slate-400">
-              Technical University of Munich (TU Munich)
-            </p>
-            <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between">
-              <span>Deadline:</span>
-              <span className="font-semibold text-white">Nov 30, 2026</span>
-            </div>
+            {draftedLetter ? (
+              <div className="bg-slate-900 text-slate-100 p-5 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-xs text-slate-400">
+                  <span className="font-mono font-bold text-blue-400">
+                    Drafted Motivation Letter
+                  </span>
+                  <span>Target: TU Munich (prog_101)</span>
+                </div>
+                <div className="font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-200">
+                  {draftedLetter}
+                </div>
+              </div>
+            ) : (
+              <div className="p-8 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-2 text-slate-500">
+                <div className="text-xl">📝</div>
+                <div className="font-bold text-slate-800 text-sm">
+                  No Generated Motivation Letter Yet
+                </div>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Ask the LangGraph Agent in the right column (e.g. <em>"Draft my motivation letter"</em>) to automatically generate a customized statement of purpose.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column: AI Assistant (8 Cols) */}
-        <div className="lg:col-span-8 space-y-4">
+        {/* Right Column (40% Width -> 5 cols on lg grid) */}
+        <div className="lg:col-span-5 space-y-4">
           <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <span>🤖 Interactive AI Assistant Drawer</span>
-            </h2>
-            <span className="text-xs text-slate-500">
-              Select mode inside ChatBox to switch RAG vs LangGraph Agent
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <h2 className="text-sm font-bold text-slate-900">
+                Application Guide Chat Assistant
+              </h2>
+            </div>
+            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
+              Agent Locked
             </span>
           </div>
 
-          {/* Embedded ChatBox */}
-          <ChatBox studentId="std_demo" programId="prog_101" />
+          {/* Embedded ChatBox locked into Agent Mode */}
+          <ChatBox
+            studentId="std_demo"
+            programId="prog_101"
+            lockedMode="agent"
+            token={token}
+            onStateUpdate={handleAgentStateUpdate}
+          />
         </div>
       </div>
     </div>
