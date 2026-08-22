@@ -25,4 +25,9 @@ data/processed/*
 *.log
 
 # Streamlit
-.streamlit/secrets.toml
+.streamlit/secrets.tomlnode_modules/
+.next/
+__pycache__/
+*.env
+venv/
+frontend/node_modules/
