@@ -25,9 +25,13 @@ data/processed/*
 *.log
 
 # Streamlit
-.streamlit/secrets.tomlnode_modules/
+.streamlit/secrets.toml
+
+# Node / Next.js
+node_modules/
 .next/
-__pycache__/
-*.env
-venv/
-frontend/node_modules/
+next-env.d.ts
+*.tsbuildinfo
+
+# Large archives pulled by the collection scripts
+*.zip
