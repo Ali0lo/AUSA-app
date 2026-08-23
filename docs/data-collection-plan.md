@@ -45,12 +45,36 @@ first; then **USA, Poland**; **UK, China** last.
 | Country | Source | Automatable? | Owner |
 |---|---|---|---|
 | **Turkey** | [`izcir/turkish-university-admissions-dataset`](https://github.com/izcir/turkish-university-admissions-dataset) — 128,352 records, 32,505 programmes, 2019–2024, cutoffs + quotas, **MIT licensed** | ✅ Fully — it is a git repo | **Claude** |
-| **USA** | [College Scorecard API](https://collegescorecard.ed.gov/data/api/) — 6,000+ institutions, admit rate + SAT/ACT 25th/75th percentiles, back to 1997, free, no registration | ✅ Fully — public API | **Claude** |
+| **USA** | **College Scorecard bulk zip** — 448 MB, per-year files 1996–2026, public domain. ✅ **Collected: 14,798 institution-year rows.** See §2a for why not the API, and for the Common Data Set alternatives | ✅ Done | **Claude** |
 | **Germany** | Official university NC pages, indexed via [auswahlgrenzen.de](https://www.auswahlgrenzen.de/). Aggregators (NC-Werte.info, Studis Online) hold 29,000+ thresholds but carry ToS risk — see open question A1 | ⚠️ Partly — needs the programme list first | **Claude fetches, team picks and verifies** |
 | **Azerbaijan** | DIM published cutoff scores | ❌ Local knowledge, likely Azerbaijani-language PDFs | **Team** |
 | **Poland** | IRK / eRekrutacja recruitment portals. No central database confirmed — see A2 | ❓ Unknown until scoped | **Team scopes, then decide** |
 | **UK** | [UCAS entry grades](https://www.ucas.com/applying/before-you-apply/what-and-where-to-study/entry-requirements/understanding-historical-entry-grades-data) — accepted-grade profiles + offer rates, 2023–2025 | ⚠️ Per-course fetching | Deferred (B1) |
 | **China** | None identified. Likely `admission_type = competitive` — see A3 | ❌ | Deferred (A3) |
+
+### 2a. USA — what was evaluated and what was chosen
+
+**Chosen: the College Scorecard bulk zip.** The API was tried first and abandoned —
+the unregistered `DEMO_KEY` throttles to roughly **30 requests/hour per IP**, not the
+1,000 the docs imply, and a full time-series pull needs 200+. It returned HTTP 429 on
+page 8. The bulk zip has no rate limit and carries more history.
+
+Three **Common Data Set** aggregators were also evaluated. CDS is genuinely richer than
+Scorecard — it carries enrolled-freshman **GPA distributions**, **admission-factor
+importance rankings** and waitlist data, none of which Scorecard has:
+
+| Source | Format | Verdict |
+|---|---|---|
+| [collegedata.fyi](https://www.collegedata.fyi/) | **MIT licensed**, open source ([repo](https://github.com/bolewood/collegedata-fyi)), public no-auth API, 4,071 archived CDS documents, 262,537 field rows | **Best of the three.** But the friendly API is a *current snapshot*, not a per-year series — and the model needs a time series. The historical depth sits behind PDF extraction or authenticated PostgREST. Note: the documented host `api.collegedata.fyi` 404s; the working base is `https://www.collegedata.fyi/api` |
+| [collegetransitions.com](https://www.collegetransitions.com/dataverse/common-data-set-repository) | Links to per-school Google Drive PDFs, 2017-18 → 2024-25, hundreds of schools | Rich but unstructured. PDF extraction per school per year. No explicit reuse licence |
+| [commondatasets.com](https://commondatasets.com/index.html) | Web interface only, **33 schools**, 2024-25 cycle only | Too narrow — one cycle gives no time series at all |
+
+**Recommendation: do not invest further here yet.** Scorecard already yields a working
+US training set, and **the USA is 4th priority under B1 while Germany is 1st and still
+has no confirmed data path.** Spending days on CDS extraction while the top market is
+unsolved is the wrong trade. Revisit collegedata.fyi as an enrichment pass if time
+remains — its per-field quality flags ("withheld because internally inconsistent")
+model exactly the honesty ADR-0004 requires, and it is worth learning from regardless.
 
 ---
 
