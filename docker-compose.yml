@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ausa_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ausa_db}
+      POSTGRES_USER: ${POSTGRES_USER:-ausa_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ausa_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ausa_user} -d ${POSTGRES_DB:-ausa_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
