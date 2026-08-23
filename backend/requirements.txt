@@ -1,0 +1,36 @@
+# Web Framework & API
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.4
+pydantic-settings>=2.2.1
+python-dotenv>=1.0.1
+
+# Security & JWT Auth
+pyjwt>=2.8.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.1.2
+
+# Database & ORM
+sqlalchemy>=2.0.28
+asyncpg>=0.29.0
+psycopg2-binary>=2.9.9
+pgvector>=0.2.5
+greenlet>=3.0.3
+
+# AI / RAG / Workflows
+langchain>=0.1.14
+langchain-community>=0.0.31
+langgraph>=0.0.32
+
+# Data Pipeline & Scraping
+httpx>=0.27.0
+beautifulsoup4>=4.12.3
+
+# Data & ML (collection scripts + cutoff models, see docs/adr/0001)
+pandas>=2.2.0
+scikit-learn>=1.4.0
+joblib>=1.3.2
+
+# Testing
+pytest>=8.1.1
+pytest-asyncio>=0.23.6

@@ -26,3 +26,12 @@ data/processed/*
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node / Next.js
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Large archives pulled by the collection scripts
+*.zip
