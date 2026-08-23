@@ -1,13 +1,45 @@
 # AUSA — Open Questions
 
-**Status:** awaiting answers. Fill in the `**Answer:**` line under each question.
+**Deadline: 15 September 2026.** Updated 23 August — **23 days left**.
 
-These are the decisions still blocking implementation after the matching/scoring design
-review. Every question carries a recommendation — accept it, override it, or write
-something better. Questions already settled in that review are recorded in
-`docs/adr/` and are not repeated here.
+**4 of 18 answered.** Fill in the `**Answer:**` line under each remaining question.
+Every question carries a recommendation — accept it, override it, or write something
+better. Decisions already settled are recorded in [`adr/`](adr/) and are not repeated here.
 
 Legend: 🔴 blocks implementation · 🟡 blocks a specific country or feature · 🟢 can be deferred
+
+## Still required — read this first
+
+Answered so far: **B1** (country order), **B3** (coverage check), **B5** (deadline),
+**C1** (deterministic hard filters are acceptable — the ADR-0001 design stands).
+
+Given 23 days, the remaining questions are no longer equally urgent. These are the ones
+that actually block work now:
+
+| Answer today | Why it blocks |
+|---|---|
+| **B2** — which degree levels? | Decides what gets curated starting tomorrow. Curation is the critical path and cannot start without it |
+| **B4** — who does what? | Four tracks, four people, 23 days. Nobody can start until this is assigned |
+| **A4** — who collects Azerbaijan DIM data? | Only the team can do this one. Nothing else unblocks it |
+| **C4** — is "the persistence baseline won" acceptable? | If it would be graded as failure, the ML plan needs a second component designed in *now*, not in week three |
+
+| Answer within 3 days | Why |
+|---|---|
+| **A1** — Germany aggregator or direct? | Gates all German collection, and Germany is the top market |
+| **F1** — who signs off on scraping legality? | Gates A1. Must happen before any German collection code runs |
+| **C2, C3** — algorithms and deliverables | Shapes the training pipeline and where the code lives |
+
+| Can wait | |
+|---|---|
+| **A2, A3** (Poland, China) | Both deferred to last per B1 |
+| **A5** (US granularity) | Recommendation is "accept and label it" — only needs a no |
+| **D1, D2, D3** (web/mobile, accounts, languages) | Frontend can start on the recommendations |
+| **E1, E2, E3** (retraining, artifacts, `admitted_profiles`) | Recommendations are safe defaults; confirm when convenient |
+
+**Not a question, but the biggest risk:** three countries × 40–50 programmes, plus five
+years of cutoff history each, plus backend, frontend, model and report, in 23 days with
+four people is very aggressive. See [`data-collection-plan.md`](data-collection-plan.md) §5
+for what to drop first if it slips.
 
 ---
 
@@ -108,7 +140,7 @@ programmes total is ~5 programmes each, which is too thin to rank meaningfully, 
 three with the strongest cutoff data. 40–50 programmes each. UK and USA next, since
 their data is already clean and free. Poland and China last.
 
-**Answer:**
+**Answer: Yes but UK and China last USA and Poland before them**
 
 ### B2 🔴 Which degree levels?
 
@@ -134,7 +166,7 @@ requirement is met on paper while the product stays mostly deterministic.
 deliberately re-weight curation toward NC programmes and the Turkish/Azerbaijani
 markets before writing any model code.
 
-**Answer:**
+**Answer: with your recommendation**
 
 ### B4 🟡 Who on the team does what?
 
@@ -151,7 +183,7 @@ should have two people, not one, at least for the first two weeks.
 
 Unknown, and it determines everything above.
 
-**Answer:**
+**Answer: 15 september. and today 23 Augest**
 
 ---
 
@@ -171,7 +203,7 @@ shortcut, they are an accurate model of how admission actually works.
 **Recommendation:** confirm with your instructor **before building**, not at submission.
 If they insist on full replacement, say so and we will reopen the design.
 
-**Answer:**
+**Answer: If there is a ML model that is enough**
 
 ### C2 🟡 Is a specific algorithm or library mandated?
 
