@@ -1,131 +1,45 @@
-"use client";
-
-import React from "react";
+import { Check } from "lucide-react";
 
 export type ApplicationStage = "gathering_info" | "drafting_documents" | "ready_to_submit";
 
-interface ApplicationStepperProps {
-  currentStage: ApplicationStage | string;
-}
-
-interface StepItem {
-  id: ApplicationStage;
-  number: number;
-  label: string;
-  description: string;
-}
-
-const STEPS: StepItem[] = [
-  {
-    id: "gathering_info",
-    number: 1,
-    label: "Gathering Info",
-    description: "Audit required dossier files",
-  },
-  {
-    id: "drafting_documents",
-    number: 2,
-    label: "Drafting Documents",
-    description: "Prepare motivation letter & SOP",
-  },
-  {
-    id: "ready_to_submit",
-    number: 3,
-    label: "Ready to Submit",
-    description: "Final dossier verification",
-  },
+const steps: Array<{ id: ApplicationStage; label: string; description: string }> = [
+  { id: "gathering_info", label: "Gather information", description: "Review the required dossier records" },
+  { id: "drafting_documents", label: "Draft documents", description: "Prepare the motivation-letter demonstration" },
+  { id: "ready_to_submit", label: "Ready for review", description: "All locally tracked documents are marked ready" }
 ];
 
-export const ApplicationStepper: React.FC<ApplicationStepperProps> = ({
-  currentStage,
-}) => {
-  const getStepStatus = (stepId: ApplicationStage, index: number) => {
-    const stageOrder: Record<string, number> = {
-      gathering_info: 0,
-      drafting_documents: 1,
-      ready_to_submit: 2,
-    };
-
-    const currentOrder = stageOrder[currentStage] ?? 0;
-
-    if (index < currentOrder) return "completed";
-    if (index === currentOrder) return "active";
-    return "upcoming";
+export function ApplicationStepper({ currentStage }: { currentStage: ApplicationStage | string }) {
+  const order: Record<string, number> = {
+    gathering_info: 0,
+    drafting_documents: 1,
+    ready_to_submit: 2
   };
+  const current = order[currentStage] ?? 0;
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-4">
-      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+    <section className="panel-strong p-6 sm:p-8" aria-labelledby="application-progress-heading">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-5">
         <div>
-          <h3 className="font-extrabold text-slate-900 text-base">
-            LangGraph Application Progress Tracker
-          </h3>
-          <p className="text-xs text-slate-500">
-            Stateful multi-step dossier preparation workflow
-          </p>
+          <h2 id="application-progress-heading" className="font-serif text-2xl font-semibold">Application progress</h2>
+          <p className="mt-1 text-sm text-muted">This state is a frontend demonstration and is not persisted.</p>
         </div>
-
-        <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-900 border border-blue-200">
-          Stage: {currentStage}
-        </span>
+        <span className="status-tag status-demo">{currentStage.replace(/_/g, " ")}</span>
       </div>
-
-      {/* Horizontal Timeline Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-        {STEPS.map((step, idx) => {
-          const status = getStepStatus(step.id, idx);
-          const isCompleted = status === "completed";
-          const isActive = status === "active";
-
+      <ol className="mt-7 grid border-y border-quiet md:grid-cols-3">
+        {steps.map((step, index) => {
+          const complete = index < current;
+          const active = index === current;
           return (
-            <div
-              key={step.id}
-              className={`relative p-4 rounded-xl border transition-all ${
-                isActive
-                  ? "bg-blue-900 text-white border-blue-800 shadow-md ring-2 ring-blue-600"
-                  : isCompleted
-                  ? "bg-blue-950 text-blue-100 border-blue-900"
-                  : "bg-slate-50 text-slate-600 border-slate-200"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {/* Step Circle Badge */}
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                    isActive
-                      ? "bg-blue-600 text-white shadow-inner"
-                      : isCompleted
-                      ? "bg-emerald-500 text-white"
-                      : "bg-slate-200 text-slate-600"
-                  }`}
-                >
-                  {isCompleted ? "✓" : step.number}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="font-bold text-sm leading-tight flex items-center justify-between">
-                    <span className="truncate">{step.label}</span>
-                    {isActive && (
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                    )}
-                  </div>
-                  <p
-                    className={`text-[11px] mt-0.5 truncate ${
-                      isActive
-                        ? "text-blue-200"
-                        : isCompleted
-                        ? "text-blue-300"
-                        : "text-slate-500"
-                    }`}
-                  >
-                    {step.description}
-                  </p>
-                </div>
+            <li key={step.id} className={`p-5 ${index > 0 ? "border-t border-quiet md:border-l md:border-t-0" : ""}`} aria-current={active ? "step" : undefined}>
+              <div className={`flex h-9 w-9 items-center justify-center border text-sm font-semibold ${active ? "border-accent bg-accent text-paper" : complete ? "border-success bg-success text-paper" : "border-line text-muted"}`}>
+                {complete ? <Check size={17} aria-label="Completed" /> : index + 1}
               </div>
-            </div>
+              <h3 className="mt-5 font-serif text-xl font-semibold">{step.label}</h3>
+              <p className="mt-2 text-sm leading-6 text-muted">{step.description}</p>
+            </li>
           );
         })}
-      </div>
-    </div>
+      </ol>
+    </section>
   );
-};
+}

@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { sendChatMessage } from "@/lib/api";
+import { ArrowUp, ExternalLink, RefreshCw } from "lucide-react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { getUserFacingError, sendChatMessage, UserFacingError } from "@/lib/api";
+import { safeExternalUrl, timestamp } from "@/lib/format";
 import { ChatMessage } from "@/types";
 
 interface ChatBoxProps {
@@ -12,259 +14,202 @@ interface ChatBoxProps {
   onStateUpdate?: (stage: string, missingDocs: string[], draftedLetter?: string) => void;
 }
 
-export const ChatBox: React.FC<ChatBoxProps> = ({
+export function ChatBox({
   studentId = "std_demo",
   programId = "prog_101",
   lockedMode,
   token,
-  onStateUpdate,
-}) => {
+  onStateUpdate
+}: ChatBoxProps) {
   const [mode, setMode] = useState<"rag" | "agent">(lockedMode || "rag");
-  const [inputMessage, setInputMessage] = useState("");
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome-1",
-      role: "assistant",
-      content:
-        lockedMode === "agent"
-          ? "Salam! I am your AI Application Assistant. I can help audit missing documents, verify deadlines, and draft your motivation letter. How would you like to proceed?"
-          : "Salam! I am your AUSA AI Advisor. You can ask me general questions about university guidelines and scholarships, or switch to Application Guide mode for step-by-step application assistance.",
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    },
-  ]);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const [error, setError] = useState<UserFacingError | null>(null);
+  const [lastSubmitted, setLastSubmitted] = useState<string | null>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  const activeMode = lockedMode || mode;
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading, error]);
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!inputMessage.trim() || isLoading) return;
+  async function send(text: string, appendUserMessage = true) {
+    const clean = text.trim();
+    if (!clean || isLoading) return;
 
-    const userText = inputMessage.trim();
-    setInputMessage("");
-
-    const userMsg: ChatMessage = {
+    const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: userText,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      content: clean,
+      timestamp: timestamp()
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    if (appendUserMessage) setMessages((current) => [...current, userMessage]);
+    setInput("");
+    setError(null);
+    setLastSubmitted(clean);
     setIsLoading(true);
 
     try {
-      const activeMode = lockedMode || mode;
-      const response = await sendChatMessage(userText, activeMode, studentId, programId, token);
-
-      const assistantMsg: ChatMessage = {
+      const response = await sendChatMessage(clean, activeMode, studentId, programId, token);
+      const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content: response.reply,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: timestamp(),
         sources: response.sources,
         application_stage: response.applicationStage,
-        missing_documents: response.missingDocs,
+        missing_documents: response.missingDocs
       };
+      setMessages((current) => [...current, assistantMessage]);
+      setLastSubmitted(null);
 
-      setMessages((prev) => [...prev, assistantMsg]);
-
-      // Notify parent page of agent state updates (stepper stage, missing docs checklist, motivation letter)
-      if (onStateUpdate && (response.applicationStage || response.missingDocs)) {
+      if (onStateUpdate && (response.applicationStage || response.missingDocs || response.draftedLetter)) {
         onStateUpdate(
           response.applicationStage || "gathering_info",
           response.missingDocs || [],
           response.draftedLetter
         );
       }
-    } catch (error: any) {
-      const errorMsg: ChatMessage = {
-        id: `error-${Date.now()}`,
-        role: "assistant",
-        content: `Sorry, an error occurred: ${error.message || "Unable to reach backend service."}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+    } catch (sendError) {
+      setError(getUserFacingError(sendError, activeMode === "rag" ? "AI advisor" : "Application assistant"));
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const activeMode = lockedMode || mode;
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void send(input);
+  }
+
+  function changeMode(nextMode: "rag" | "agent") {
+    setMode(nextMode);
+    setMessages([]);
+    setError(null);
+    setLastSubmitted(null);
+    setInput("");
+  }
 
   return (
-    <div className="w-full flex flex-col h-[650px] rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden backdrop-blur-md">
-      {/* Top Header & Mode Bar */}
-      <div className="p-4 bg-slate-950/90 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
-          <h3 className="font-bold text-white text-base">
-            {lockedMode === "agent" ? "LangGraph Application Agent" : "AUSA AI Advisor"}
-          </h3>
+    <section className="panel-strong flex min-h-[620px] flex-col" aria-label={activeMode === "rag" ? "AI advisor conversation" : "Application assistant conversation"}>
+      <div className="flex flex-col gap-4 border-b border-line p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="font-serif text-2xl font-semibold">{activeMode === "rag" ? "Ask the document advisor" : "Application assistant"}</h2>
+          <p className="mt-1 text-sm text-muted">
+            {activeMode === "rag" ? "Answers depend on retrieved university documents." : "Agent tools currently use demonstration records."}
+          </p>
         </div>
-
-        {/* Dual Mode Toggle Buttons (Hidden if lockedMode is set) */}
-        {!lockedMode ? (
-          <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
+        {!lockedMode && (
+          <div className="flex border border-line" aria-label="Conversation mode">
             <button
               type="button"
-              onClick={() => setMode("rag")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                mode === "rag"
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
+              className={`min-h-11 px-3 text-sm font-semibold ${mode === "rag" ? "bg-ink text-paper" : "bg-paper text-ink"}`}
+              onClick={() => changeMode("rag")}
+              aria-pressed={mode === "rag"}
             >
-              🔍 General Q&A (RAG)
+              Advisor
             </button>
             <button
               type="button"
-              onClick={() => setMode("agent")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                mode === "agent"
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
+              className={`min-h-11 border-l border-line px-3 text-sm font-semibold ${mode === "agent" ? "bg-ink text-paper" : "bg-paper text-ink"}`}
+              onClick={() => changeMode("agent")}
+              aria-pressed={mode === "agent"}
             >
-              🤖 Application Guide (Agent)
+              Application
             </button>
           </div>
-        ) : (
-          <span className="text-xs font-mono px-3 py-1 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700/60">
-            🔒 Locked: Agent Mode
-          </span>
         )}
       </div>
 
-      {/* Mode Sub-banner Info */}
-      <div className="px-4 py-2 bg-slate-900/80 border-b border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-        <span>
-          {activeMode === "rag"
-            ? "Mode: Strictly grounded document guidelines search (PostgreSQL pgvector RAG)."
-            : "Mode: Stateful application dossier advisor & motivation letter drafting tool."}
-        </span>
-      </div>
+      <div className="flex-1 space-y-5 overflow-y-auto bg-[#f8f5ef] p-5" role="log" aria-live="polite" aria-relevant="additions">
+        {messages.length === 0 && (
+          <div className="max-w-2xl border-l-4 border-accent bg-paper p-5">
+            <p className="font-serif text-xl font-semibold">Start with one precise question.</p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              {activeMode === "rag"
+                ? "If no document supports the answer, the backend should return that it does not have the information."
+                : "Ask about missing documents, a programme deadline, or a motivation-letter draft."}
+            </p>
+          </div>
+        )}
 
-      {/* Message History Area */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-950/40">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex flex-col ${
-              msg.role === "user" ? "items-end" : "items-start"
-            }`}
-          >
-            <div
-              className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                msg.role === "user"
-                  ? "bg-blue-600 text-white rounded-br-none shadow-lg shadow-blue-600/20"
-                  : "bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700/60 shadow-md"
-              }`}
-            >
-              {/* Message Content */}
-              <div className="whitespace-pre-wrap">{msg.content}</div>
-
-              {/* RAG Sources Section */}
-              {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-3 pt-2 border-t border-slate-700/80 text-xs space-y-1">
-                  <div className="font-semibold text-blue-300 flex items-center gap-1">
-                    <span>📚 Referenced Sources ({msg.sources.length}):</span>
-                  </div>
-                  <div className="space-y-1 text-slate-300">
-                    {msg.sources.map((src, i) => (
-                      <div
-                        key={i}
-                        className="bg-slate-900/60 p-2 rounded-md border border-slate-700/50"
-                      >
-                        <p className="italic font-mono text-[11px] text-slate-300">
-                          "{src.content_snippet}"
-                        </p>
-                        {src.source_url && (
-                          <a
-                            href={src.source_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-400 hover:underline text-[10px] block mt-1"
-                          >
-                            🔗 Source Link
+        {messages.map((message) => (
+          <article key={message.id} className={`max-w-[92%] border p-4 sm:max-w-[82%] ${message.role === "user" ? "ml-auto border-ink bg-ink text-paper" : "border-quiet bg-paper text-ink"}`}>
+            <div className="whitespace-pre-wrap text-sm leading-6">{message.content}</div>
+            {message.sources && message.sources.length > 0 && (
+              <div className="mt-4 border-t border-quiet pt-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Sources returned · {message.sources.length}</p>
+                <ul className="mt-3 space-y-3">
+                  {message.sources.map((source, index) => {
+                    const sourceUrl = safeExternalUrl(source.source_url);
+                    return (
+                      <li key={`${message.id}-${index}`} className="border-l-2 border-accent pl-3 text-xs leading-5 text-muted">
+                        <p>{source.content_snippet}</p>
+                        {source.page !== undefined && source.page !== null && <p className="mt-1">Page {source.page}</p>}
+                        {sourceUrl && (
+                          <a className="mt-2 inline-flex items-center gap-1 font-semibold text-accent underline underline-offset-4" href={sourceUrl} target="_blank" rel="noopener noreferrer">
+                            Open source
+                            <ExternalLink size={12} aria-hidden="true" />
                           </a>
                         )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Agent Application Stage & Missing Documents Checklist */}
-              {msg.missing_documents && msg.missing_documents.length > 0 && (
-                <div className="mt-3 pt-2 border-t border-slate-700/80 text-xs space-y-1 text-amber-300">
-                  <div className="font-semibold">📋 Missing Dossier Documents:</div>
-                  <ul className="list-disc list-inside space-y-0.5 text-slate-300">
-                    {msg.missing_documents.map((doc, idx) => (
-                      <li key={idx} className="font-mono text-xs">
-                        {doc}
+                        {source.source_url && !sourceUrl && <p className="mt-2 font-semibold text-danger">The returned source URL is not a safe web address.</p>}
                       </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <span className="text-[10px] text-slate-500 px-1 mt-1 font-mono">
-              {msg.timestamp}
-            </span>
-          </div>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+            {message.missing_documents && message.missing_documents.length > 0 && (
+              <div className="mt-4 border-t border-quiet pt-3 text-xs leading-5">
+                Missing documents: {message.missing_documents.join(", ")}
+              </div>
+            )}
+            <time className={`mt-3 block text-[0.68rem] ${message.role === "user" ? "text-[#d8d7d2]" : "text-muted"}`}>{message.timestamp}</time>
+          </article>
         ))}
 
-        {isLoading && (
-          <div className="flex items-start gap-2">
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl rounded-bl-none px-4 py-3 text-sm text-slate-400 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" />
-              <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce delay-150" />
-              <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce delay-300" />
-              <span className="text-xs">
-                {activeMode === "rag" ? "Searching guidelines vector DB..." : "Agent executing tool calls..."}
-              </span>
-            </div>
+        {isLoading && <p className="text-sm font-semibold text-muted" role="status">Waiting for the backend response</p>}
+
+        {error && (
+          <div className="border border-danger bg-paper p-5" role="alert">
+            <p className="font-semibold text-danger">{error.title}</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{error.message}</p>
+            {lastSubmitted && (
+              <button type="button" className="button-secondary mt-4" onClick={() => void send(lastSubmitted, false)} disabled={isLoading}>
+                <RefreshCw size={15} aria-hidden="true" />
+                Retry message
+              </button>
+            )}
           </div>
         )}
-
-        <div ref={messagesEndRef} />
+        <div ref={endRef} />
       </div>
 
-      {/* Input Bar */}
-      <form
-        onSubmit={handleSendMessage}
-        className="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2"
-      >
-        <input
-          type="text"
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          placeholder={
-            activeMode === "rag"
-              ? "Ask a question (e.g. 'What is the IELTS requirement for DAAD scholarship?')..."
-              : "Ask the application guide (e.g. 'Draft my motivation letter')..."
-          }
-          className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
-        />
-
-        <button
-          type="submit"
-          disabled={!inputMessage.trim() || isLoading}
-          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-600/30"
-        >
-          Send
-        </button>
+      <form onSubmit={submit} className="border-t border-line bg-paper p-4">
+        <label className="field-label" htmlFor={`chat-input-${activeMode}`}>
+          {activeMode === "rag" ? "Question" : "Message to the application agent"}
+        </label>
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <textarea
+            id={`chat-input-${activeMode}`}
+            className="field min-h-24 resize-y"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder={activeMode === "rag" ? "What is the IELTS requirement?" : "What documents am I missing?"}
+            maxLength={2000}
+          />
+          <button type="submit" className="button-primary sm:min-h-24 sm:w-28" disabled={!input.trim() || isLoading}>
+            <ArrowUp size={18} aria-hidden="true" />
+            {isLoading ? "Sending" : "Send"}
+          </button>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
+          <span>{activeMode === "rag" ? "No external web knowledge is requested by this interface." : "Application submission is not supported."}</span>
+          <span>{input.length}/2000</span>
+        </div>
       </form>
-    </div>
+    </section>
   );
-};
+}

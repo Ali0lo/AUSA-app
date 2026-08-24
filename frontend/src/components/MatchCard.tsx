@@ -1,172 +1,102 @@
 "use client";
 
-import React from "react";
-import { FactorScoreDetail, MatchResult } from "@/types";
+import { Check, X } from "lucide-react";
+import { MatchResult } from "@/types";
 
 interface MatchCardProps {
   result: MatchResult;
   onReset?: () => void;
 }
 
-export const MatchCard: React.FC<MatchCardProps> = ({ result, onReset }) => {
-  const getScoreColorClass = (score: number) => {
-    if (score >= 80) return "bg-emerald-500 text-emerald-400 border-emerald-500/30";
-    if (score >= 50) return "bg-amber-500 text-amber-400 border-amber-500/30";
-    return "bg-rose-500 text-rose-400 border-rose-500/30";
-  };
+const factorLabels = {
+  academic: "Academic performance",
+  budget: "Budget coverage",
+  language: "Language result",
+  degree_level: "Degree level"
+};
 
-  const getScoreBadgeClass = (score: number) => {
-    if (score >= 80) return "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40";
-    if (score >= 50) return "bg-amber-950/80 text-amber-300 border border-amber-500/40";
-    return "bg-rose-950/80 text-rose-300 border border-rose-500/40";
-  };
-
-  const renderFactorRow = (
-    title: string,
-    detail: FactorScoreDetail,
-    weightLabel: string
-  ) => {
-    const isPassed = detail.passed_hard_filter;
-    const progressColor = getScoreColorClass(detail.score).split(" ")[0];
-
-    return (
-      <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 backdrop-blur-sm space-y-2 transition-all hover:border-slate-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-100 text-sm">{title}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-              {weightLabel}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${getScoreBadgeClass(detail.score)}`}>
-              {detail.score.toFixed(1)}% Score
-            </span>
-            <span className="text-xs text-slate-400 font-mono">
-              +{detail.weighted_score.toFixed(1)}% total
-            </span>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
-          <div
-            className={`h-full ${progressColor} transition-all duration-500 ease-out`}
-            style={{ width: `${Math.max(0, Math.min(100, detail.score))}%` }}
-          />
-        </div>
-
-        {/* Explanation text */}
-        <p className="text-xs text-slate-400 leading-relaxed pt-1">
-          {detail.explanation}
-        </p>
-      </div>
-    );
-  };
+export function MatchCard({ result, onReset }: MatchCardProps) {
+  const factors = [
+    ["academic", result.breakdown.academic],
+    ["budget", result.breakdown.budget],
+    ["language", result.breakdown.language],
+    ["degree_level", result.breakdown.degree_level]
+  ] as const;
 
   return (
-    <div className="w-full rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-6 space-y-6 text-slate-100 backdrop-blur-md">
-      {/* Header & Overall Match Gauge */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-800 gap-4">
+    <section className="panel-strong" aria-labelledby="match-result-heading">
+      <div className="grid gap-7 border-b border-line p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-start">
         <div>
-          <span className="text-xs uppercase tracking-widest font-semibold text-blue-400">
-            Matching Analysis Result
-          </span>
-          <h2 className="text-2xl font-bold text-white mt-1">
+          <p className="eyebrow">Prototype result</p>
+          <h2 id="match-result-heading" className="mt-3 font-serif text-3xl font-semibold leading-tight">
             {result.program_name}
           </h2>
-          <p className="text-sm text-slate-400">{result.university_name}</p>
+          <p className="mt-2 text-muted">{result.university_name}</p>
         </div>
-
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
-              Overall Compatibility
-            </div>
-            <div className="flex items-center justify-end gap-2 mt-1">
-              <span className="text-4xl font-extrabold text-white tracking-tight">
-                {result.overall_match_percentage.toFixed(0)}%
-              </span>
-            </div>
-          </div>
-
-          {/* Eligibility Badge */}
-          <div
-            className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 border shadow-lg ${
-              result.is_eligible
-                ? "bg-emerald-950/90 text-emerald-300 border-emerald-500/50 shadow-emerald-950/50"
-                : "bg-rose-950/90 text-rose-300 border-rose-500/50 shadow-rose-950/50"
-            }`}
-          >
-            <span
-              className={`w-2.5 h-2.5 rounded-full ${
-                result.is_eligible ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
-              }`}
-            />
-            {result.is_eligible ? "Eligible Target" : "Ineligible / Rejection"}
+        <div className="border-l-4 border-accent pl-5 md:text-right">
+          <p className="text-xs font-semibold uppercase tracking-[0.13em] text-muted">Compatibility</p>
+          <p className="mt-1 font-serif text-5xl font-semibold">{result.overall_match_percentage.toFixed(0)}%</p>
+          <div className={`mt-3 inline-flex items-center gap-2 text-sm font-semibold ${result.is_eligible ? "text-success" : "text-danger"}`}>
+            {result.is_eligible ? <Check size={17} aria-hidden="true" /> : <X size={17} aria-hidden="true" />}
+            {result.is_eligible ? "Backend marks this eligible" : "Backend marks this ineligible"}
           </div>
         </div>
       </div>
 
-      {/* Ineligibility Reasons Warning Box */}
-      {!result.is_eligible && result.ineligibility_reasons.length > 0 && (
-        <div className="p-4 rounded-xl bg-rose-950/50 border border-rose-800/80 text-rose-200 text-xs space-y-1.5">
-          <div className="font-bold flex items-center gap-2 text-rose-300 text-sm">
-            <span>⚠️ Ineligibility Factors Detected:</span>
+      <div className="p-6 sm:p-8">
+        <div className="notice-warning">
+          <p className="font-semibold text-ink">Interpret this result carefully</p>
+          <p className="mt-1 text-muted">
+            This is the current rule-based prototype score. It is not an admission probability and does not include the later cutoff-prediction design.
+          </p>
+        </div>
+
+        {result.ineligibility_reasons.length > 0 && (
+          <div className="mt-7 border border-danger p-5" role="alert">
+            <h3 className="font-serif text-xl font-semibold text-danger">Reasons returned by the backend</h3>
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-muted">
+              {result.ineligibility_reasons.map((reason) => <li key={reason}>{reason}</li>)}
+            </ul>
           </div>
-          <ul className="list-disc list-inside space-y-1 pl-1">
-            {result.ineligibility_reasons.map((reason, idx) => (
-              <li key={idx} className="leading-normal">
-                {reason}
-              </li>
+        )}
+
+        <div className="mt-8">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line pb-3">
+            <h3 className="font-serif text-2xl font-semibold">Factor breakdown</h3>
+            <span className="text-xs text-muted">Values are returned unchanged from the matching endpoint</span>
+          </div>
+          <div className="divide-y divide-quiet">
+            {factors.map(([key, detail]) => (
+              <div key={key} className="grid gap-4 py-5 sm:grid-cols-[1fr_6rem_7rem] sm:items-start">
+                <div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h4 className="font-semibold">{factorLabels[key]}</h4>
+                    <span className={detail.passed_hard_filter ? "text-xs font-semibold text-success" : "text-xs font-semibold text-danger"}>
+                      {detail.passed_hard_filter ? "Passed" : "Did not pass"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-muted">{detail.explanation}</p>
+                </div>
+                <div className="sm:text-right">
+                  <p className="text-xs uppercase tracking-wide text-muted">Factor score</p>
+                  <p className="mt-1 font-serif text-2xl font-semibold">{detail.score.toFixed(1)}%</p>
+                </div>
+                <div className="sm:text-right">
+                  <p className="text-xs uppercase tracking-wide text-muted">Contribution</p>
+                  <p className="mt-1 font-serif text-2xl font-semibold">{detail.weighted_score.toFixed(1)}</p>
+                  <p className="text-xs text-muted">Weight {(detail.weight * 100).toFixed(0)}%</p>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
-      )}
 
-      {/* Factor Score Breakdown Grid */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-          <span>Score Component Breakdown</span>
-          <span className="text-xs font-normal text-slate-500">
-            Deterministic Weights Enforced
-          </span>
-        </h3>
-
-        <div className="grid grid-cols-1 gap-3">
-          {renderFactorRow(
-            "Academic Performance (GPA)",
-            result.breakdown.academic,
-            "Weight: 50%"
-          )}
-          {renderFactorRow(
-            "Financial Budget Feasibility",
-            result.breakdown.budget,
-            "Weight: 30%"
-          )}
-          {renderFactorRow(
-            "English Language Score",
-            result.breakdown.language,
-            "Weight: 20%"
-          )}
-          {renderFactorRow(
-            "Degree Level Match",
-            result.breakdown.degree_level,
-            "Prerequisite Hard Filter"
-          )}
-        </div>
+        {onReset && (
+          <div className="mt-7 border-t border-quiet pt-6">
+            <button type="button" className="button-secondary" onClick={onReset}>Evaluate another profile</button>
+          </div>
+        )}
       </div>
-
-      {onReset && (
-        <div className="pt-2 flex justify-end">
-          <button
-            onClick={onReset}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-all border border-slate-700"
-          >
-            ← Test Another Program
-          </button>
-        </div>
-      )}
-    </div>
+    </section>
   );
-};
+}

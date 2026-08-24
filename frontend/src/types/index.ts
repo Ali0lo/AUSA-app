@@ -1,5 +1,7 @@
 export type DegreeLevel = "bachelor" | "master" | "phd";
 
+export type FeatureState = "available" | "demo" | "experimental" | "unavailable" | "offline";
+
 export interface StudentProfile {
   gpa: number;
   budget: number;
@@ -9,6 +11,12 @@ export interface StudentProfile {
   field_of_study?: string;
   preferred_countries?: string[];
   research_experience?: boolean;
+}
+
+export interface StudentAccountProfile extends StudentProfile {
+  id: number;
+  email: string;
+  country?: string;
 }
 
 export interface ProgramRequirements {
@@ -51,8 +59,8 @@ export interface MatchResult {
 
 export interface DocumentSourceInfo {
   content_snippet: string;
-  source_url?: string;
-  page?: number;
+  source_url?: string | null;
+  page?: number | null;
 }
 
 export interface ChatMessage {
@@ -63,4 +71,33 @@ export interface ChatMessage {
   sources?: DocumentSourceInfo[];
   application_stage?: string;
   missing_documents?: string[];
+}
+
+export interface AgentStateData {
+  student_id: string;
+  target_program_id?: string;
+  application_stage: string;
+  missing_documents: string[];
+  drafted_motivation_letter?: string;
+}
+
+export interface ChatMessageResponse {
+  reply: string;
+  sources?: DocumentSourceInfo[];
+  applicationStage?: string;
+  missingDocs?: string[];
+  draftedLetter?: string;
+}
+
+export interface RegisterPayload extends StudentProfile {
+  email: string;
+  password: string;
+  country?: string;
+}
+
+export interface HealthResponse {
+  status: string;
+  service: string;
+  version: string;
+  environment: string;
 }
