@@ -151,7 +151,7 @@ echo Created backend\.env with local development settings.
 :environment_ready
 
 echo Initializing and seeding the database...
-"%AUSA_VENV_PYTHON%" scripts\seed_db.py
+"%AUSA_VENV_PYTHON%" -m scripts.seed_db
 
 if errorlevel 1 (
     echo ERROR: Database initialization or seeding failed.
