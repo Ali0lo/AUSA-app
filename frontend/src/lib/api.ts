@@ -1,173 +1,389 @@
-import {
+import type {
+  AgentStateData,
+  ChatMessageResponse,
   DocumentSourceInfo,
+  FactorScoreDetail,
+  HealthResponse,
   MatchResult,
   ProgramRequirements,
-  StudentProfile,
+  RegisterPayload,
+  StudentAccountProfile,
+  StudentProfile
 } from "@/types";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+export const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
+).replace(/\/+$/, "");
 
-/**
- * Fetch authenticated student profile from /api/v1/auth/me.
- */
-export async function fetchCurrentStudentProfile(
-  token: string
-): Promise<StudentProfile & { id: number; email: string }> {
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export type ApiErrorKind = "offline" | "timeout" | "http" | "invalid-response";
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.detail || `Profile fetch failed with status ${response.status}`
-    );
+export class ApiError extends Error {
+  status?: number;
+  kind: ApiErrorKind;
+
+  constructor(message: string, kind: ApiErrorKind, status?: number) {
+    super(message);
+    this.name = "ApiError";
+    this.kind = kind;
+    this.status = status;
   }
-
-  return response.json();
 }
 
-export interface AgentStateData {
-  student_id: string;
-  target_program_id?: string;
-  application_stage: string;
-  missing_documents: string[];
-  drafted_motivation_letter?: string;
+export interface UserFacingError {
+  title: string;
+  message: string;
 }
 
-/**
- * Fetch current LangGraph agent state (stage, missing docs, generated letter).
- */
-export async function fetchAgentState(
-  studentId: string = "std_demo",
-  programId: string = "prog_101",
-  token?: string
-): Promise<AgentStateData> {
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
+const REQUEST_TIMEOUT_MS = 12000;
 
-  const response = await fetch(
-    `${API_BASE_URL}/chat/agent/state?student_id=${studentId}&target_program_id=${programId}`,
-    { headers }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isOptionalNumber(value: unknown): value is number | null | undefined {
+  return value === undefined || value === null || isNumber(value);
+}
+
+function isOptionalString(value: unknown): value is string | null | undefined {
+  return value === undefined || value === null || typeof value === "string";
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isDegree(value: unknown): value is StudentProfile["degree_level"] {
+  return value === "bachelor" || value === "master" || value === "phd";
+}
+
+function invalidResponse(feature: string): never {
+  throw new ApiError(
+    `The backend response for ${feature} did not match the documented API contract.`,
+    "invalid-response"
   );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch agent state.");
-  }
-
-  return response.json();
 }
 
-/**
- * Send student profile and target program requirements to backend deterministic matching engine.
- */
+function validationDetail(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (!Array.isArray(value)) return null;
+
+  const messages = value
+    .map((item) => {
+      if (!isRecord(item) || typeof item.msg !== "string") return null;
+      const location = Array.isArray(item.loc)
+        ? item.loc.filter((part) => typeof part === "string" || typeof part === "number").join(" → ")
+        : "request";
+      return `${location}: ${item.msg}`;
+    })
+    .filter((message): message is string => Boolean(message));
+
+  return messages.length ? messages.join("; ") : null;
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        ...options.headers
+      }
+    });
+
+    const raw = await response.text();
+    let data: unknown = null;
+
+    if (raw) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        if (response.ok) {
+          throw new ApiError("The backend returned data that was not valid JSON.", "invalid-response", response.status);
+        }
+      }
+    }
+
+    if (!response.ok) {
+      const detail = isRecord(data) ? validationDetail(data.detail) : null;
+      throw new ApiError(detail || `The backend returned status ${response.status}.`, "http", response.status);
+    }
+
+    return data as T;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError("The backend did not respond within 12 seconds.", "timeout");
+    }
+    throw new ApiError("The AUSA backend could not be reached.", "offline");
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function authHeaders(token?: string): Record<string, string> {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function isFactor(value: unknown): value is FactorScoreDetail {
+  return (
+    isRecord(value) &&
+    isNumber(value.score) &&
+    isNumber(value.weight) &&
+    isNumber(value.weighted_score) &&
+    typeof value.passed_hard_filter === "boolean" &&
+    typeof value.explanation === "string"
+  );
+}
+
+function isSource(value: unknown): value is DocumentSourceInfo {
+  return (
+    isRecord(value) &&
+    typeof value.content_snippet === "string" &&
+    isOptionalString(value.source_url) &&
+    isOptionalNumber(value.page)
+  );
+}
+
+function assertHealth(data: unknown): asserts data is HealthResponse {
+  if (
+    !isRecord(data) ||
+    typeof data.status !== "string" ||
+    typeof data.service !== "string" ||
+    typeof data.version !== "string" ||
+    typeof data.environment !== "string"
+  ) {
+    invalidResponse("health check");
+  }
+}
+
+function assertStudent(data: unknown): asserts data is StudentAccountProfile {
+  if (
+    !isRecord(data) ||
+    !isNumber(data.id) ||
+    typeof data.email !== "string" ||
+    !isNumber(data.gpa) ||
+    !isNumber(data.budget) ||
+    !isDegree(data.degree_level) ||
+    !isOptionalNumber(data.ielts) ||
+    !isOptionalNumber(data.toefl) ||
+    !isOptionalString(data.field_of_study) ||
+    !isOptionalString(data.country)
+  ) {
+    invalidResponse("student profile");
+  }
+}
+
+function assertToken(data: unknown): asserts data is { access_token: string; token_type: string } {
+  if (!isRecord(data) || typeof data.access_token !== "string" || typeof data.token_type !== "string") {
+    invalidResponse("account registration");
+  }
+}
+
+function assertMatch(data: unknown): asserts data is MatchResult {
+  if (
+    !isRecord(data) ||
+    typeof data.program_name !== "string" ||
+    typeof data.university_name !== "string" ||
+    !isNumber(data.overall_match_percentage) ||
+    typeof data.is_eligible !== "boolean" ||
+    !isStringArray(data.ineligibility_reasons) ||
+    !isRecord(data.breakdown) ||
+    !isFactor(data.breakdown.degree_level) ||
+    !isFactor(data.breakdown.academic) ||
+    !isFactor(data.breakdown.budget) ||
+    !isFactor(data.breakdown.language)
+  ) {
+    invalidResponse("prototype matching");
+  }
+}
+
+function assertAgentState(data: unknown): asserts data is AgentStateData {
+  if (
+    !isRecord(data) ||
+    typeof data.student_id !== "string" ||
+    !isOptionalString(data.target_program_id) ||
+    typeof data.application_stage !== "string" ||
+    !isStringArray(data.missing_documents) ||
+    !isOptionalString(data.drafted_motivation_letter)
+  ) {
+    invalidResponse("application state");
+  }
+}
+
+export function getUserFacingError(error: unknown, feature: string): UserFacingError {
+  if (error instanceof ApiError) {
+    if (error.kind === "offline") {
+      return {
+        title: "Backend unavailable",
+        message: `The AUSA API could not be reached. ${feature} is disabled until the backend is running.`
+      };
+    }
+    if (error.kind === "timeout") {
+      return {
+        title: "Request timed out",
+        message: `${feature} took longer than 12 seconds. Check the backend and try again.`
+      };
+    }
+    if (error.kind === "invalid-response") {
+      return {
+        title: "Unexpected backend response",
+        message: error.message
+      };
+    }
+    if (error.status === 401) {
+      return {
+        title: "Authentication required",
+        message: "The backend rejected the current credentials or session. Sign in again and retry."
+      };
+    }
+    if (error.status === 404 || error.status === 501) {
+      return {
+        title: "Feature unavailable",
+        message: `${feature} is not implemented by the connected backend.`
+      };
+    }
+    if (error.status === 422) {
+      return {
+        title: "Invalid request",
+        message: error.message
+      };
+    }
+    return {
+      title: "Backend error",
+      message: error.message
+    };
+  }
+
+  return {
+    title: "Unexpected error",
+    message: `${feature} failed unexpectedly. Try again or check the browser console.`
+  };
+}
+
+export async function fetchHealth(): Promise<HealthResponse> {
+  const data = await request<unknown>("/health");
+  assertHealth(data);
+  return data;
+}
+
+export async function fetchCurrentStudentProfile(token: string): Promise<StudentAccountProfile> {
+  const data = await request<unknown>("/auth/me", {
+    headers: authHeaders(token)
+  });
+  assertStudent(data);
+  return data;
+}
+
+export async function registerStudent(payload: RegisterPayload): Promise<{ access_token: string; token_type: string }> {
+  const data = await request<unknown>("/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  assertToken(data);
+  return data;
+}
+
 export async function fetchMatchScore(
   student: StudentProfile,
   program: ProgramRequirements,
   token?: string
 ): Promise<MatchResult> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}/matching/evaluate`, {
+  const data = await request<unknown>("/matching/evaluate", {
     method: "POST",
-    headers,
-    body: JSON.stringify({ student, program }),
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token)
+    },
+    body: JSON.stringify({ student, program })
   });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.detail || `Matching request failed with status ${response.status}`
-    );
-  }
-
-  return response.json();
+  assertMatch(data);
+  return data;
 }
 
-export interface ChatMessageResponse {
-  reply: string;
-  sources?: DocumentSourceInfo[];
-  applicationStage?: string;
-  missingDocs?: string[];
-  draftedLetter?: string;
+export async function fetchAgentState(
+  studentId = "std_demo",
+  programId = "prog_101",
+  token?: string
+): Promise<AgentStateData> {
+  const query = new URLSearchParams({
+    student_id: studentId,
+    target_program_id: programId
+  });
+  const data = await request<unknown>(`/chat/agent/state?${query.toString()}`, {
+    headers: authHeaders(token)
+  });
+  assertAgentState(data);
+  return data;
 }
 
-/**
- * Send chat message to backend (RAG guidelines Q&A or LangGraph stateful application agent).
- */
 export async function sendChatMessage(
   message: string,
   type: "rag" | "agent",
-  studentId: string = "std_demo",
+  studentId = "std_demo",
   programId?: string,
   token?: string
 ): Promise<ChatMessageResponse> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
   if (type === "rag") {
-    const response = await fetch(`${API_BASE_URL}/chat/ask`, {
+    const data = await request<unknown>("/chat/ask", {
       method: "POST",
-      headers,
-      body: JSON.stringify({
-        question: message,
-        top_k: 5,
-      }),
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(token)
+      },
+      body: JSON.stringify({ question: message, top_k: 5 })
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.detail || `RAG Q&A request failed with status ${response.status}`
-      );
+    if (
+      !isRecord(data) ||
+      typeof data.answer !== "string" ||
+      !Array.isArray(data.sources) ||
+      !data.sources.every(isSource)
+    ) {
+      invalidResponse("AI advisor");
     }
 
-    const data = await response.json();
     return {
       reply: data.answer,
-      sources: data.sources || [],
-    };
-  } else {
-    // Agent endpoint
-    const response = await fetch(`${API_BASE_URL}/chat/agent`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        message,
-        student_id: studentId,
-        target_program_id: programId || "prog_demo",
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.detail || `Agent request failed with status ${response.status}`
-      );
-    }
-
-    const data = await response.json();
-    return {
-      reply: data.response,
-      applicationStage: data.application_stage,
-      missingDocs: data.missing_documents || [],
-      draftedLetter: data.drafted_motivation_letter,
+      sources: data.sources
     };
   }
+
+  const data = await request<unknown>("/chat/agent", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token)
+    },
+    body: JSON.stringify({
+      message,
+      student_id: studentId,
+      target_program_id: programId || "prog_demo"
+    })
+  });
+
+  if (
+    !isRecord(data) ||
+    typeof data.response !== "string" ||
+    typeof data.application_stage !== "string" ||
+    !isStringArray(data.missing_documents) ||
+    !isOptionalString(data.drafted_motivation_letter)
+  ) {
+    invalidResponse("application assistant");
+  }
+
+  return {
+    reply: data.response,
+    applicationStage: data.application_stage,
+    missingDocs: data.missing_documents,
+    draftedLetter: data.drafted_motivation_letter || undefined
+  };
 }
