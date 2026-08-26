@@ -102,7 +102,7 @@ npm run build
 
 ---
 
-## 💻 Key Technical Engineering Accomplishments (Ali Iskandarli)
+## 💻 Key Technical Engineering Accomplishments (My part)
 
 - **Scholarship-First Net-Cost Matching Architecture ([ADR-0005](docs/adr/0005-scholarship-first-net-cost-evaluation.md))**: Designed and implemented the evaluation algorithm that calculates eligible institutional & state scholarships prior to executing hard budget filters.
 - **Predictive Machine Learning Admission Models ([ADR-0001](docs/adr/0001-ml-predictive-cutoff-layer.md) & [ADR-0002](docs/adr/0002-data-science-training-pipeline.md))**: Developed and serialized Random Forest classifier pipelines to infer admission probability for Turkey (YKS) and US (SAT/GPA) programs, integrating them into FastAPI via an in-memory singleton predictor service.
