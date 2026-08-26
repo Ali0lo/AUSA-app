@@ -1,5 +1,6 @@
 import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { StudentAccountProfile } from "@/types";
 
 const API_BASE_URL =
@@ -18,6 +19,10 @@ async function readDetail(response: Response, fallback: string): Promise<string>
 
 const authOptions: AuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || ""
+    }),
     CredentialsProvider({
       name: "Email and password",
       credentials: {
