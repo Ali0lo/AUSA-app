@@ -1,0 +1,56 @@
+services:
+  # -------------------------------------------------------------
+  # PostgreSQL 16 Database with pgvector Extension
+  # -------------------------------------------------------------
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: ausa_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ausa_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ausa_secure_password_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-ausa_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ausa_user} -d ${POSTGRES_DB:-ausa_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ausa_network
+
+  # -------------------------------------------------------------
+  # FastAPI Application Backend Service
+  # -------------------------------------------------------------
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ausa_fastapi_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-ausa_user}:${POSTGRES_PASSWORD:-ausa_secure_password_2026}@db:5432/${POSTGRES_DB:-ausa_db}
+      - SECRET_KEY=${SECRET_KEY:-change_this_super_secret_jwt_key_in_production}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ausa_network
+
+volumes:
+  postgres_prod_data:
+    driver: local
+
+networks:
+  ausa_network:
+    driver: bridge

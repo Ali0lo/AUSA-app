@@ -1,0 +1,95 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # -------------------------------------------------------------
+  # Backend Job: Install dependencies & run pytest suite
+  # -------------------------------------------------------------
+  test-backend:
+    name: Backend Lint & Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install System & Python Dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx python-multipart
+
+      - name: Set up Dummy Environment File
+        run: |
+          cd backend
+          echo "ENVIRONMENT=testing" > .env
+          echo "LOG_LEVEL=info" >> .env
+          echo "DATABASE_URL=sqlite+aiosqlite:///:memory:" >> .env
+          echo "SECRET_KEY=testing_secret_key_ci_cd_pipeline_2026" >> .env
+          echo "ALGORITHM=HS256" >> .env
+          echo "ACCESS_TOKEN_EXPIRE_MINUTES=60" >> .env
+          echo "OPENAI_API_KEY=sk-proj-mock-ci-key-for-testing" >> .env
+
+      - name: Run Pytest Test Suite
+        env:
+          PYTHONPATH: backend
+          DEBUG: "true"
+          ENVIRONMENT: "testing"
+          SECRET_KEY: "testing_secret_key_ci_cd_pipeline_2026"
+          OPENAI_API_KEY: "sk-proj-mock-ci-key-for-testing"
+        run: |
+          cd backend
+          pytest tests/
+
+  # -------------------------------------------------------------
+  # Frontend Job: Install dependencies, lint, and dry-run build
+  # -------------------------------------------------------------
+  test-frontend:
+    name: Frontend Lint & Dry-Run Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run Next.js Linter
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: Run Dry-Run Production Build
+        env:
+          NEXT_PUBLIC_API_URL: "http://localhost:8000/api/v1"
+          NEXTAUTH_URL: "http://localhost:3000"
+          NEXTAUTH_SECRET: "ci_nextauth_testing_secret_2026"
+        run: |
+          cd frontend
+          npm run build
+
