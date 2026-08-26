@@ -1,44 +1,42 @@
-import os
+import asyncio
 import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # Ensure backend root directory is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+backend_dir = str(Path(__file__).parent.parent)
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
-# Import Base metadata and all registered ORM models
 from app.core.config import settings
 from app.core.database import Base
-from app.models.document import UniversityDocument
-from app.models.program import Program
-from app.models.scholarship import Scholarship
-from app.models.student import Student
+import app.models  # Import all SQLAlchemy ORM models into Base.metadata
 
-# Alembic config object
+# Alembic Config object
 config = context.config
 
-# Interpret the config file for Python logging
+# Setup Python logging
 if config.config_file_name:
     fileConfig(config.config_file_name)
 
-# Target metadata for autogenerate support
+# Set target_metadata for autogenerate support
 target_metadata = Base.metadata
 
-
-def get_url() -> str:
-    """Retrieve database connection URL for migrations."""
-    db_url = getattr(settings, "SYNC_DATABASE_URL", None) or settings.DATABASE_URL
-    # Ensure sync driver for Alembic migration execution if asyncpg was passed
-    if db_url.startswith("postgresql+asyncpg://"):
-        db_url = db_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
-    return db_url
+# Set dynamic Database URL from settings (ensuring asyncpg driver)
+database_url = settings.DATABASE_URL
+if database_url.startswith("postgresql://"):
+    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+config.set_main_option("sqlalchemy.url", database_url)
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
-    url = get_url()
+    """Run migrations in 'offline' mode without an active engine connection."""
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -50,25 +48,35 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-    configuration = config.get_section(config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = get_url()
-    
-    connectable = engine_from_config(
-        configuration,
+def do_run_migrations(connection: Connection) -> None:
+    """Execute migrations within the context of a sync connection wrapper."""
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+async def run_async_migrations() -> None:
+    """In-process async migration runner using asyncpg driver."""
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-        )
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
 
-        with context.begin_transaction():
-            context.run_migrations()
+    await connectable.dispose()
+
+
+def run_migrations_online() -> None:
+    """Run migrations in 'online' mode using asyncio event loop."""
+    asyncio.run(run_async_migrations())
 
 
 if context.is_offline_mode():
