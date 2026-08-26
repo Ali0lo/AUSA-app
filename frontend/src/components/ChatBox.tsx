@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowUp, ExternalLink, RefreshCw } from "lucide-react";
+import { ArrowUp, ExternalLink, Paperclip, RefreshCw, X } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { getUserFacingError, sendChatMessage, UserFacingError } from "@/lib/api";
+import { getUserFacingError, sendChatMessage, uploadDocumentAndChat, UserFacingError } from "@/lib/api";
 import { safeExternalUrl, timestamp } from "@/lib/format";
-import { ChatMessage } from "@/types";
+import { ChatMessage, StudentProfile } from "@/types";
 
 interface ChatBoxProps {
   studentId?: string;
@@ -12,6 +12,7 @@ interface ChatBoxProps {
   lockedMode?: "rag" | "agent";
   token?: string;
   onStateUpdate?: (stage: string, missingDocs: string[], draftedLetter?: string) => void;
+  onProfileUpdate?: (updatedProfile: Partial<StudentProfile>) => void;
 }
 
 export function ChatBox({
@@ -19,14 +20,17 @@ export function ChatBox({
   programId = "prog_101",
   lockedMode,
   token,
-  onStateUpdate
+  onStateUpdate,
+  onProfileUpdate
 }: ChatBoxProps) {
   const [mode, setMode] = useState<"rag" | "agent">(lockedMode || "rag");
   const [input, setInput] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<UserFacingError | null>(null);
   const [lastSubmitted, setLastSubmitted] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const activeMode = lockedMode || mode;
 
@@ -36,13 +40,18 @@ export function ChatBox({
 
   async function send(text: string, appendUserMessage = true) {
     const clean = text.trim();
-    if (!clean || isLoading) return;
+    if ((!clean && !selectedFile) || isLoading) return;
+
+    const displayContent = selectedFile
+      ? `${clean ? clean + "\n" : ""}[Attached Document: ${selectedFile.name}]`
+      : clean;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: clean,
-      timestamp: timestamp()
+      content: displayContent,
+      timestamp: timestamp(),
+      attachment_name: selectedFile?.name
     };
 
     if (appendUserMessage) setMessages((current) => [...current, userMessage]);
@@ -52,7 +61,13 @@ export function ChatBox({
     setIsLoading(true);
 
     try {
-      const response = await sendChatMessage(clean, activeMode, studentId, programId, token);
+      let response;
+      if (selectedFile) {
+        response = await uploadDocumentAndChat(selectedFile, clean, studentId, programId, token);
+      } else {
+        response = await sendChatMessage(clean, activeMode, studentId, programId, token);
+      }
+
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
@@ -64,6 +79,8 @@ export function ChatBox({
       };
       setMessages((current) => [...current, assistantMessage]);
       setLastSubmitted(null);
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
 
       if (onStateUpdate && (response.applicationStage || response.missingDocs || response.draftedLetter)) {
         onStateUpdate(
@@ -71,6 +88,10 @@ export function ChatBox({
           response.missingDocs || [],
           response.draftedLetter
         );
+      }
+
+      if (onProfileUpdate && response.updatedProfile) {
+        onProfileUpdate(response.updatedProfile);
       }
     } catch (sendError) {
       setError(getUserFacingError(sendError, activeMode === "rag" ? "AI advisor" : "Application assistant"));
@@ -90,6 +111,7 @@ export function ChatBox({
     setError(null);
     setLastSubmitted(null);
     setInput("");
+    setSelectedFile(null);
   }
 
   return (
@@ -98,7 +120,7 @@ export function ChatBox({
         <div>
           <h2 className="font-serif text-2xl font-semibold">{activeMode === "rag" ? "Ask the document advisor" : "Application assistant"}</h2>
           <p className="mt-1 text-sm text-muted">
-            {activeMode === "rag" ? "Answers depend on retrieved university documents." : "Agent tools currently use demonstration records."}
+            {activeMode === "rag" ? "Answers depend on retrieved university documents." : "Upload academic documents (PDFs, transcripts) to parse metrics and update your profile."}
           </p>
         </div>
         {!lockedMode && (
@@ -126,11 +148,11 @@ export function ChatBox({
       <div className="flex-1 space-y-5 overflow-y-auto bg-[#f8f5ef] p-5" role="log" aria-live="polite" aria-relevant="additions">
         {messages.length === 0 && (
           <div className="max-w-2xl border-l-4 border-accent bg-paper p-5">
-            <p className="font-serif text-xl font-semibold">Start with one precise question.</p>
+            <p className="font-serif text-xl font-semibold">Start with one precise question or upload a document.</p>
             <p className="mt-2 text-sm leading-6 text-muted">
               {activeMode === "rag"
                 ? "If no document supports the answer, the backend should return that it does not have the information."
-                : "Ask about missing documents, a programme deadline, or a motivation-letter draft."}
+                : "Ask about missing documents, deadlines, or attach your transcript/certificate PDF to auto-update your profile."}
             </p>
           </div>
         )}
@@ -170,7 +192,7 @@ export function ChatBox({
           </article>
         ))}
 
-        {isLoading && <p className="text-sm font-semibold text-muted" role="status">Waiting for the backend response</p>}
+        {isLoading && <p className="text-sm font-semibold text-muted" role="status">Waiting for the backend response...</p>}
 
         {error && (
           <div className="border border-danger bg-paper p-5" role="alert">
@@ -188,6 +210,27 @@ export function ChatBox({
       </div>
 
       <form onSubmit={submit} className="border-t border-line bg-paper p-4">
+        {selectedFile && (
+          <div className="mb-3 flex items-center justify-between border border-accent bg-[#f4efe6] px-3 py-1.5 text-xs font-semibold text-ink">
+            <div className="flex items-center gap-2">
+              <Paperclip size={14} className="text-accent" />
+              <span>{selectedFile.name}</span>
+              <span className="text-muted">({Math.round(selectedFile.size / 1024)} KB)</span>
+            </div>
+            <button
+              type="button"
+              className="text-muted hover:text-danger"
+              onClick={() => {
+                setSelectedFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+              title="Remove attachment"
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
         <label className="field-label" htmlFor={`chat-input-${activeMode}`}>
           {activeMode === "rag" ? "Question" : "Message to the application agent"}
         </label>
@@ -197,16 +240,45 @@ export function ChatBox({
             className="field min-h-24 resize-y"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder={activeMode === "rag" ? "What is the IELTS requirement?" : "What documents am I missing?"}
+            placeholder={
+              activeMode === "rag"
+                ? "What is the IELTS requirement?"
+                : "Ask a question or upload a transcript PDF (📎 button) to auto-update your profile..."
+            }
             maxLength={2000}
           />
-          <button type="submit" className="button-primary sm:min-h-24 sm:w-28" disabled={!input.trim() || isLoading}>
-            <ArrowUp size={18} aria-hidden="true" />
-            {isLoading ? "Sending" : "Send"}
-          </button>
+          <div className="flex items-center gap-2 sm:flex-col sm:items-stretch">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.txt,.doc,.docx"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) setSelectedFile(file);
+              }}
+            />
+            <button
+              type="button"
+              className="button-secondary min-h-11 sm:min-h-11"
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach document PDF"
+            >
+              <Paperclip size={18} aria-hidden="true" />
+              <span className="hidden sm:inline">Attach</span>
+            </button>
+            <button
+              type="submit"
+              className="button-primary min-h-11 sm:min-h-12 sm:w-28"
+              disabled={(!input.trim() && !selectedFile) || isLoading}
+            >
+              <ArrowUp size={18} aria-hidden="true" />
+              {isLoading ? "Sending" : "Send"}
+            </button>
+          </div>
         </div>
         <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
-          <span>{activeMode === "rag" ? "No external web knowledge is requested by this interface." : "Application submission is not supported."}</span>
+          <span>{activeMode === "rag" ? "No external web knowledge is requested." : "Attach PDF transcript to extract GPA and IELTS scores automatically."}</span>
           <span>{input.length}/2000</span>
         </div>
       </form>

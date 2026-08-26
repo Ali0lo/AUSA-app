@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
 from pydantic import BaseModel, Field, field_validator
 
 DegreeLevel = Literal["bachelor", "master", "phd"]
@@ -45,6 +45,19 @@ class ProgramRequirements(BaseModel):
         return v
 
 
+class ScholarshipSchema(BaseModel):
+    """Scholarship schema model for scholarship opportunities."""
+    id: Optional[int] = Field(None, description="Scholarship database primary key ID")
+    name: str = Field(..., description="Official scholarship name")
+    provider: Optional[str] = Field(None, description="Provider or organization name")
+    country: Optional[str] = Field(None, description="Target host country")
+    degree_level: Optional[str] = Field(None, description="Eligible degree level")
+    min_gpa: Optional[float] = Field(None, ge=0.0, le=4.0, description="Minimum required GPA")
+    min_ielts: Optional[float] = Field(None, ge=0.0, le=9.0, description="Minimum required IELTS score")
+    amount: Union[float, int, str] = Field(..., description="Scholarship amount (fixed numeric, string description, or full-ride)")
+    eligibility_text: Optional[str] = Field(None, description="Eligibility criteria text")
+
+
 class FactorScoreDetail(BaseModel):
     """Detailed score breakdown and explainable message for a single matching factor."""
     score: float = Field(..., ge=0.0, le=100.0, description="Unweighted factor score (0-100%)")
@@ -63,10 +76,17 @@ class MatchBreakdown(BaseModel):
 
 
 class MatchResult(BaseModel):
-    """Final deterministic match evaluation result."""
+    """Final deterministic match evaluation result with net-cost, scholarship, and ML admission probability support."""
     program_name: str = Field(..., description="Program name evaluated")
     university_name: str = Field(..., description="University name evaluated")
     overall_match_percentage: float = Field(..., ge=0.0, le=100.0, description="Final overall match percentage (0-100%)")
     is_eligible: bool = Field(..., description="Boolean indicating overall eligibility")
     ineligibility_reasons: List[str] = Field(default_factory=list, description="List of reasons if ineligible")
     breakdown: MatchBreakdown = Field(..., description="Detailed breakdown explaining factor scores")
+    original_tuition: float = Field(default=0.0, ge=0.0, description="Original sticker tuition fee before scholarship")
+    scholarship_applied: bool = Field(default=False, description="Whether a scholarship was applied to reduce tuition")
+    scholarship_name: Optional[str] = Field(None, description="Name of applied scholarship if eligible")
+    scholarship_amount: float = Field(default=0.0, ge=0.0, description="Scholarship discount or coverage amount applied")
+    net_cost: float = Field(default=0.0, ge=0.0, description="Effective net tuition cost after scholarship application")
+    admission_probability: Optional[float] = Field(None, ge=0.0, le=1.0, description="ML predicted admission probability (0.0 to 1.0)")
+    admission_prediction_rationale: Optional[str] = Field(None, description="Explainable rationale text for ML cutoff prediction")

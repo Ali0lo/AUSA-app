@@ -1,7 +1,11 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from app.data_pipeline.extraction import ExtractedProgramData, extract_program_info_from_text
-from app.data_pipeline.jobs import refresh_university_data_job
+from app.data_pipeline.jobs import (
+    refresh_azerbaijan_data_job,
+    refresh_germany_data_job,
+    refresh_university_data_job,
+)
 from app.data_pipeline.scraper import fetch_page_content
 
 
@@ -13,12 +17,15 @@ def test_extracted_program_data_schema():
         min_gpa=3.2,
         tuition_fee_usd=12000.0,
         min_ielts=6.5,
-        confidence_score=95.0
+        confidence_score=95.0,
+        requires_studienkolleg=False,
+        blocked_account_eur=11208.0
     )
     assert data.university_name == "TU Munich"
     assert data.degree_level == "master"
     assert data.confidence_score == 95.0
     assert data.min_gpa == 3.2
+    assert data.blocked_account_eur == 11208.0
 
 
 @pytest.mark.asyncio
@@ -61,13 +68,22 @@ async def test_extract_program_info_from_text_fallback():
 
 
 @pytest.mark.asyncio
-async def test_refresh_university_data_job():
-    urls = ["https://example.edu/cs-masters"]
-    results = await refresh_university_data_job(urls=urls)
-    
-    assert len(results) == 1
-    record = results[0]
-    assert record["status"] == "success"
-    assert "verification_status" in record
-    assert "last_updated" in record
-    assert record["confidence_score"] >= 0.0
+async def test_refresh_germany_data_job():
+    results = await refresh_germany_data_job(min_confidence_threshold=85.0)
+    assert len(results) >= 1
+    for rec in results:
+        assert rec["country"] == "Germany"
+        assert rec["status"] == "success"
+        assert rec["verification_status"] in ["verified", "flagged_for_review"]
+        assert "blocked_account_eur" in rec["extracted_data"]
+
+
+@pytest.mark.asyncio
+async def test_refresh_azerbaijan_data_job():
+    results = await refresh_azerbaijan_data_job(min_confidence_threshold=85.0)
+    assert len(results) >= 1
+    for rec in results:
+        assert rec["country"] == "Azerbaijan"
+        assert rec["status"] == "success"
+        assert rec["verification_status"] in ["verified", "flagged_for_review"]
+        assert "dim_score_required" in rec

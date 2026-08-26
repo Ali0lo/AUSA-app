@@ -1,4 +1,5 @@
-from typing import List
+from typing import Any, List, Optional
+
 from app.schemas.matching import (
     FactorScoreDetail,
     MatchBreakdown,
@@ -6,10 +7,13 @@ from app.schemas.matching import (
     ProgramRequirements,
     StudentProfile,
 )
+from app.services.matching.prediction import admission_predictor
 from app.services.matching.scoring import (
     calculate_academic_score,
     calculate_budget_score,
     calculate_language_score,
+    calculate_net_cost,
+    parse_scholarship_amount,
 )
 
 # Standard Default Weights
@@ -24,15 +28,22 @@ def evaluate_match(
     weight_academic: float = WEIGHT_ACADEMIC,
     weight_budget: float = WEIGHT_BUDGET,
     weight_language: float = WEIGHT_LANGUAGE,
+    available_scholarships: Optional[List[Any]] = None,
 ) -> MatchResult:
     """
-    Main deterministic matching engine function.
-    
-    1. Evaluates strict Hard Filters (Degree Level, strict cutoffs).
-    2. Calculates Soft Ranking weighted scores across Academic, Budget, and Language.
-    3. Produces a 100% explainable MatchResult detailing overall percentage and component breakdown.
+    Main deterministic matching engine function with:
+    1. Scholarship-First Net-Cost Evaluation (ADR-0005).
+    2. Predictive Cutoff Machine Learning Inference (ADR-0001 & ADR-0002).
+
+    Steps:
+    1. Evaluates strict Hard Filters (Degree Level mismatch).
+    2. Calculates Net Cost by evaluating eligible scholarships *before* applying budget filters.
+    3. Runs ML admission cutoff prediction model for Turkey/USA programs.
+    4. Evaluates Soft Ranking weighted scores across Academic (50%), Net Budget (30%), and Language (20%).
+    5. Produces an explainable MatchResult detailing net-cost, scholarship metadata, and ML admission probability.
     """
     ineligibility_reasons: List[str] = []
+    original_tuition = program.tuition_fee
 
     # -------------------------------------------------------------
     # Step 1: Degree Level Hard Filter Evaluation
@@ -63,6 +74,58 @@ def evaluate_match(
         explanation=degree_explanation,
     )
 
+    # -------------------------------------------------------------
+    # Step 2: Scholarship-First Net-Cost Calculation (ADR-0005)
+    # -------------------------------------------------------------
+    net_cost, applied_scholarship = calculate_net_cost(
+        program_tuition=original_tuition,
+        student_profile=student,
+        available_scholarships=available_scholarships or [],
+    )
+
+    scholarship_applied = False
+    scholarship_name: Optional[str] = None
+    scholarship_amount = 0.0
+
+    if applied_scholarship is not None:
+        scholarship_applied = True
+        scholarship_name = (
+            getattr(applied_scholarship, "name", None)
+            or (applied_scholarship.get("name") if isinstance(applied_scholarship, dict) else "Scholarship")
+        )
+        raw_amt = (
+            getattr(applied_scholarship, "amount", None)
+            if not isinstance(applied_scholarship, dict)
+            else applied_scholarship.get("amount")
+        )
+        scholarship_amount = min(parse_scholarship_amount(raw_amt, original_tuition), original_tuition)
+
+    # -------------------------------------------------------------
+    # Step 3: ML Admission Cutoff Prediction (ADR-0001 & ADR-0002)
+    # -------------------------------------------------------------
+    probability = admission_predictor.calculate_admission_probability(
+        student_profile=student,
+        program=program
+    )
+    prob_pct = int(round(probability * 100))
+    country_upper = (program.country or "").upper().strip()
+
+    if "TURKEY" in country_upper or "TÜRKIYE" in country_upper or country_upper == "TR":
+        prediction_rationale = (
+            f"Based on historical data from 2019-2024, students with your profile have an "
+            f"estimated {prob_pct}% probability of meeting the cutoff for this program."
+        )
+    elif "UNITED STATES" in country_upper or "USA" in country_upper or country_upper == "US":
+        prediction_rationale = (
+            f"Based on historical US College Scorecard data, students with your profile have an "
+            f"estimated {prob_pct}% probability of admission to this program."
+        )
+    else:
+        prediction_rationale = (
+            f"Based on academic benchmark analysis, students with your profile have an "
+            f"estimated {prob_pct}% probability of admission to this program."
+        )
+
     # If degree level hard filter fails, short-circuit soft ranking to 0% match
     if not degree_passed:
         empty_academic = FactorScoreDetail(
@@ -86,10 +149,17 @@ def evaluate_match(
                 budget=empty_budget,
                 language=empty_language,
             ),
+            original_tuition=original_tuition,
+            scholarship_applied=scholarship_applied,
+            scholarship_name=scholarship_name,
+            scholarship_amount=scholarship_amount,
+            net_cost=net_cost,
+            admission_probability=probability,
+            admission_prediction_rationale=prediction_rationale,
         )
 
     # -------------------------------------------------------------
-    # Step 2: Individual Factor Scoring (Academic, Budget, Language)
+    # Step 4: Individual Factor Scoring (Academic, Net Budget, Language)
     # -------------------------------------------------------------
     acad_score, acad_exp, acad_passed = calculate_academic_score(
         student_gpa=student.gpa, required_gpa=program.min_gpa
@@ -97,10 +167,14 @@ def evaluate_match(
     if not acad_passed:
         ineligibility_reasons.append(f"Academic requirement not met: {acad_exp}")
 
+    # Evaluate budget score using net_cost instead of original sticker tuition
     budg_score, budg_exp, budg_passed = calculate_budget_score(
         student_budget=student.budget,
-        program_tuition=program.tuition_fee,
+        program_tuition=net_cost,
         currency=program.currency,
+        scholarship_name=scholarship_name,
+        scholarship_amount=scholarship_amount,
+        original_tuition=original_tuition,
     )
     if not budg_passed:
         ineligibility_reasons.append(f"Budget constraint not met: {budg_exp}")
@@ -115,7 +189,7 @@ def evaluate_match(
         ineligibility_reasons.append(f"Language proficiency requirement not met: {lang_exp}")
 
     # -------------------------------------------------------------
-    # Step 3: Weighted Soft Ranking Calculation
+    # Step 5: Weighted Soft Ranking Calculation
     # -------------------------------------------------------------
     acad_weighted = round(acad_score * weight_academic, 2)
     budg_weighted = round(budg_score * weight_budget, 2)
@@ -162,4 +236,11 @@ def evaluate_match(
             budget=budget_factor,
             language=language_factor,
         ),
+        original_tuition=original_tuition,
+        scholarship_applied=scholarship_applied,
+        scholarship_name=scholarship_name,
+        scholarship_amount=scholarship_amount,
+        net_cost=net_cost,
+        admission_probability=probability,
+        admission_prediction_rationale=prediction_rationale,
     )
