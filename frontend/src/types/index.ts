@@ -55,6 +55,13 @@ export interface MatchResult {
   is_eligible: boolean;
   ineligibility_reasons: string[];
   breakdown: MatchBreakdown;
+  original_tuition?: number;
+  scholarship_applied?: boolean;
+  scholarship_name?: string | null;
+  scholarship_amount?: number;
+  net_cost?: number;
+  admission_probability?: number | null;
+  admission_prediction_rationale?: string | null;
 }
 
 export interface DocumentSourceInfo {
@@ -71,6 +78,7 @@ export interface ChatMessage {
   sources?: DocumentSourceInfo[];
   application_stage?: string;
   missing_documents?: string[];
+  attachment_name?: string;
 }
 
 export interface AgentStateData {
@@ -79,6 +87,7 @@ export interface AgentStateData {
   application_stage: string;
   missing_documents: string[];
   drafted_motivation_letter?: string;
+  student_profile?: Partial<StudentProfile>;
 }
 
 export interface ChatMessageResponse {
@@ -87,6 +96,43 @@ export interface ChatMessageResponse {
   applicationStage?: string;
   missingDocs?: string[];
   draftedLetter?: string;
+  updatedProfile?: Partial<StudentProfile>;
+}
+
+export interface FlaggedProgram {
+  id: number;
+  university_name: string;
+  program_name: string;
+  degree_level?: string;
+  field?: string;
+  country?: string;
+  min_gpa?: number;
+  min_ielts?: number;
+  tuition_fee?: number;
+  currency: string;
+  confidence_score: number;
+  verification_status: string;
+  extraction_notes?: string;
+  source_url?: string;
+  dim_score_required?: number;
+  blocked_account_eur?: number;
+  requires_studienkolleg?: boolean;
+}
+
+export interface VerifyProgramPayload {
+  university_name?: string;
+  program_name?: string;
+  degree_level?: string;
+  field?: string;
+  country?: string;
+  min_gpa?: number;
+  min_ielts?: number;
+  tuition_fee?: number;
+  currency?: string;
+  dim_score_required?: number;
+  blocked_account_eur?: number;
+  requires_studienkolleg?: boolean;
+  verified_by?: string;
 }
 
 export interface RegisterPayload extends StudentProfile {

@@ -3,12 +3,14 @@ import type {
   ChatMessageResponse,
   DocumentSourceInfo,
   FactorScoreDetail,
+  FlaggedProgram,
   HealthResponse,
   MatchResult,
   ProgramRequirements,
   RegisterPayload,
   StudentAccountProfile,
-  StudentProfile
+  StudentProfile,
+  VerifyProgramPayload
 } from "@/types";
 
 export const API_BASE_URL = (
@@ -229,7 +231,7 @@ export function getUserFacingError(error: unknown, feature: string): UserFacingE
     if (error.kind === "timeout") {
       return {
         title: "Request timed out",
-        message: `${feature} took longer than 12 seconds. Check the backend and try again.`
+        message: `${feature} took longer than expected. Check the backend and try again.`
       };
     }
     if (error.kind === "invalid-response") {
@@ -380,10 +382,138 @@ export async function sendChatMessage(
     invalidResponse("application assistant");
   }
 
+  let updatedProfile: Partial<StudentProfile> | undefined = undefined;
+  if (isRecord(data.updated_profile)) {
+    const prof = data.updated_profile;
+    updatedProfile = {
+      gpa: typeof prof.gpa === "number" ? prof.gpa : undefined,
+      ielts: typeof prof.ielts === "number" ? prof.ielts : undefined,
+      toefl: typeof prof.toefl === "number" ? prof.toefl : undefined,
+      degree_level: (prof.degree_level === "bachelor" || prof.degree_level === "master" || prof.degree_level === "phd") ? prof.degree_level : undefined,
+    };
+  }
+
   return {
     reply: data.response,
     applicationStage: data.application_stage,
     missingDocs: data.missing_documents,
-    draftedLetter: data.drafted_motivation_letter || undefined
+    draftedLetter: data.drafted_motivation_letter || undefined,
+    updatedProfile,
   };
+}
+
+export async function uploadDocumentAndChat(
+  file: File,
+  message: string,
+  studentId = "std_demo",
+  programId = "prog_101",
+  token?: string
+): Promise<ChatMessageResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("message", message || "I uploaded an academic document for profile extraction.");
+  formData.append("student_id", studentId);
+  formData.append("target_program_id", programId);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/chat/upload`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        ...authHeaders(token)
+      },
+      body: formData
+    });
+
+    const raw = await response.text();
+    let data: unknown = null;
+
+    if (raw) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        if (response.ok) {
+          throw new ApiError("The backend returned data that was not valid JSON.", "invalid-response", response.status);
+        }
+      }
+    }
+
+    if (!response.ok) {
+      const detail = isRecord(data) ? validationDetail(data.detail) : null;
+      throw new ApiError(detail || `The backend returned status ${response.status}.`, "http", response.status);
+    }
+
+    if (
+      !isRecord(data) ||
+      typeof data.response !== "string" ||
+      typeof data.application_stage !== "string" ||
+      !isStringArray(data.missing_documents)
+    ) {
+      invalidResponse("document upload parsing");
+    }
+
+    let updatedProfile: Partial<StudentProfile> | undefined = undefined;
+    if (isRecord(data.updated_profile)) {
+      const prof = data.updated_profile;
+      updatedProfile = {
+        gpa: typeof prof.gpa === "number" ? prof.gpa : undefined,
+        ielts: typeof prof.ielts === "number" ? prof.ielts : undefined,
+        toefl: typeof prof.toefl === "number" ? prof.toefl : undefined,
+        degree_level: (prof.degree_level === "bachelor" || prof.degree_level === "master" || prof.degree_level === "phd") ? prof.degree_level : undefined,
+      };
+    }
+
+    return {
+      reply: data.response,
+      applicationStage: data.application_stage,
+      missingDocs: data.missing_documents,
+      draftedLetter: typeof data.drafted_motivation_letter === "string" ? data.drafted_motivation_letter : undefined,
+      updatedProfile,
+    };
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError("The document upload timed out.", "timeout");
+    }
+    throw new ApiError("The AUSA backend could not be reached for document upload.", "offline");
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function fetchFlaggedPrograms(token?: string): Promise<FlaggedProgram[]> {
+  const data = await request<unknown>("/admin/programs/flagged", {
+    headers: authHeaders(token)
+  });
+
+  if (!Array.isArray(data)) {
+    invalidResponse("admin flagged programs query");
+  }
+
+  return data as FlaggedProgram[];
+}
+
+export async function verifyAndApproveProgram(
+  programId: number,
+  payload: VerifyProgramPayload,
+  token?: string
+): Promise<{ message: string; program_id: number; verification_status: string }> {
+  const data = await request<unknown>(`/admin/programs/${programId}/verify`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token)
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!isRecord(data) || typeof data.verification_status !== "string") {
+    invalidResponse("admin program verification");
+  }
+
+  return data as { message: string; program_id: number; verification_status: string };
 }
