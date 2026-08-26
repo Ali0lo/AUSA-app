@@ -102,9 +102,15 @@ npm run build
 
 ---
 
-## 👤 Author
+## 💻 Key Technical Engineering Accomplishments (Ali Iskandarli)
 
-- **Ali Iskandarli** ([@Ali0lo](https://github.com/Ali0lo)) — Project Lead & Full-Stack Systems Architect
+- **Scholarship-First Net-Cost Matching Architecture ([ADR-0005](docs/adr/0005-scholarship-first-net-cost-evaluation.md))**: Designed and implemented the evaluation algorithm that calculates eligible institutional & state scholarships prior to executing hard budget filters.
+- **Predictive Machine Learning Admission Models ([ADR-0001](docs/adr/0001-ml-predictive-cutoff-layer.md) & [ADR-0002](docs/adr/0002-data-science-training-pipeline.md))**: Developed and serialized Random Forest classifier pipelines to infer admission probability for Turkey (YKS) and US (SAT/GPA) programs, integrating them into FastAPI via an in-memory singleton predictor service.
+- **Autonomous PDF Transcript Parsing & Agent Workflows**: Built stateful LangGraph agent tools and FastAPI file upload endpoints capable of extracting structured academic metrics (GPA, IELTS, TOEFL) from raw transcript PDFs to update student database profiles in real time.
+- **Async Cross-Border Data Pipelines**: Created asynchronous scraping routines (`httpx` + `BeautifulSoup4`) for Germany (DAAD/Uni-Assist) and local Azerbaijani universities (ADA, UNEC, BANM, BSU) mapping TestDaF, Studienkolleg, €11,208 blocked accounts, and DIM/TQDK 0–700 exam score scales.
+- **Human-in-the-Loop Admin Verification Dashboard**: Built the `/admin` curation interface and FastAPI endpoints to flag low-confidence (<85%) scraped records for human review before publishing them to the student matching engine.
+- **Asynchronous Database & Migration Stack**: Implemented PostgreSQL 16 `pgvector` schemas, Async SQLAlchemy 2.0 ORM models, and an async Alembic migration environment.
+- **DevOps & Production Infrastructure**: Authored production Docker container builds, `docker-compose.prod.yml`, Vercel routing rules, NextAuth Google OAuth integration, and GitHub Actions CI/CD workflows.
 
 ---
 
