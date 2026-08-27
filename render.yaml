@@ -38,3 +38,4 @@ databases:
     user: ausa_user
     region: frankfurt
     plan: free
+
