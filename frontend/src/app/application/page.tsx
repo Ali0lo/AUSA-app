@@ -1,6 +1,6 @@
 "use client";
 
-import { Clipboard, RefreshCw } from "lucide-react";
+import { Clipboard, Download, RefreshCw } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { ApplicationStage, ApplicationStepper } from "@/components/ApplicationStepper";
@@ -9,7 +9,7 @@ import { DocumentChecklist } from "@/components/DocumentChecklist";
 import { FeatureTag } from "@/components/FeatureTag";
 import { Notice } from "@/components/Notice";
 import { ServiceStatus } from "@/components/ServiceStatus";
-import { fetchAgentState, getUserFacingError, UserFacingError } from "@/lib/api";
+import { downloadApplicationDossierPdf, fetchAgentState, getUserFacingError, UserFacingError } from "@/lib/api";
 
 const initialDocuments = ["official_transcript", "passport_copy", "motivation_letter"];
 
@@ -19,6 +19,7 @@ export default function ApplicationPage() {
   const [missingDocuments, setMissingDocuments] = useState<string[]>(initialDocuments);
   const [draftedLetter, setDraftedLetter] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [loadError, setLoadError] = useState<UserFacingError | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const token = session?.user?.accessToken;
@@ -89,6 +90,41 @@ export default function ApplicationPage() {
     }
   }
 
+  async function exportPdf() {
+    if (!draftedLetter) return;
+    setIsExportingPdf(true);
+    try {
+      await downloadApplicationDossierPdf(
+        {
+          motivation_letter_text: draftedLetter,
+          student_id: 1,
+          program_id: 105,
+          student_data: {
+            email: session?.user?.email || "std_demo@ausa.edu.az",
+            gpa: 3.65,
+            ielts: 7.0,
+            degree_level: "master",
+            field_of_study: "Computer Science"
+          },
+          program_data: {
+            university_name: "Technical University of Munich (TUM)",
+            program_name: "M.Sc. Informatics",
+            degree_level: "master",
+            country: "Germany",
+            tuition_fee: 0.0,
+            blocked_account_eur: 11208.0,
+            deadline: "2026-07-15"
+          }
+        },
+        token
+      );
+    } catch (exportError) {
+      setLoadError(getUserFacingError(exportError, "PDF export"));
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }
+
   return (
     <div className="app-page">
       <div className="flex flex-col gap-6 border-b border-line pb-8 lg:flex-row lg:items-end lg:justify-between">
@@ -139,10 +175,21 @@ export default function ApplicationPage() {
                   <p className="mt-1 text-sm text-muted">Returned by the current demonstration tool for student <code className="font-mono text-xs">std_demo</code> and programme <code className="font-mono text-xs">prog_101</code>.</p>
                 </div>
                 {draftedLetter && (
-                  <button type="button" className="button-quiet" onClick={() => void copyLetter()}>
-                    <Clipboard size={16} aria-hidden="true" />
-                    Copy draft
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button type="button" className="button-quiet" onClick={() => void copyLetter()}>
+                      <Clipboard size={16} aria-hidden="true" />
+                      Copy draft
+                    </button>
+                    <button
+                      type="button"
+                      className="button-primary"
+                      onClick={() => void exportPdf()}
+                      disabled={isExportingPdf}
+                    >
+                      <Download size={16} aria-hidden="true" />
+                      {isExportingPdf ? "Generating PDF..." : "Download Application PDF"}
+                    </button>
+                  </div>
                 )}
               </div>
 

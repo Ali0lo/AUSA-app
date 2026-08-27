@@ -485,6 +485,55 @@ export async function uploadDocumentAndChat(
   }
 }
 
+export async function downloadApplicationDossierPdf(
+  payload: {
+    motivation_letter_text: string;
+    student_id?: number;
+    program_id?: number;
+    student_data?: Record<string, unknown>;
+    program_data?: Record<string, unknown>;
+  },
+  token?: string
+): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/export/motivation-letter/pdf`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/pdf",
+        ...authHeaders(token)
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new ApiError(`PDF export failed with status ${response.status}.`, "http", response.status);
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "AUSA_Application_Dossier.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError("PDF export generation timed out.", "timeout");
+    }
+    throw new ApiError("The backend could not be reached to generate the PDF dossier.", "offline");
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function fetchFlaggedPrograms(token?: string): Promise<FlaggedProgram[]> {
   const data = await request<unknown>("/admin/programs/flagged", {
     headers: authHeaders(token)

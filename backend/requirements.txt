@@ -28,6 +28,7 @@ langgraph>=0.0.32
 httpx>=0.27.0
 beautifulsoup4>=4.12.3
 pypdf>=4.0.0
+reportlab>=4.1.0
 
 # Data & ML (collection scripts + cutoff models, see docs/adr/0001)
 pandas>=2.2.0

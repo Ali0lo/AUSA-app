@@ -40,3 +40,4 @@ alembic upgrade head
 # Run pytest suite
 PYTHONPATH=. pytest tests/
 ```
+
