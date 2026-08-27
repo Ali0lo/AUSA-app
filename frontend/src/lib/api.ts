@@ -10,6 +10,7 @@ import type {
   RegisterPayload,
   StudentAccountProfile,
   StudentProfile,
+  TrackedApplication,
   VerifyProgramPayload
 } from "@/types";
 
@@ -532,6 +533,74 @@ export async function downloadApplicationDossierPdf(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function fetchMyApplications(
+  studentId = "std_demo",
+  token?: string
+): Promise<TrackedApplication[]> {
+  const query = new URLSearchParams({ student_id: studentId });
+  const data = await request<unknown>(`/applications/my-applications?${query.toString()}`, {
+    headers: authHeaders(token)
+  });
+
+  if (!Array.isArray(data)) {
+    invalidResponse("tracked applications query");
+  }
+
+  return (data as unknown) as TrackedApplication[];
+}
+
+export async function createTrackedApplication(
+  payload: {
+    university_name: string;
+    program_name: string;
+    student_id?: string;
+    program_id?: number;
+    degree_level?: string;
+    country?: string;
+    deadline?: string;
+    stage?: string;
+    notes?: string;
+  },
+  token?: string
+): Promise<TrackedApplication> {
+  const data = await request<unknown>("/applications/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token)
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!isRecord(data) || typeof data.university_name !== "string") {
+    invalidResponse("tracked application creation");
+  }
+
+  return (data as unknown) as TrackedApplication;
+}
+
+export async function updateTrackedApplicationStage(
+  applicationId: number,
+  stage: string,
+  notes?: string,
+  token?: string
+): Promise<TrackedApplication> {
+  const data = await request<unknown>(`/applications/${applicationId}/stage`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token)
+    },
+    body: JSON.stringify({ stage, notes })
+  });
+
+  if (!isRecord(data) || typeof data.stage !== "string") {
+    invalidResponse("tracked application stage update");
+  }
+
+  return (data as unknown) as TrackedApplication;
 }
 
 export async function fetchFlaggedPrograms(token?: string): Promise<FlaggedProgram[]> {

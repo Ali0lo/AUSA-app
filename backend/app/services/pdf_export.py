@@ -245,3 +245,4 @@ def generate_application_dossier_pdf(
     doc.build(elements)
     buffer.seek(0)
     return buffer.getvalue()
+

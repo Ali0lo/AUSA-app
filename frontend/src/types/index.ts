@@ -135,6 +135,21 @@ export interface VerifyProgramPayload {
   verified_by?: string;
 }
 
+export interface TrackedApplication {
+  id: number;
+  student_id: string;
+  program_id?: number | null;
+  university_name: string;
+  program_name: string;
+  degree_level?: string | null;
+  country?: string | null;
+  deadline?: string | null;
+  stage: "shortlisted" | "preparing_documents" | "submitted" | "accepted" | "rejected" | string;
+  days_remaining: number;
+  is_urgent: boolean;
+  notes?: string | null;
+}
+
 export interface RegisterPayload extends StudentProfile {
   email: string;
   password: string;

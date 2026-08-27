@@ -9,7 +9,8 @@ import { NavAuthButton } from "@/components/NavAuthButton";
 const navigation = [
   { href: "/match", label: "Match" },
   { href: "/advisor", label: "AI advisor" },
-  { href: "/application", label: "Application" }
+  { href: "/application", label: "Application" },
+  { href: "/applications", label: "My Tracker" }
 ];
 
 export function SiteHeader() {
@@ -29,7 +30,7 @@ export function SiteHeader() {
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
           {navigation.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}`));
             return (
               <Link
                 key={item.href}

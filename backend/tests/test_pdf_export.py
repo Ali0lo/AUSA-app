@@ -55,3 +55,4 @@ def test_export_motivation_letter_pdf_endpoint():
     assert response.headers["content-type"] == "application/pdf"
     assert "attachment; filename=" in response.headers["content-disposition"]
     assert response.content.startswith(b"%PDF")
+
