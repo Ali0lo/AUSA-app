@@ -17,3 +17,4 @@ class StudentApplication(Base):
     stage = Column(String(50), nullable=False, default="shortlisted")
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+

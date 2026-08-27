@@ -1,0 +1,40 @@
+# Render Infrastructure-as-Code (IaC) Blueprint Configuration
+# Deploys FastAPI backend web service and PostgreSQL database
+
+services:
+  # -------------------------------------------------------------
+  # FastAPI Backend Web Service
+  # -------------------------------------------------------------
+  - type: web
+    name: ausa-backend
+    env: docker
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    region: frankfurt
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ausa-postgres
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+
+databases:
+  # -------------------------------------------------------------
+  # PostgreSQL 16 Managed Database Instance
+  # -------------------------------------------------------------
+  - name: ausa-postgres
+    databaseName: ausa_db
+    user: ausa_user
+    region: frankfurt
+    plan: free

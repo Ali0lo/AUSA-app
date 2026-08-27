@@ -137,3 +137,4 @@ export function ApplicationTracker({ initialApplications, token, onRefresh }: Ap
     </div>
   );
 }
+

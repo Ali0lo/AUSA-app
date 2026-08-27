@@ -47,3 +47,4 @@ def test_update_application_stage():
     assert response.status_code == 200
     data = response.json()
     assert data["stage"] == "submitted"
+
