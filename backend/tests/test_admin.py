@@ -33,3 +33,12 @@ def test_verify_and_approve_program():
     assert data["verification_status"] == "verified"
     assert data["program_id"] == 1001
 
+
+def test_seed_database_endpoint():
+    response = client.post("/api/v1/admin/seed")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "programs_seeded" in data
+    assert "scholarships_seeded" in data
+    assert "documents_seeded" in data

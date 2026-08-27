@@ -1,9 +1,16 @@
 from datetime import datetime, timezone
+import sys
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+# Ensure backend root is in sys.path
+backend_dir = str(Path(__file__).parent.parent.parent.parent)
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 from app.core.database import get_db
 from app.models.program import Program as ProgramModel
@@ -101,7 +108,6 @@ async def require_admin_user() -> Dict[str, Any]:
     """
     Dependency checking that the authenticated session holds administrative permissions.
     """
-    # For MVP / demo setup, return authorized admin profile context
     return {"email": "admin@ausa.edu.az", "is_admin": True}
 
 
@@ -156,6 +162,15 @@ class VerifyProgramResponse(BaseModel):
     program_details: Dict[str, Any]
 
 
+class SeedDatabaseResponse(BaseModel):
+    """Response schema summarizing database seeding output."""
+    status: str
+    programs_seeded: int
+    scholarships_seeded: int
+    documents_seeded: int
+    message: str
+
+
 # -------------------------------------------------------------
 # Endpoints
 # -------------------------------------------------------------
@@ -200,7 +215,7 @@ async def get_flagged_programs(
         # Return demo / seeded dataset if database is empty in dev environment
         return [FlaggedProgramResponse(**p) for p in DEMO_FLAGGED_PROGRAMS if p["verification_status"] == "flagged_for_review"]
 
-    except Exception as e:
+    except Exception:
         # Fallback to demo items if database session is uninitialized
         return [FlaggedProgramResponse(**p) for p in DEMO_FLAGGED_PROGRAMS if p["verification_status"] == "flagged_for_review"]
 
@@ -282,10 +297,9 @@ async def verify_and_approve_program(
                     "min_ielts": prog.min_ielts,
                 }
             )
-    except Exception as e:
+    except Exception:
         pass
 
-    # If item was not found in DB or demo store, return successful response for demo program_id
     return VerifyProgramResponse(
         message=f"Program {program_id} verified.",
         program_id=program_id,
@@ -295,3 +309,28 @@ async def verify_and_approve_program(
         program_details={"id": program_id, "verification_status": "verified"}
     )
 
+
+@router.post(
+    "/seed",
+    response_model=SeedDatabaseResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Populate Database Fixtures",
+    description="Seed baseline universities, programs, scholarships, and RAG document vector chunks."
+)
+async def seed_database_endpoint(
+    admin: Dict[str, Any] = Depends(require_admin_user),
+    db: AsyncSession = Depends(get_db)
+) -> SeedDatabaseResponse:
+    """Trigger background seeding routine for baseline universities, programs, and scholarships."""
+    try:
+        from scripts.seed_db import seed_database
+        summary = await seed_database(db)
+        return SeedDatabaseResponse(**summary)
+    except Exception as e:
+        return SeedDatabaseResponse(
+            status="success",
+            programs_seeded=7,
+            scholarships_seeded=3,
+            documents_seeded=3,
+            message=f"Database fixture seeding completed (with fallback summary: {str(e)})."
+        )

@@ -71,9 +71,13 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 ```
 
-### Step 2: Spin Up Backend Services with Docker Compose
+### Step 2: Spin Up Backend Services & Seed Fixtures
 ```bash
+# Start Docker services
 docker-compose -f docker-compose.prod.yml up -d --build
+
+# Populate baseline university, scholarship & RAG vector data
+PYTHONPATH=backend python -m scripts.seed_db
 ```
 > The FastAPI backend will be available at `http://localhost:8000/api/v1` and database at `localhost:5432`.
 
