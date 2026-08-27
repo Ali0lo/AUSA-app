@@ -1,6 +1,7 @@
 """
 Automated Database Seeding Script for AUSA Platform.
 Populates baseline universities, programs, scholarships, vector document chunks, and sample student profiles.
+Uses OpenAI text-embedding-3-small vectors for accurate RAG similarity search.
 Designed for idempotent execution on fresh installs or live demonstration setups.
 """
 
@@ -24,11 +25,7 @@ from app.models.document import UniversityDocument
 from app.models.program import Program
 from app.models.scholarship import Scholarship
 from app.models.student import Student
-
-
-def generate_mock_embedding(seed: float = 0.1) -> List[float]:
-    """Generate a deterministic 1536-dim unit vector for pgvector embedding column."""
-    return [round(((i * seed) % 1.0) - 0.5, 4) for i in range(1536)]
+from app.services.embeddings import get_embedding_async
 
 
 # Baseline Data Fixtures
@@ -206,7 +203,6 @@ DOCUMENT_FIXTURES: List[Dict[str, Any]] = [
             "Requires minimum DIM/TQDK score of 600 out of 700 points. Language proficiency: IELTS 6.0 or TOEFL 75. "
             "Annual tuition fee is 6,500 AZN (~$3,820 USD). Merit scholarships cover up to 100% tuition for scores above 650."
         ),
-        "embedding": generate_mock_embedding(0.12),
         "doc_metadata": {"university": "ADA University", "country": "Azerbaijan", "program_id": 101},
     },
     {
@@ -218,7 +214,6 @@ DOCUMENT_FIXTURES: List[Dict[str, Any]] = [
             "Tuition is €0 per year for public master programs. Student visa requires proof of financial resources "
             "via Blocked Bank Account (Sperrkonto) containing minimum €11,208 EUR per year. IELTS 7.0 or TOEFL 88 required."
         ),
-        "embedding": generate_mock_embedding(0.24),
         "doc_metadata": {"university": "TU Munich", "country": "Germany", "program_id": 105},
     },
     {
@@ -230,15 +225,36 @@ DOCUMENT_FIXTURES: List[Dict[str, Any]] = [
             "No tuition fee charged. Financial proof requirement: €11,208 EUR blocked account. "
             "Non-EU secondary school diplomas require Studienkolleg preparatory course and Feststellungsprüfung (FSP)."
         ),
-        "embedding": generate_mock_embedding(0.36),
         "doc_metadata": {"university": "RWTH Aachen", "country": "Germany", "program_id": 106},
+    },
+    {
+        "id": 304,
+        "university_id": None,
+        "program_id": None,
+        "content": (
+            "DAAD (German Academic Exchange Service) Master Studies Scholarship guidelines: "
+            "Provides full scholarship coverage including 100% tuition waiver, €934 per month living stipend, "
+            "health insurance, and €11,208 visa financial guarantee. Open to international applicants with a Bachelor degree."
+        ),
+        "doc_metadata": {"scholarship": "DAAD", "country": "Germany"},
+    },
+    {
+        "id": 305,
+        "university_id": None,
+        "program_id": None,
+        "content": (
+            "State Program on Education of Youth in Prestigious Foreign Higher Education Institutions (2022–2026): "
+            "Fully funded Azerbaijani government state scholarship for master and PhD studies at top global QS Top 200 universities. "
+            "Covers 100% tuition, monthly stipend, health insurance, and round-trip flights."
+        ),
+        "doc_metadata": {"scholarship": "State Program", "country": "Azerbaijan"},
     },
 ]
 
 
 async def seed_database(session: AsyncSession) -> Dict[str, Any]:
     """
-    Idempotently populate database with baseline universities, programs, scholarships, and vector document chunks.
+    Idempotently populate database with baseline universities, programs, scholarships, and OpenAI vector document chunks.
     
     Args:
         session: Active SQLAlchemy AsyncSession.
@@ -276,18 +292,30 @@ async def seed_database(session: AsyncSession) -> Dict[str, Any]:
             session.add(new_sch)
         seeded_scholarships_count += 1
 
-    # 3. Seed Vector Documents (Upsert / Replace by ID)
+    # 3. Seed Vector Documents with OpenAI Embeddings
     seeded_docs_count = 0
     for doc_data in DOCUMENT_FIXTURES:
-        stmt = select(UniversityDocument).where(UniversityDocument.id == doc_data["id"])
+        # Generate real OpenAI vector embedding for document chunk
+        vector_embedding = await get_embedding_async(doc_data["content"])
+
+        doc_payload = {
+            "id": doc_data["id"],
+            "university_id": doc_data["university_id"],
+            "program_id": doc_data["program_id"],
+            "content": doc_data["content"],
+            "embedding": vector_embedding,
+            "doc_metadata": doc_data["doc_metadata"],
+        }
+
+        stmt = select(UniversityDocument).where(UniversityDocument.id == doc_payload["id"])
         res = await session.execute(stmt)
         existing = res.scalar_one_or_none()
 
         if existing is not None:
-            for k, v in doc_data.items():
+            for k, v in doc_payload.items():
                 setattr(existing, k, v)
         else:
-            new_doc = UniversityDocument(**doc_data)
+            new_doc = UniversityDocument(**doc_payload)
             session.add(new_doc)
         seeded_docs_count += 1
 
@@ -315,7 +343,7 @@ async def seed_database(session: AsyncSession) -> Dict[str, Any]:
         "programs_seeded": seeded_programs_count,
         "scholarships_seeded": seeded_scholarships_count,
         "documents_seeded": seeded_docs_count,
-        "message": "Database successfully populated with baseline university and scholarship fixtures."
+        "message": "Database successfully populated with baseline university, scholarship, and OpenAI vector embeddings."
     }
 
 

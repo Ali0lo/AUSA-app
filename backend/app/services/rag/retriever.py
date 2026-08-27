@@ -3,20 +3,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import UniversityDocument
+from app.services.embeddings import get_embedding_async
 
 
 async def get_query_embedding(query: str) -> List[float]:
     """
-    Generate a 1536-dimensional vector embedding for the search query.
-    Uses OpenAIEmbeddings if available, with fallback for offline environments.
+    Generate a 1536-dimensional vector embedding for the search query using OpenAI embeddings.
     """
-    try:
-        from langchain_openai import OpenAIEmbeddings
-        embeddings_model = OpenAIEmbeddings()
-        return await embeddings_model.aembed_query(query)
-    except Exception:
-        # Fallback 1536-dim vector for testing and offline environments
-        return [0.0] * 1536
+    return await get_embedding_async(query)
 
 
 async def retrieve_relevant_chunks(
@@ -37,7 +31,7 @@ async def retrieve_relevant_chunks(
     Returns:
         List of UniversityDocument instances ordered by cosine similarity.
     """
-    # 1. Embed user query
+    # 1. Embed user query using OpenAI / deterministic vector model
     query_vector = await get_query_embedding(query)
 
     # 2. Build SQLAlchemy query using pgvector cosine distance
