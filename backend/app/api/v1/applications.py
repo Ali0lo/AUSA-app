@@ -7,10 +7,13 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.application import StudentApplication as ApplicationModel
+from app.models.student import Student
 
 router = APIRouter(prefix="/applications", tags=["Application Tracker & Deadlines"])
 
@@ -123,6 +126,38 @@ class UpdateStagePayload(BaseModel):
 
 
 # -------------------------------------------------------------
+# Ownership helpers
+# -------------------------------------------------------------
+def _owner_key(student: Student) -> str:
+    """The tracker's owner key for an authenticated student.
+
+    StudentApplication.student_id is a string column, so the numeric account id
+    is stringified. This is the ONLY source of ownership -- never a request
+    parameter, or one student can read and mutate another's records.
+    """
+    return str(student.id)
+
+
+def _to_response(app: ApplicationModel) -> "ApplicationResponse":
+    """Serialize a tracker row, computing its deadline countdown."""
+    days, is_urgent = calculate_days_remaining(app.deadline)
+    return ApplicationResponse(
+        id=app.id,
+        student_id=app.student_id,
+        program_id=app.program_id,
+        university_name=app.university_name,
+        program_name=app.program_name,
+        degree_level=app.degree_level,
+        country=app.country,
+        deadline=str(app.deadline) if app.deadline else None,
+        stage=app.stage,
+        days_remaining=days,
+        is_urgent=is_urgent,
+        notes=app.notes,
+    )
+
+
+# -------------------------------------------------------------
 # Endpoints
 # -------------------------------------------------------------
 @router.get(
@@ -132,61 +167,30 @@ class UpdateStagePayload(BaseModel):
     summary="Get Student Applications & Deadline Countdowns"
 )
 async def get_my_applications(
-    student_id: str = Query("std_demo", description="Student account identifier"),
+    current_student: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> List[ApplicationResponse]:
-    """Retrieve active student applications with calculated deadline countdowns."""
+    """Retrieve the authenticated student's applications with deadline countdowns.
+
+    The owner is taken from the bearer token. It was previously a `student_id`
+    query parameter with a default, so any caller could read any student's
+    applications by passing their id.
+    """
+    owner_id = _owner_key(current_student)
+
     try:
-        stmt = select(ApplicationModel).where(ApplicationModel.student_id == student_id)
+        stmt = select(ApplicationModel).where(ApplicationModel.student_id == owner_id)
         res = await db.execute(stmt)
         db_apps = list(res.scalars().all())
+    except SQLAlchemyError as exc:
+        # Do not fall back to demo records -- that silently showed one student
+        # another student's data and hid a broken schema. See docs/adr/0004.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The application tracker is temporarily unavailable.",
+        ) from exc
 
-        if db_apps:
-            out = []
-            for app in db_apps:
-                days, is_urgent = calculate_days_remaining(app.deadline)
-                out.append(
-                    ApplicationResponse(
-                        id=app.id,
-                        student_id=app.student_id,
-                        program_id=app.program_id,
-                        university_name=app.university_name,
-                        program_name=app.program_name,
-                        degree_level=app.degree_level,
-                        country=app.country,
-                        deadline=str(app.deadline) if app.deadline else None,
-                        stage=app.stage,
-                        days_remaining=days,
-                        is_urgent=is_urgent,
-                        notes=app.notes,
-                    )
-                )
-            return out
-    except Exception:
-        pass
-
-    # Fallback to demo items
-    out = []
-    for app_data in DEMO_APPLICATIONS:
-        if app_data["student_id"] == student_id or student_id == "std_demo":
-            days, is_urgent = calculate_days_remaining(app_data.get("deadline"))
-            out.append(
-                ApplicationResponse(
-                    id=app_data["id"],
-                    student_id=app_data["student_id"],
-                    program_id=app_data["program_id"],
-                    university_name=app_data["university_name"],
-                    program_name=app_data["program_name"],
-                    degree_level=app_data["degree_level"],
-                    country=app_data["country"],
-                    deadline=app_data["deadline"],
-                    stage=app_data["stage"],
-                    days_remaining=days,
-                    is_urgent=is_urgent,
-                    notes=app_data["notes"],
-                )
-            )
-    return out
+    return [_to_response(app) for app in db_apps]
 
 
 @router.post(
@@ -197,11 +201,16 @@ async def get_my_applications(
 )
 async def create_application(
     payload: CreateApplicationPayload,
+    current_student: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> ApplicationResponse:
-    """Add a new target program to the student application tracker."""
+    """Add a new target program to the authenticated student's tracker.
+
+    `payload.student_id` is deliberately ignored: the owner comes from the token,
+    so a caller cannot create records under another student's account.
+    """
     days, is_urgent = calculate_days_remaining(payload.deadline)
-    sid = payload.student_id or "std_demo"
+    sid = _owner_key(current_student)
 
     try:
         new_app = ApplicationModel(
@@ -235,35 +244,14 @@ async def create_application(
             is_urgent=is_urgent,
             notes=new_app.notes,
         )
-    except Exception:
-        new_id = len(DEMO_APPLICATIONS) + 101
-        demo_obj = {
-            "id": new_id,
-            "student_id": sid,
-            "program_id": payload.program_id,
-            "university_name": payload.university_name,
-            "program_name": payload.program_name,
-            "degree_level": payload.degree_level,
-            "country": payload.country,
-            "deadline": payload.deadline or "2026-07-01",
-            "stage": payload.stage or "shortlisted",
-            "notes": payload.notes,
-        }
-        DEMO_APPLICATIONS.append(demo_obj)
-        return ApplicationResponse(
-            id=new_id,
-            student_id=sid,
-            program_id=payload.program_id,
-            university_name=payload.university_name,
-            program_name=payload.program_name,
-            degree_level=payload.degree_level,
-            country=payload.country,
-            deadline=payload.deadline,
-            stage=payload.stage or "shortlisted",
-            days_remaining=days,
-            is_urgent=is_urgent,
-            notes=payload.notes,
-        )
+    except SQLAlchemyError as exc:
+        # Previously this appended to an in-memory demo list and reported success,
+        # so the student believed the program was saved when nothing was written.
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not save the application. Please try again shortly.",
+        ) from exc
 
 
 @router.patch(
@@ -275,68 +263,45 @@ async def create_application(
 async def update_application_stage(
     application_id: int,
     payload: UpdateStagePayload,
+    current_student: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> ApplicationResponse:
-    """Update the application lifecycle stage and notes."""
+    """Update the stage and notes of one of the authenticated student's applications.
+
+    The record is looked up by id **and** owner. Looking up by primary key alone
+    let any caller mutate any student's application.
+    """
+    owner_id = _owner_key(current_student)
+
     try:
-        stmt = select(ApplicationModel).where(ApplicationModel.id == application_id)
+        stmt = select(ApplicationModel).where(
+            ApplicationModel.id == application_id,
+            ApplicationModel.student_id == owner_id,
+        )
         res = await db.execute(stmt)
         app = res.scalar_one_or_none()
 
-        if app is not None:
-            app.stage = payload.stage
-            if payload.notes is not None:
-                app.notes = payload.notes
-            await db.commit()
-            await db.refresh(app)
-            days, is_urgent = calculate_days_remaining(app.deadline)
-            return ApplicationResponse(
-                id=app.id,
-                student_id=app.student_id,
-                program_id=app.program_id,
-                university_name=app.university_name,
-                program_name=app.program_name,
-                degree_level=app.degree_level,
-                country=app.country,
-                deadline=str(app.deadline) if app.deadline else None,
-                stage=app.stage,
-                days_remaining=days,
-                is_urgent=is_urgent,
-                notes=app.notes,
+        # 404 rather than 403 so the response does not reveal that an application
+        # with this id exists under another account.
+        if app is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Application not found.",
             )
-    except Exception:
-        pass
 
-    demo_item = next((a for a in DEMO_APPLICATIONS if a["id"] == application_id), None)
-    if demo_item is not None:
-        demo_item["stage"] = payload.stage
+        app.stage = payload.stage
         if payload.notes is not None:
-            demo_item["notes"] = payload.notes
-        days, is_urgent = calculate_days_remaining(demo_item.get("deadline"))
-        return ApplicationResponse(
-            id=demo_item["id"],
-            student_id=demo_item["student_id"],
-            program_id=demo_item["program_id"],
-            university_name=demo_item["university_name"],
-            program_name=demo_item["program_name"],
-            degree_level=demo_item["degree_level"],
-            country=demo_item["country"],
-            deadline=demo_item["deadline"],
-            stage=demo_item["stage"],
-            days_remaining=days,
-            is_urgent=is_urgent,
-            notes=demo_item["notes"],
-        )
+            app.notes = payload.notes
+        await db.commit()
+        await db.refresh(app)
+    except HTTPException:
+        raise
+    except SQLAlchemyError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not update the application. Please try again shortly.",
+        ) from exc
 
-    days, is_urgent = calculate_days_remaining("2026-07-01")
-    return ApplicationResponse(
-        id=application_id,
-        student_id="std_demo",
-        university_name="Target Institution",
-        program_name="Degree Program",
-        stage=payload.stage,
-        days_remaining=days,
-        is_urgent=is_urgent,
-        notes=payload.notes
-    )
+    return _to_response(app)
 

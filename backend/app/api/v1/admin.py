@@ -12,8 +12,11 @@ backend_dir = str(Path(__file__).parent.parent.parent.parent)
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
+from app.api.deps import get_current_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.program import Program as ProgramModel
+from app.models.student import Student
 
 router = APIRouter(prefix="/admin", tags=["Admin Curation & Data Verification"])
 
@@ -104,11 +107,30 @@ DEMO_FLAGGED_PROGRAMS: List[Dict[str, Any]] = [
 # -------------------------------------------------------------
 # Admin Security Dependency
 # -------------------------------------------------------------
-async def require_admin_user() -> Dict[str, Any]:
+async def require_admin_user(
+    current_student: Student = Depends(get_current_user),
+) -> Dict[str, Any]:
     """
     Dependency checking that the authenticated session holds administrative permissions.
+
+    Authentication is delegated to get_current_user (raises 401 on a bad or unknown
+    token). Authorisation is an explicit allowlist in settings.ADMIN_EMAILS.
+
+    Fail-closed: when ADMIN_EMAILS is empty nobody is an admin, so a misconfigured
+    deployment locks the curation endpoints rather than opening them to the world.
+    These routes can mark scraped programs as human-verified, which is the guardrail
+    data-sourcing.md requires before data reaches a student.
     """
-    return {"email": "admin@ausa.edu.az", "is_admin": True}
+    email = (current_student.email or "").strip().lower()
+    allowed = {e.strip().lower() for e in settings.ADMIN_EMAILS if e and e.strip()}
+
+    if not allowed or email not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator privileges are required for this operation.",
+        )
+
+    return {"email": email, "is_admin": True}
 
 
 # -------------------------------------------------------------

@@ -30,3 +30,26 @@ local_pgdata/
 .vscode/
 .idea/
 *.swp
+
+# Collected datasets (~700 MB). Reproducible via backend/scripts/collect_*.py --
+# see data/README.md. Keep these rules: without them `git add -A` after a
+# collection run commits the raw College Scorecard archive.
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/**/*.csv
+data/**/*.json
+data/**/*.zip
+
+# Model artifacts & vector stores
+*.pkl
+*.faiss
+*.chroma
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Next.js generated files
+next-env.d.ts
+*.tsbuildinfo

@@ -2,6 +2,7 @@ from typing import AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -35,29 +36,32 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    stmt = select(Student)
+    if subject.isdigit():
+        stmt = stmt.where(Student.id == int(subject))
+    else:
+        stmt = stmt.where(Student.email == subject)
+
+    # A database failure must surface as an outage, never as a successful login.
+    # See docs/adr/0004 -- no silent fallbacks.
     try:
-        stmt = select(Student)
-        if subject.isdigit():
-            stmt = stmt.where(Student.id == int(subject))
-        else:
-            stmt = stmt.where(Student.email == subject)
-
         result = await db.execute(stmt)
-        student = result.scalars().first()
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication is temporarily unavailable.",
+        ) from exc
 
-        if student:
-            return student
-    except Exception:
-        pass
+    student = result.scalars().first()
+    if student is None:
+        # Token is validly signed but its subject has no account (e.g. deleted user).
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired authentication token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # Return mock student instance for offline dev/test fallback
-    return Student(
-        id=int(subject) if subject.isdigit() else 101,
-        email=subject if "@" in subject else "test_student_auth@ausa.edu.az",
-        gpa=3.7,
-        budget="20000.0",
-        degree_level="master"
-    )
+    return student
 
 
 async def get_optional_current_user(

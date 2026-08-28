@@ -2,6 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -86,10 +87,14 @@ async def login(
         return TokenResponse(access_token=token, token_type="bearer")
     except HTTPException:
         raise
-    except Exception:
-        # Fallback for dev/test environment without active PostgreSQL database engine
-        token = create_access_token(subject=101)
-        return TokenResponse(access_token=token, token_type="bearer")
+    except SQLAlchemyError as exc:
+        # A database outage must surface as an outage. Minting a token here would
+        # authenticate any credentials whenever the database is unreachable.
+        # See docs/adr/0004 -- no silent fallbacks.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication is temporarily unavailable. Please try again shortly.",
+        ) from exc
 
 
 @router.post(
@@ -135,10 +140,14 @@ async def register(
         return TokenResponse(access_token=token, token_type="bearer")
     except HTTPException:
         raise
-    except Exception:
-        # Fallback for dev/test environment without active PostgreSQL database engine
-        token = create_access_token(subject=101)
-        return TokenResponse(access_token=token, token_type="bearer")
+    except SQLAlchemyError as exc:
+        # A database outage must surface as an outage. Minting a token here would
+        # authenticate any credentials whenever the database is unreachable.
+        # See docs/adr/0004 -- no silent fallbacks.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication is temporarily unavailable. Please try again shortly.",
+        ) from exc
 
 
 @router.get(
