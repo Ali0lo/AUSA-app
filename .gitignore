@@ -1,37 +1,32 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
+# Environment & secret files
+.env
+.env.local
+.env.production
+.env.staging
+*.env
+
+# Python & Virtual Environments
 .venv/
 venv/
-.env
-.env.*
+__pycache__/
+*.py[cod]
+*.so
 
-# Data & models
-data/raw/*
-!data/raw/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
-*.csv
-*.json
-*.pkl
-*.faiss
-*.chroma
-
-# IDE & OS
-.idea/
-.vscode/
-.DS_Store
-*.log
-
-# Streamlit
-.streamlit/secrets.toml
-
-# Node / Next.js
+# Node & Next.js Build Outputs
 node_modules/
 .next/
-next-env.d.ts
-*.tsbuildinfo
+out/
+build/
+dist/
 
-# Large archives pulled by the collection scripts
-*.zip
+# Logs & Databases
+*.log
+*.sqlite3
+*.db
+local_pgdata/
+
+# OS & Editor Files
+.DS_Store
+.vscode/
+.idea/
+*.swp

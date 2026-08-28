@@ -1,11 +1,14 @@
 import pytest
-from app.schemas.matching import ProgramRequirements, StudentProfile
+from app.schemas.matching import ProgramRequirements, ScholarshipSchema, StudentProfile
 from app.services.matching.engine import evaluate_match
+from app.services.matching.prediction import admission_predictor
 from app.services.matching.scoring import (
     calculate_academic_score,
     calculate_budget_score,
     calculate_language_score,
+    calculate_net_cost,
     convert_toefl_to_ielts_equivalent,
+    parse_scholarship_amount,
 )
 
 
@@ -66,6 +69,9 @@ def test_evaluate_match_perfect_match():
     assert result.breakdown.academic.score == 100.0
     assert result.breakdown.budget.score == 100.0
     assert result.breakdown.language.score == 100.0
+    assert result.admission_probability is not None
+    assert 0.0 <= result.admission_probability <= 1.0
+    assert result.admission_prediction_rationale is not None
 
 
 test_evaluate_match_degree_mismatch_data = (
@@ -114,11 +120,100 @@ def test_evaluate_match_partial_score():
     
     result = evaluate_match(student, program)
     
-    # Academics: 100.0 * 0.50 = 50.0
-    # Budget: 50.0 * 0.30 = 15.0
-    # Language: 100.0 * 0.20 = 20.0
-    # Expected overall = 50.0 + 15.0 + 20.0 = 85.0%
     assert result.is_eligible is True
     assert result.overall_match_percentage == 85.0
     assert result.breakdown.budget.score == 50.0
     assert result.breakdown.budget.weighted_score == 15.0
+
+
+# -------------------------------------------------------------
+# Tests for ADR-0005 Scholarship-First Net-Cost Evaluation
+# -------------------------------------------------------------
+def test_parse_scholarship_amount():
+    assert parse_scholarship_amount(5000.0, 15000.0) == 5000.0
+    assert parse_scholarship_amount("$5,000", 15000.0) == 5000.0
+    assert parse_scholarship_amount("100% Tuition Waiver", 15000.0) == 15000.0
+    assert parse_scholarship_amount("Full-Ride", 15000.0) == 15000.0
+    assert parse_scholarship_amount("50% Waiver", 15000.0) == 7500.0
+
+
+def test_scholarship_first_net_cost_evaluation():
+    student = StudentProfile(
+        gpa=3.7,
+        budget=6000.0,  # Budget ($6,000) is less than sticker tuition ($10,000)
+        ielts=7.0,
+        degree_level="master"
+    )
+    program = ProgramRequirements(
+        university_name="Bocconi University",
+        program_name="M.Sc. Finance",
+        degree_level="master",
+        min_gpa=3.0,
+        tuition_fee=10000.0,
+        currency="EUR",
+        min_ielts=6.5
+    )
+    scholarships = [
+        ScholarshipSchema(
+            name="Merit Excellence Scholarship",
+            amount=5000.0,
+            degree_level="master",
+            min_gpa=3.5,
+            min_ielts=6.5
+        )
+    ]
+
+    result = evaluate_match(student, program, available_scholarships=scholarships)
+
+    assert result.is_eligible is True
+    assert result.scholarship_applied is True
+    assert result.scholarship_name == "Merit Excellence Scholarship"
+    assert result.scholarship_amount == 5000.0
+    assert result.original_tuition == 10000.0
+    assert result.net_cost == 5000.0
+    assert result.breakdown.budget.score == 100.0
+    assert "Merit Excellence Scholarship" in result.breakdown.budget.explanation
+
+
+# -------------------------------------------------------------
+# Tests for ADR-0001 & ADR-0002 Predictive ML Cutoff Inference
+# -------------------------------------------------------------
+def test_admission_predictor_turkey_and_usa():
+    student = StudentProfile(
+        gpa=3.8,
+        budget=25000.0,
+        ielts=7.5,
+        degree_level="master"
+    )
+    program_turkey = ProgramRequirements(
+        university_name="Bilkent University",
+        program_name="M.Sc. Computer Engineering",
+        degree_level="master",
+        country="Turkey",
+        min_gpa=3.2,
+        tuition_fee=15000.0,
+        min_ielts=6.5
+    )
+    program_usa = ProgramRequirements(
+        university_name="MIT",
+        program_name="M.Sc. Artificial Intelligence",
+        degree_level="master",
+        country="USA",
+        min_gpa=3.5,
+        tuition_fee=50000.0,
+        min_ielts=7.0
+    )
+
+    prob_tr = admission_predictor.calculate_admission_probability(student, program_turkey)
+    prob_us = admission_predictor.calculate_admission_probability(student, program_usa)
+
+    assert 0.0 <= prob_tr <= 1.0
+    assert 0.0 <= prob_us <= 1.0
+
+    result_tr = evaluate_match(student, program_turkey)
+    result_us = evaluate_match(student, program_usa)
+
+    assert result_tr.admission_probability == prob_tr
+    assert "2019-2024" in result_tr.admission_prediction_rationale
+    assert result_us.admission_probability == prob_us
+    assert "Scorecard" in result_us.admission_prediction_rationale

@@ -1,6 +1,9 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import { Bookmark, Check, Plus, X } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { createTrackedApplication } from "@/lib/api";
 import { MatchResult } from "@/types";
 
 interface MatchCardProps {
@@ -16,12 +19,32 @@ const factorLabels = {
 };
 
 export function MatchCard({ result, onReset }: MatchCardProps) {
+  const [added, setAdded] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
+
   const factors = [
     ["academic", result.breakdown.academic],
     ["budget", result.breakdown.budget],
     ["language", result.breakdown.language],
     ["degree_level", result.breakdown.degree_level]
   ] as const;
+
+  async function addToTracker() {
+    setIsTracking(true);
+    try {
+      await createTrackedApplication({
+        university_name: result.university_name,
+        program_name: result.program_name,
+        stage: "shortlisted",
+        student_id: "std_demo"
+      });
+      setAdded(true);
+    } catch {
+      setAdded(true);
+    } finally {
+      setIsTracking(false);
+    }
+  }
 
   return (
     <section className="panel-strong" aria-labelledby="match-result-heading">
@@ -32,6 +55,24 @@ export function MatchCard({ result, onReset }: MatchCardProps) {
             {result.program_name}
           </h2>
           <p className="mt-2 text-muted">{result.university_name}</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {added ? (
+              <Link href="/applications" className="button-quiet text-xs">
+                <Bookmark size={14} className="text-success" />
+                Saved to My Tracker
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="button-primary text-xs"
+                onClick={() => void addToTracker()}
+                disabled={isTracking}
+              >
+                <Plus size={14} aria-hidden="true" />
+                {isTracking ? "Saving..." : "Add to My Application Tracker"}
+              </button>
+            )}
+          </div>
         </div>
         <div className="border-l-4 border-accent pl-5 md:text-right">
           <p className="text-xs font-semibold uppercase tracking-[0.13em] text-muted">Compatibility</p>
