@@ -11,6 +11,7 @@ supersedes the old one rather than editing it.
 | [0003](0003-evaluation-protocol.md) | Temporal + cold-start evaluation against a persistence baseline | Accepted |
 | [0004](0004-batch-serving-and-explainability.md) | Batch-precomputed predictions, two-audience explanations | Accepted |
 | [0005](0005-scholarship-pass-precedes-budget-filter.md) | Scholarship matching runs before the budget filter | Accepted |
+| [0006](0006-admission-routes.md) | Programs accept several qualifications, not one | **Proposed** |
 
 ## Background
 

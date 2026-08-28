@@ -2,7 +2,7 @@
 
 **Deadline: 15 September 2026.** Updated 23 August — **23 days left**.
 
-**4 of 18 answered.** Fill in the `**Answer:**` line under each remaining question.
+**4 of 22 answered.** Fill in the `**Answer:**` line under each remaining question.
 Every question carries a recommendation — accept it, override it, or write something
 better. Decisions already settled are recorded in [`adr/`](adr/) and are not repeated here.
 
@@ -22,6 +22,7 @@ that actually block work now:
 | **B4** — who does what? | Four tracks, four people, 23 days. Nobody can start until this is assigned |
 | **A4** — who collects Azerbaijan DIM data? | Only the team can do this one. Nothing else unblocks it |
 | **C4** — is "the persistence baseline won" acceptable? | If it would be graded as failure, the ML plan needs a second component designed in *now*, not in week three |
+| **G1, G2** — which admission routes, and how do we capture qualifications? | Blocks ADR-0006. Determines what cutoff data to collect — and whether the Turkish data we already have serves the product or only the model |
 
 | Answer within 3 days | Why |
 |---|---|
@@ -322,6 +323,78 @@ aggregators all need checking.
 
 **Recommendation:** one named person, terms-of-service and robots.txt checked per source,
 recorded in a table in this repo, done **before** any collection code is written.
+
+**Answer:**
+
+---
+
+## G. Admission routes
+
+Programs accept **several alternative entrance qualifications**, not one. A Turkish
+university may admit international applicants on **SAT ≥ 1200 *or* YÖS ≥ 60**. ADR-0001
+models a single cutoff per program and cannot express that.
+
+Full analysis in [`adr/0006-admission-routes.md`](adr/0006-admission-routes.md)
+(status: **Proposed** — these three questions block acceptance).
+
+The uncomfortable part, stated up front: an Azerbaijani student applying to Turkey
+never sits YKS — they go through **YÖS** or the **international quota**, and many
+Turkish universities accept **SAT**. So the 115,482 rows of YKS cutoffs we collected
+describe **a route our users will never take**. Still valid as ML training data and as
+a selectivity signal; not valid as "the score you need".
+
+Note that language tests (IELTS / TOEFL / Duolingo / TestDaF) are **not** part of this
+question. They are pass/fail thresholds, already correctly handled as deterministic
+Layer 1 filters by ADR-0001. Only *entrance qualifications* are competitive.
+
+### G1 🔴 Which admission routes does the MVP support?
+
+Each supported route means separate cutoff history to collect, curate and
+human-verify, per program.
+
+Candidates: **DIM** (Azerbaijan), **YÖS** (Turkey, international), **SAT** (accepted by
+many Turkish and all US institutions), **converted GPA / Abiturnote** (Germany),
+**UCAS tariff** (UK).
+
+**Recommendation:** **SAT and YÖS first**, because those are the routes Azerbaijani
+students actually use for the top-priority destinations, then DIM for the home market.
+Note this inverts the data-availability ordering — YKS has the most published data and
+is the least useful route to our users.
+
+**Answer:**
+
+### G2 🔴 Does intake capture every qualification up front, or per country on demand?
+
+`architecture-decisions.md` §5 deliberately keeps Phase 1 intake minimal. Asking a
+student for DIM *and* SAT *and* YÖS *and* IELTS up front works against that, and most
+students hold only one or two.
+
+**Recommendation:** ask for what they have, not for everything — a short "which of these
+do you have?" step, with the rest optional. Routes they hold no qualification for are
+simply not scored, and are never counted against them.
+
+**Answer:**
+
+### G3 🟡 If a route has no cutoff data, do we show it or hide it?
+
+Likely common for YÖS and SAT international quotas, where cutoffs are often unpublished.
+
+**Recommendation:** **show it, labelled honestly** — "requirements known, competitiveness
+unknown" — under the ADR-0001 `open` / `competitive` taxonomy. Hiding a viable route
+because we lack data is worse for the student than admitting we don't know. Never invent
+a cutoff to fill the gap.
+
+**Answer:**
+
+### G4 🟡 Do we accept that the ML trains on routes the product may not serve?
+
+The likely end state: the model is trained on YKS and College Scorecard (real, recent,
+defensible, gradeable) while the product ranks SAT/YÖS routes deterministically because
+their cutoffs aren't published.
+
+**Recommendation:** accept it, and state it explicitly in the course report as a data
+limitation. It is a legitimate position — but it must be a recorded decision, not
+something discovered while writing up.
 
 **Answer:**
 
