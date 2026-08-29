@@ -47,3 +47,6 @@ data/raw/usa/
 # traceable to the exact run that produced it.
 models/*.joblib
 !models/metrics.json
+
+# CatBoost training logs
+catboost_info/
