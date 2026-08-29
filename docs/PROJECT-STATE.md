@@ -347,18 +347,43 @@ it does not hold.
 
 ### 9.5 Proposed intake flow
 
-1. **Field / career goal + target countries** (with "open to anywhere")
-2. **Exam scores — only the ones step 1 makes relevant**
-3. **Budget** — blank or 0 means scholarship-only
-4. Hard filter on the curated tier → results
-5. Ordered hardest-achievable first, banded Reach / Match / Safe
+**Field-first, country-grouped, never country-gated.**
 
-Step 1 before step 2 matters: 30,000 programmes are unusable until narrowed, a first
-screen of exam inputs converts badly, and — the useful part — **the chosen countries
-determine which exams we ask for.** *"You chose Germany and Turkey, so we need your
-attestat, your DIM score, and one language certificate."* Nobody is asked for YÖS unless
-they are going to Turkey. This supersedes the G2 answer's generic "which of these do you
-have?" step.
+1. **Field / career goal** — the only thing asked up front
+2. **Qualifications** — four optional fields, refining the list live
+3. **Budget** — blank or 0 means scholarship-only
+4. **Country** — a *facet on the results*, not a gate. Default: all countries. Plus an
+   optional must-have / rule-out for students with a hard constraint
+5. Hard filter on the curated tier → results, **grouped by country**
+6. Within each group, ordered hardest-achievable first, banded Reach / Match / Safe
+
+**Why country must not be asked first.** It assumes the answer to the question the
+product exists to answer. A student who already knows they want Germany goes to DAAD;
+AUSA's highest-value output is *"consider Poland — your DIM score goes further there."*
+Gating on country destroys that and reduces the product to a filtered search box. There
+is also a plain asymmetry: students reliably know roughly *what* they want to study, and
+much less reliably *where*. **Country is an output, not an input.**
+
+> **Correction to an earlier recommendation in this session.** Claude first proposed
+> asking field **and country** together, arguing that the chosen countries determine
+> which exams to ask for. That argument is weak at this scale: an Azerbaijani
+> school-leaver plausibly holds only attestat, DIM, a language certificate and possibly
+> SAT — four optional fields, with YÖS already dropped. There was never a wall of inputs
+> to save the user from, so the benefit did not justify gating on country.
+
+**Do not build a wizard.** Multi-step forms lose users at every step. One page, result
+list always visible, refining as fields are filled. Before any input it can show the most
+competitive or most popular programmes in the field, so the page is never empty.
+
+**The catch that forces country grouping.** The number means different things per
+country: Azerbaijan and (once collected) Germany give a genuine success rate, while
+Turkey and the USA give selectivity only. Showing "82%" beside "top 6% competitive" in
+one ranked list is misleading, and sorting them against each other is worse. Grouping by
+country preserves discovery while giving each block a place to state honestly what its
+number means — e.g. *"Turkey: we can tell you how hard this is, not whether you'd clear
+it."*
+
+This supersedes the G2 answer's generic "which of these do you have?" step.
 
 ### 9.6 Build order implied
 
@@ -386,6 +411,7 @@ programmes with NC + language + tuition + deadline → curated tier). Recommenda
 
 ### 9.8 Open questions for the grilling session
 
+0. **Confirm field-first / country-grouped intake (§9.5)** — the one place an earlier recommendation in this session was reversed.
 1. **Success rate as a percentage or bands only?** Evidence says bands until recalibration ships.
 2. **Does Azerbaijan stay** as a local section, given it is the only working success-rate market?
 3. **Germany breadth vs depth.**
