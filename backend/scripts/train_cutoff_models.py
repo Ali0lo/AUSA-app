@@ -351,6 +351,105 @@ def evaluate_cold_start(df: pd.DataFrame, out_dir: Path, country: str) -> dict:
     return results
 
 
+# --------------------------------------------------- one pooled model vs per-country
+
+
+def evaluate_pooled(data_dir: Path, countries: list) -> dict:
+    """Test ADR-0002's per-country decision instead of assuming it.
+
+    A single model with `country` as a feature is only meaningful on a unit-free target:
+    raw cutoffs run 0-560 (YKS), 0-700 (DIM) and 600-1500 (SAT p25), so a pooled
+    regressor on raw values would mostly learn which country a row came from, and its
+    error would be dominated by the largest scale.
+
+    The comparable target is the cutoff's percentile within its own country and year --
+    which is also exactly the selectivity index the product displays. A predicted
+    percentile converts back to native units through that country's own distribution.
+
+    Three arms, identical held-out programs: per-country models, one pooled model, and
+    one pooled model with countries weighted equally (Turkey is ~90% of the rows, so
+    swamping has to be ruled out before concluding that pooling simply does not work).
+    """
+    if len(countries) < 2:
+        return {"skipped": "needs at least two countries"}
+
+    frames = []
+    for country in countries:
+        df = load_country(country, data_dir).dropna(subset=["cutoff_value"]).copy()
+        df["country"] = country
+        df["program_key"] = country + "::" + df["program_key"].astype(str)
+        df["target_pct"] = df.groupby("intake_year")["cutoff_value"].rank(pct=True)
+        frames.append(df)
+    pool = pd.concat(frames, ignore_index=True)
+
+    shared = ["university_name", "department_name", "score_type", "scholarship_type"]
+    # Encode across the pool so every arm sees one consistent code space. Names are in
+    # different languages, so a Turkish and an Azerbaijani department never share a code
+    # -- there is no shared taxonomy to transfer through, and that is the finding.
+    for col in shared + ["country"]:
+        pool[col + "_code"] = pool[col].astype("category").cat.codes
+    features = [c + "_code" for c in shared] + ["intake_year"]
+    pooled_features = features + ["country_code"]
+
+    train_parts, test_parts = [], []
+    for country in countries:
+        sub = pool[pool.country == country]
+        splitter = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
+        tr_idx, te_idx = next(splitter.split(sub, groups=sub["program_key"]))
+        train_parts.append(sub.iloc[tr_idx])
+        test_parts.append(sub.iloc[te_idx])
+    train_all, test_all = pd.concat(train_parts), pd.concat(test_parts)
+
+    def hgb():
+        return HistGradientBoostingRegressor(max_iter=500, learning_rate=0.06, random_state=42)
+
+    pooled = hgb().fit(train_all[pooled_features], train_all["target_pct"])
+    counts = train_all["country"].value_counts()
+    weights = train_all["country"].map(len(train_all) / (len(counts) * counts))
+    pooled_balanced = hgb().fit(
+        train_all[pooled_features], train_all["target_pct"], sample_weight=weights
+    )
+
+    results = {"target": "cutoff percentile within country-year", "per_country": {}}
+    print("\n=== ONE POOLED MODEL vs PER-COUNTRY (percentile target) ===")
+    print(f"  {'country':<9}{'dept-mean':>11}{'per-country':>13}{'pooled':>9}{'pooled-bal':>12}  winner")
+    for country in countries:
+        tr = train_all[train_all.country == country]
+        te = test_all[test_all.country == country]
+
+        dept_mean = tr.groupby("department_name_code")["target_pct"].mean()
+        base = mean_absolute_error(
+            te["target_pct"],
+            te["department_name_code"].map(dept_mean).fillna(tr["target_pct"].mean()),
+        )
+        solo = mean_absolute_error(
+            te["target_pct"], hgb().fit(tr[features], tr["target_pct"]).predict(te[features])
+        )
+        pooled_mae = mean_absolute_error(te["target_pct"], pooled.predict(te[pooled_features]))
+        balanced_mae = mean_absolute_error(
+            te["target_pct"], pooled_balanced.predict(te[pooled_features])
+        )
+
+        arms = {"per_country": solo, "pooled": pooled_mae, "pooled_balanced": balanced_mae}
+        winner = min(arms, key=arms.get)
+        results["per_country"][country] = {
+            "baseline_department_mean": float(base),
+            **{k: float(v) for k, v in arms.items()},
+            "winner": winner,
+        }
+        print(f"  {country:<9}{base:>11.4f}{solo:>13.4f}{pooled_mae:>9.4f}"
+              f"{balanced_mae:>12.4f}  {winner}")
+
+    wins = [v["winner"] for v in results["per_country"].values()]
+    results["verdict"] = (
+        "per-country retained (ADR-0002 holds)"
+        if wins.count("per_country") >= len(wins) / 2
+        else "pooled competitive -- revisit ADR-0002"
+    )
+    print(f"  -> {results['verdict']}")
+    return results
+
+
 # ------------------------------------------------------------------------------ main
 
 
@@ -408,9 +507,12 @@ def main() -> None:
     if not reports:
         sys.exit("No country data found. Run the collect_*.py scripts first.")
 
+    output = {"per_country": reports,
+              "pooled_vs_per_country": evaluate_pooled(args.data_dir, list(reports))}
+
     args.out_dir.mkdir(parents=True, exist_ok=True)
     metrics_path = args.out_dir / "metrics.json"
-    metrics_path.write_text(json.dumps(reports, indent=2), encoding="utf-8")
+    metrics_path.write_text(json.dumps(output, indent=2), encoding="utf-8")
     print(f"\nmetrics -> {metrics_path.relative_to(REPO_ROOT)}")
 
 

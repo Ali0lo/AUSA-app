@@ -74,9 +74,51 @@ so the two countries are semantically consistent targets — they differ in unit
 | **sec.az** `/kecid-ballari` | 1,028 specialty × university, 42 universities, **2023 + 2024 + 2025**, state-funded. Server-rendered HTML, one request. `/kod/NNNNNN` detail pages add quota, tuition and the paid track | ✅ **Chosen** |
 | 2xacademy.az | 461 specialties, **2025 only**, both funding tracks | Useful cross-check for 2025; too little history to train on |
 | uniaz.info | per-group cutoff pages | Not evaluated in depth — sec.az already covers it |
-| **DİM official** (dim.gov.az) | 2018–2025 statistical analyses, **PDF only**. Regional, gender and sector breakdowns | ❌ No per-specialty cutoffs at all |
+| **DİM official** (dim.gov.az) | Free PDFs, 2018–2025. The `n12` series is 706 pages of statistical analysis | ⚠️ **Not a bulk source, but a free official verifier** — see below |
 | **"Abituriyent" journal** (abiturient.az) | The authoritative per-specialty minimums | ❌ Paywalled. Would be the way to get pre-2023 history — see the limitation below |
 | **qebulai.az** | 2020–2025 | ❌ **Excluded on legal grounds — see below** |
+
+#### The official DİM PDFs — what they actually contain (checked 29 Aug)
+
+`dim.gov.az/az/fealiyyet/tetqiqat/statistik-tehlil` publishes free PDFs going back to
+2018. They were opened and searched rather than judged from the listing page:
+
+- **`n12-<year>.pdf`** — the *Abituriyent* №12 scientific-statistical analysis. The 2025
+  edition is **706 pages, 2.3 M characters, text extracts cleanly** with `pypdf`.
+- **`secim-<year>.pdf`** — the specialty-selection booklet, 112 pages.
+
+**They do not contain a full per-specialty cutoff table.** What they contain is:
+
+- **Only the extremes** — Cədvəl 1.64, *"ƏN YÜKSƏK VƏ ƏN AŞAĞI KEÇİD BALLI İXTİSASLAR"*,
+  lists the highest- and lowest-cutoff specialty per group, not all 1,028.
+- Group-level admission plans split by **Azərbaycan bölməsi / Rus bölməsi / Birgə**.
+- Per-subject correct-answer percentages, school rankings, score-interval distributions.
+
+**But they are genuinely valuable for three things:**
+
+1. **Free official verification.** The 2025 journal states BANM *İnformasiya
+   təhlükəsizliyi* = **681.0**; our sec.az row for that programme is **681.0 — exact
+   match**. This is how `verified_by` gets filled without paying for the journal.
+
+   One caveat found while checking: ADA *Dizayn* reads 237.1 in the journal against 241.9
+   in our data. That is **not** a discrepancy — the journal quotes *"minimal **test
+   imtahanı** balı"* for Group V, where an aptitude exam (`qabiliyyət imtahanı`) adds
+   points on top. Group V rows are measuring a different quantity and must not be
+   verified against this figure.
+
+2. **It confirms our target definition, officially.** *"qəbul olan abituriyentlər
+   arasında ən aşağı bal toplayan abituriyentin balı minimal bal kimi götürülmüşdür"* —
+   the cutoff is the score of the lowest-scoring admitted applicant. Identical semantics
+   to the Turkish `final_score_012`. Quote this in the report.
+
+3. **It explains the 163 unlabelled variants.** The booklet states DİM prepares
+   **separate admission plans for the Azerbaijani and Russian sections**, and notes that
+   same-name specialties differ significantly between Baku and the regions. That is the
+   discriminator sec.az drops.
+
+The booklet also draws a distinction worth keeping straight in the UI: **`müsabiqə şərti`**
+(the minimum score to enter the competition at all, set in advance) is *not* the
+**`keçid balı`** (the resulting cutoff, known only afterwards). We predict the latter.
 
 **qebulai.az must not be used, as a source or a cross-check.** Its robots.txt disallows
 `ClaudeBot`, `GPTBot`, `CCBot` and `Google-Extended`, sets `Content-Signal: ai-train=no`,
