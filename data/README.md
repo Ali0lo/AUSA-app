@@ -88,12 +88,53 @@ persistence baseline 2023->2024 : admission_rate MAE 0.0623 | sat_avg MAE 23.98
 
 ---
 
-## 3. Germany, Azerbaijan, Poland, UK, China — not yet automated
+## 3. Azerbaijan — 2,576 rows (~5 seconds, one HTTP request)
+
+Source: [sec.az `/kecid-ballari`](https://sec.az/kecid-ballari) — a compilation of
+published DİM results for 2023, 2024 and 2025, state-funded (`dövlət sifarişli`) places.
+
+```bash
+python backend/scripts/collect_azerbaijan.py
+```
+
+Produces `data/processed/azerbaijan_cutoff_history.csv`.
+
+**Expected output:**
+
+```
+2,576 rows / 1,028 programs / 42 universities
+928 programs have 2+ years of history
+2023: 805   2024: 743   2025: 1028
+978 rows (38%) are unlabelled variants
+```
+
+> ⚠️ **Never use qebulai.az.** Its robots.txt disallows `ClaudeBot`, `GPTBot` and
+> `CCBot`, sets `Content-Signal: ai-train=no`, and asserts an express reservation of
+> rights under **Article 4 of EU Directive 2019/790**. It is also a direct competitor.
+> sec.az, by contrast, explicitly permits these crawlers.
+
+> ⚠️ **163 groups of rows are unlabelled variants (38% of the file).** DİM admits
+> separately by language section and by əyani/qiyabi, but the sec.az list page does not
+> publish which row is which — they are identical apart from the scores. They are kept as
+> **separate programs** with a `variant_index`. Do **not** merge them: collapsing them
+> interleaves unrelated series and silently corrupts every lag feature. `variant_index`
+> carries no meaning — variant 1 is simply the highest-scoring one.
+
+> ⚠️ **Only three years, so forecasting cannot be evaluated for Azerbaijan** — a lag plus
+> a train/test split needs four. Cold start works fine. Pre-2023 history exists only in
+> the paywalled *Abituriyent* journal.
+
+The `--with-details` flag would fetch ~500 `/kod/` pages for quota, tuition and the paid
+track. It **refuses to run** without `--i-have-f1-signoff`, because that is bulk
+collection and open question **F1** requires a named owner first.
+
+---
+
+## 4. Germany, Poland, UK, China — not yet automated
 
 | Country | Status | Blocked on |
 |---|---|---|
-| **Germany** | Not started | Open question **A1** (aggregator vs direct) and **F1** (legal sign-off). Top priority market, least certain data path |
-| **Azerbaijan** | Not started | Open question **A4** — team-only task, needs local knowledge and Azerbaijani-language sources |
+| **Germany** | Not started | Open question **A1** (aggregator vs direct) and **F1** (legal sign-off). ⚠️ `collect_germany.py` currently **fabricates data** on network failure — fix or delete it before running anything |
 | **Poland** | Not scoped | Open question **A2** |
 | **UK** | Deferred | UCAS entry-grade data confirmed to exist; deprioritised per **B1** |
 | **China** | Deferred | Open question **A3** — likely no cutoff exists to predict |
@@ -109,10 +150,10 @@ Both files share the shape defined in
 
 | Column | Meaning |
 |---|---|
-| `country` | ISO-2 code (`TR`, `US`) |
+| `country` | ISO-2 code (`TR`, `US`, `AZ`) |
 | `intake_year` | The admission cycle |
 | `cutoff_value` | **The target variable.** In native units |
-| `cutoff_unit` | `yks_score_012`, `sat_p25_and_admit_rate`, … |
+| `cutoff_unit` | `yks_score_012`, `sat_p25_and_admit_rate`, `dim_score_700`, … |
 | `lower_is_better` | `TRUE` for German Abiturnote and YKS *rank*; `FALSE` for scores |
 | `source_url` | Provenance for every single row |
 | `verified_by` | **Empty until a human checks the row.** See below |

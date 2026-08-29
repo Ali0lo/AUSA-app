@@ -1,0 +1,328 @@
+{
+  "TR": {
+    "country": "TR",
+    "cutoff_unit": "yks_score_012",
+    "lower_is_better": false,
+    "rows": 115482,
+    "programs": 29293,
+    "forecasting": {
+      "split": "train<=2022, val=2023, test=2024",
+      "features": [
+        "university_name",
+        "university_type",
+        "city",
+        "faculty_name",
+        "department_name",
+        "score_type",
+        "scholarship_type",
+        "total_quota",
+        "intake_year",
+        "cut_lag1",
+        "cut_lag2",
+        "cut_lag3",
+        "delta1",
+        "delta2",
+        "quota_lag1",
+        "quota_delta",
+        "enrolled_lag1",
+        "placement_lag1",
+        "fill_lag1",
+        "rank_lag1",
+        "obp_lag1",
+        "quota_ratio"
+      ],
+      "baselines": {
+        "persistence": {
+          "mae": 13.773244304083015,
+          "rmse": 19.74682020394934,
+          "r2": 0.9160102793444584,
+          "n": 17732
+        }
+      },
+      "models": {
+        "DecisionTree": {
+          "mae": 22.97200263661237,
+          "rmse": 31.037023227119047,
+          "r2": 0.7925125107345427,
+          "n": 17732,
+          "vs_baseline_pct": -66.79,
+          "beats_baseline": false
+        },
+        "RandomForest": {
+          "mae": 17.4929100141355,
+          "rmse": 22.957132173926695,
+          "r2": 0.8864813906211125,
+          "n": 17732,
+          "vs_baseline_pct": -27.01,
+          "beats_baseline": false
+        },
+        "HistGradientBoosting": {
+          "mae": 18.128613291508405,
+          "rmse": 25.639644740548846,
+          "r2": 0.8584024302021561,
+          "n": 17732,
+          "vs_baseline_pct": -31.62,
+          "beats_baseline": false
+        }
+      }
+    },
+    "cold_start": {
+      "split": "GroupShuffleSplit(test_size=0.25) on program_key",
+      "features": [
+        "university_name",
+        "university_type",
+        "city",
+        "faculty_name",
+        "department_name",
+        "score_type",
+        "scholarship_type",
+        "total_quota",
+        "intake_year"
+      ],
+      "train_programs": 21969,
+      "test_programs": 7324,
+      "baselines": {
+        "global_mean": {
+          "mae": 55.35492731268509,
+          "rmse": 69.63565841977366,
+          "r2": -2.7980605608046716e-06,
+          "n": 28822
+        },
+        "department_mean": {
+          "mae": 38.95902169500854,
+          "rmse": 50.82935766088598,
+          "r2": 0.4671964797600552,
+          "n": 28822
+        }
+      },
+      "models": {
+        "DecisionTree": {
+          "mae": 28.944756129962347,
+          "rmse": 39.78044126395394,
+          "r2": 0.6736549459981136,
+          "n": 28822,
+          "vs_baseline_pct": 25.7,
+          "beats_baseline": true
+        },
+        "RandomForest": {
+          "mae": 21.500620544150014,
+          "rmse": 29.801669066049055,
+          "r2": 0.8168448991948911,
+          "n": 28822,
+          "vs_baseline_pct": 44.81,
+          "beats_baseline": true
+        },
+        "HistGradientBoosting": {
+          "mae": 17.96301963936903,
+          "rmse": 24.10954070404252,
+          "r2": 0.880128561637009,
+          "n": 28822,
+          "vs_baseline_pct": 53.89,
+          "beats_baseline": true
+        }
+      },
+      "shipped_model": {
+        "name": "HistGradientBoosting",
+        "artifact": "models\\cutoff_coldstart_TR.joblib"
+      }
+    },
+    "trained_at": "2026-08-29T12:28:10.286229+00:00",
+    "sklearn_version": "1.7.2"
+  },
+  "US": {
+    "country": "US",
+    "cutoff_unit": "sat_total_p25",
+    "lower_is_better": false,
+    "rows": 9714,
+    "programs": 1425,
+    "forecasting": {
+      "split": "train<=2022, val=2023, test=2024",
+      "features": [
+        "university_name",
+        "university_type",
+        "city",
+        "faculty_name",
+        "department_name",
+        "score_type",
+        "scholarship_type",
+        "total_quota",
+        "intake_year",
+        "cut_lag1",
+        "cut_lag2",
+        "cut_lag3",
+        "delta1",
+        "delta2",
+        "quota_lag1",
+        "quota_delta",
+        "enrolled_lag1",
+        "placement_lag1",
+        "fill_lag1",
+        "quota_ratio"
+      ],
+      "baselines": {
+        "persistence": {
+          "mae": 34.517954298150165,
+          "rmse": 51.78132643278071,
+          "r2": 0.9047635123031984,
+          "n": 919
+        }
+      },
+      "models": {
+        "DecisionTree": {
+          "mae": 39.87534471612551,
+          "rmse": 56.94019555347431,
+          "r2": 0.8848417817648112,
+          "n": 919,
+          "vs_baseline_pct": -15.52,
+          "beats_baseline": false
+        },
+        "RandomForest": {
+          "mae": 33.92137909068373,
+          "rmse": 48.30472868215992,
+          "r2": 0.9171225610381388,
+          "n": 919,
+          "vs_baseline_pct": 1.73,
+          "beats_baseline": true
+        },
+        "HistGradientBoosting": {
+          "mae": 36.00333708206592,
+          "rmse": 50.89834024301498,
+          "r2": 0.9079838053129221,
+          "n": 919,
+          "vs_baseline_pct": -4.3,
+          "beats_baseline": false
+        }
+      }
+    },
+    "cold_start": {
+      "split": "GroupShuffleSplit(test_size=0.25) on program_key",
+      "features": [
+        "university_name",
+        "university_type",
+        "city",
+        "faculty_name",
+        "department_name",
+        "score_type",
+        "scholarship_type",
+        "total_quota",
+        "intake_year"
+      ],
+      "train_programs": 1068,
+      "test_programs": 357,
+      "baselines": {
+        "global_mean": {
+          "mae": 112.76127226694072,
+          "rmse": 146.94393120702497,
+          "r2": -0.00016513235552784167,
+          "n": 2521
+        },
+        "department_mean": {
+          "mae": 112.76127226694072,
+          "rmse": 146.94393120702497,
+          "r2": -0.00016513235552784167,
+          "n": 2521
+        }
+      },
+      "models": {
+        "DecisionTree": {
+          "mae": 107.5342504344233,
+          "rmse": 145.65417659807719,
+          "r2": 0.017315092028794776,
+          "n": 2521,
+          "vs_baseline_pct": 4.64,
+          "beats_baseline": true
+        },
+        "RandomForest": {
+          "mae": 95.52172395765838,
+          "rmse": 127.41873885380663,
+          "r2": 0.24797027690616769,
+          "n": 2521,
+          "vs_baseline_pct": 15.29,
+          "beats_baseline": true
+        },
+        "HistGradientBoosting": {
+          "mae": 99.27315485091201,
+          "rmse": 131.8693711752663,
+          "r2": 0.19451719857367378,
+          "n": 2521,
+          "vs_baseline_pct": 11.96,
+          "beats_baseline": true
+        }
+      },
+      "shipped_model": {
+        "name": "RandomForest",
+        "artifact": "models\\cutoff_coldstart_US.joblib"
+      }
+    },
+    "trained_at": "2026-08-29T12:28:28.158540+00:00",
+    "sklearn_version": "1.7.2"
+  },
+  "AZ": {
+    "country": "AZ",
+    "cutoff_unit": "dim_score_700",
+    "lower_is_better": false,
+    "rows": 2576,
+    "programs": 1028,
+    "forecasting": {
+      "skipped": "too few intake years for a temporal split (train<=2023 has 0 rows, test=2025 has 928)"
+    },
+    "cold_start": {
+      "split": "GroupShuffleSplit(test_size=0.25) on program_key",
+      "features": [
+        "university_name",
+        "department_name",
+        "score_type",
+        "scholarship_type",
+        "intake_year"
+      ],
+      "train_programs": 771,
+      "test_programs": 257,
+      "baselines": {
+        "global_mean": {
+          "mae": 107.12449477485785,
+          "rmse": 130.46325230337914,
+          "r2": -6.124059789103242e-05,
+          "n": 648
+        },
+        "department_mean": {
+          "mae": 57.36731997911702,
+          "rmse": 82.16199064036849,
+          "r2": 0.6033640272251798,
+          "n": 648
+        }
+      },
+      "models": {
+        "DecisionTree": {
+          "mae": 54.04301700747082,
+          "rmse": 76.16687486835302,
+          "r2": 0.6591349548568177,
+          "n": 648,
+          "vs_baseline_pct": 5.79,
+          "beats_baseline": true
+        },
+        "RandomForest": {
+          "mae": 42.11847208518771,
+          "rmse": 59.799742498249955,
+          "r2": 0.7898889844785404,
+          "n": 648,
+          "vs_baseline_pct": 26.58,
+          "beats_baseline": true
+        },
+        "HistGradientBoosting": {
+          "mae": 41.34339408860803,
+          "rmse": 59.09829686603599,
+          "r2": 0.7947892419832572,
+          "n": 648,
+          "vs_baseline_pct": 27.93,
+          "beats_baseline": true
+        }
+      },
+      "shipped_model": {
+        "name": "HistGradientBoosting",
+        "artifact": "models\\cutoff_coldstart_AZ.joblib"
+      }
+    },
+    "trained_at": "2026-08-29T12:28:32.251392+00:00",
+    "sklearn_version": "1.7.2"
+  }
+}

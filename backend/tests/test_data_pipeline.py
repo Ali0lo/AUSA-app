@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from app.data_pipeline.extraction import ExtractedProgramData, extract_program_info_from_text
 from app.data_pipeline.jobs import (
-    refresh_azerbaijan_data_job,
     refresh_germany_data_job,
     refresh_university_data_job,
 )
@@ -78,12 +77,9 @@ async def test_refresh_germany_data_job():
         assert "blocked_account_eur" in rec["extracted_data"]
 
 
-@pytest.mark.asyncio
-async def test_refresh_azerbaijan_data_job():
-    results = await refresh_azerbaijan_data_job(min_confidence_threshold=85.0)
-    assert len(results) >= 1
-    for rec in results:
-        assert rec["country"] == "Azerbaijan"
-        assert rec["status"] == "success"
-        assert rec["verification_status"] in ["verified", "flagged_for_review"]
-        assert "dim_score_required" in rec
+# test_refresh_azerbaijan_data_job was removed with the job it covered (2026-08-29).
+#
+# The test asserted status == "success" for every record, which it could only satisfy
+# because the collector fabricated three programs from mock HTML when the network call
+# failed. It therefore passed whether or not the real sources were reachable -- a green
+# test asserting invented DIM scores. See backend/app/data_pipeline/jobs.py.

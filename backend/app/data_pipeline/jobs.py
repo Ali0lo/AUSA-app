@@ -11,7 +11,6 @@ if scripts_dir not in sys.path:
 from app.data_pipeline.extraction import ExtractedProgramData, extract_program_info_from_text
 from app.data_pipeline.scraper import fetch_page_content
 from collect_germany import collect_germany_program_data
-from collect_azerbaijan import collect_azerbaijan_program_data
 
 
 MOCK_PIPELINE_URLS = [
@@ -127,40 +126,14 @@ async def refresh_germany_data_job(
     return results
 
 
-async def refresh_azerbaijan_data_job(
-    urls: Optional[List[str]] = None,
-    min_confidence_threshold: float = 85.0
-) -> List[Dict[str, Any]]:
-    """
-    Background job function for scraping and extracting local Azerbaijani university data (ADA, UNEC, BANM, BSU).
-    Flags any record with confidence_score < 85.0% as 'flagged_for_review'.
-    """
-    print(f"[Azerbaijan Refresh Job] Starting Azerbaijani program data ingestion job...")
-    extracted_records = await collect_azerbaijan_program_data(urls)
-
-    results: List[Dict[str, Any]] = []
-    for rec in extracted_records:
-        is_verified = rec.confidence_score >= min_confidence_threshold
-        verification_status = "verified" if is_verified else "flagged_for_review"
-
-        summary = {
-            "country": "Azerbaijan",
-            "university_name": rec.university_name,
-            "program_name": rec.program_name,
-            "dim_score_required": rec.dim_score_required,
-            "extracted_data": rec.model_dump(),
-            "confidence_score": rec.confidence_score,
-            "verification_status": verification_status,
-            "last_updated": datetime.now(timezone.utc).isoformat(),
-            "status": "success",
-        }
-        results.append(summary)
-
-        print(
-            f"[Azerbaijan Ingestion] {rec.university_name or 'AZ Uni'} - {rec.program_name} "
-            f"| DIM Required: {rec.dim_score_required or 'N/A'} "
-            f"| Status: {verification_status} | Confidence: {rec.confidence_score}%"
-        )
-
-    print(f"[Azerbaijan Refresh Job] Processed {len(results)} Azerbaijani records.")
-    return results
+# refresh_azerbaijan_data_job was REMOVED on 2026-08-29.
+#
+# It called collect_azerbaijan_program_data, which caught a bare Exception on any network
+# failure and silently substituted hardcoded mock HTML containing invented DIM scores
+# (ADA 600, UNEC 520, BHOS 650). Those fabricated scores were then marked "verified"
+# whenever their confidence_score cleared 85, and written into the pipeline as real
+# admission requirements. ADR-0004 forbids exactly this.
+#
+# Azerbaijani data now comes from backend/scripts/collect_azerbaijan.py, which builds
+# program_cutoff_history from published DIM results and exits rather than guessing.
+# It is a batch collector, not a request-path job, so it has no replacement here.

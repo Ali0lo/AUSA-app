@@ -1,10 +1,9 @@
 # ADR-0006 — Admission routes: programs accept several qualifications, not one
 
-**Status:** **Proposed** — the shape below is agreed in principle, but questions
-G1–G3 in [`../open-questions.md`](../open-questions.md) must be answered before this
-can be accepted and built.
-**Date:** 2026-08-28
-**Amends if accepted:** [ADR-0001](0001-cutoff-prediction-replaces-weighted-scoring.md), [ADR-0002](0002-per-country-models-and-normalization.md)
+**Status:** **Accepted** (29 August 2026) — G1–G4 answered in
+[`../open-questions.md`](../open-questions.md).
+**Date:** 2026-08-28, accepted 2026-08-29
+**Amends:** [ADR-0001](0001-cutoff-prediction-replaces-weighted-scoring.md), [ADR-0002](0002-per-country-models-and-normalization.md)
 
 ---
 
@@ -112,10 +111,60 @@ may only be able to rank deterministically. That is an acceptable and honest spl
 it should be a **stated decision recorded here**, not something discovered while writing
 the final report.
 
-## Open questions blocking acceptance
+## Accepted scope (29 August 2026)
 
-See [`../open-questions.md`](../open-questions.md) section G:
+### The finding that shaped it
 
-- **G1** — which routes does the MVP support?
-- **G2** — does intake capture every qualification up front, or per country on demand?
-- **G3** — is a route with no cutoff data shown or hidden?
+Research on 29 August established that **DIM has signed recognition protocols with
+Turkish universities**: an Azerbaijani student can apply to some of them on their DIM
+score alone, with no YÖS and no SAT. DIM is therefore not merely the home-market
+qualification — it is also a Turkey route. That single fact makes DIM the best value
+per unit of collection effort in the whole project, and it inverts the priority the
+draft assumed.
+
+### The route matrix
+
+Routes are not one-per-country. A qualification opens routes in several destinations:
+
+| Student holds | Azerbaijan | Turkey | Germany | USA |
+|---|---|---|---|---|
+| **DIM** (0–700) | native cutoff | **protocol universities** | — (→ Studienkolleg) | — |
+| **Attestat GPA** | — | private universities | → Abiturnote, Bavarian formula | GPA |
+| **SAT** | — | international quota | — | native |
+| Language (IELTS / TOEFL / TÖMER / TestDaF) | pass/fail | pass/fail | pass/fail | pass/fail |
+
+**Three routes are in scope: DIM, SAT, attestat GPA. YÖS is dropped** — its per-programme
+cutoffs are rarely published, so collection cost is high and the resulting data thin.
+
+### Two kinds of calculation, and they must not be blurred
+
+1. **Conversion is arithmetic.** Attestat → Abiturnote uses the KMK-recognised Modified
+   Bavarian formula, `(Nmax − Nd) / (Nmax − Nmin) × 3 + 1`, the same one uni-assist
+   applies. ADR-0002 already forbids learning this: compute it.
+2. **Cutoff prediction is ML.** What score actually clears the bar on that route.
+
+A student's qualifications are evaluated against **every route they open**, across every
+destination — but the conversion layer and the prediction layer stay separate.
+
+### Intake (G2)
+
+One optional "which of these do you have?" step: DIM, attestat GPA, SAT, plus language
+certificates. A route the student holds no qualification for is **not scored and never
+counted against them** — absent, not zero.
+
+### Routes without published cutoffs (G3)
+
+Shown as `admission_type = competitive`, labelled *"requirements known, competitiveness
+unknown"*. Applies immediately to the Turkish international-quota SAT route. A cutoff is
+never invented to fill the gap — the ADR-0004 no-fabrication rule, applied to the UI.
+
+### Trained-on versus served (G4)
+
+- **Trained on:** YKS (Turkey) and College Scorecard (USA); DIM once collected.
+- **Served:** DIM, SAT, attestat GPA.
+- **Trained only, never served:** YKS. **No product route uses it.**
+
+YKS earns its place as a **selectivity signal** — how competitive a Turkish programme is
+relative to its peers — which is what the selectivity index needs, and which transfers
+across routes even though the raw score does not. This limitation is stated here so it
+is quoted, not discovered, when the report is written.

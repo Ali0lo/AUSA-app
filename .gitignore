@@ -30,3 +30,20 @@ local_pgdata/
 .vscode/
 .idea/
 *.swp
+
+# Collected datasets -- reproduce with backend/scripts/collect_*.py, see data/README.md.
+# Scoped to data/** so these patterns never swallow source files elsewhere.
+data/**/*.csv
+data/**/*.json
+data/**/*.zip
+data/**/*.pdf
+data/**/*.xlsx
+data/raw/turkey/
+data/raw/usa/
+!data/**/.gitkeep
+
+# Trained model artifacts -- regenerate with train_cutoff_models.py.
+# models/metrics.json IS committed: ADR-0004 requires every predicted_cutoff to be
+# traceable to the exact run that produced it.
+models/*.joblib
+!models/metrics.json
