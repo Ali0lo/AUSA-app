@@ -35,29 +35,35 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    try:
-        stmt = select(Student)
-        if subject.isdigit():
-            stmt = stmt.where(Student.id == int(subject))
-        else:
-            stmt = stmt.where(Student.email == subject)
+    stmt = select(Student)
+    if subject.isdigit():
+        stmt = stmt.where(Student.id == int(subject))
+    else:
+        stmt = stmt.where(Student.email == subject)
 
+    try:
         result = await db.execute(stmt)
         student = result.scalars().first()
+    except Exception as exc:
+        # The database is the only authority on who exists. If it cannot be reached,
+        # nobody is authenticated. This previously fell through to a synthetic Student
+        # (gpa 3.7, budget 20000) copied from test_auth.py, so any database error
+        # authenticated any well-formed token and handed the caller an invented profile
+        # that then drove matching.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication is temporarily unavailable.",
+        ) from exc
 
-        if student:
-            return student
-    except Exception:
-        pass
+    if student is None:
+        # A correctly signed token for a student who no longer exists is not valid.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired authentication token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # Return mock student instance for offline dev/test fallback
-    return Student(
-        id=int(subject) if subject.isdigit() else 101,
-        email=subject if "@" in subject else "test_student_auth@ausa.edu.az",
-        gpa=3.7,
-        budget="20000.0",
-        degree_level="master"
-    )
+    return student
 
 
 async def get_optional_current_user(
@@ -72,5 +78,9 @@ async def get_optional_current_user(
 
     try:
         return await get_current_user(credentials=credentials, db=db)
-    except HTTPException:
-        return None
+    except HTTPException as exc:
+        # A bad token means "not signed in". A database outage does not -- reporting it
+        # as anonymous would silently downgrade every authenticated request.
+        if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+            return None
+        raise

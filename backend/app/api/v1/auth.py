@@ -39,14 +39,19 @@ class RegisterRequest(BaseModel):
 
 
 class StudentUserResponse(BaseModel):
-    """User response model returned by GET /auth/me."""
+    """User response model returned by GET /auth/me.
+
+    Every profile field is optional because every corresponding column is nullable.
+    A student who has not entered a GPA has no GPA -- returning a stand-in 3.5 would
+    put a number the student never gave us into their eligibility checks.
+    """
     id: int
-    email: str
-    gpa: float
-    budget: float
+    email: Optional[str] = None
+    gpa: Optional[float] = None
+    budget: Optional[float] = None
     ielts: Optional[float] = None
     toefl: Optional[int] = None
-    degree_level: DegreeLevel
+    degree_level: Optional[DegreeLevel] = None
     field_of_study: Optional[str] = None
     country: Optional[str] = None
 
@@ -86,10 +91,14 @@ async def login(
         return TokenResponse(access_token=token, token_type="bearer")
     except HTTPException:
         raise
-    except Exception:
-        # Fallback for dev/test environment without active PostgreSQL database engine
-        token = create_access_token(subject=101)
-        return TokenResponse(access_token=token, token_type="bearer")
+    except Exception as exc:
+        # Never issue a token when credentials could not be checked. This previously
+        # returned a valid token for student 101 on any database error -- an
+        # authentication bypass triggered by an outage, not a dev convenience.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Login is temporarily unavailable.",
+        ) from exc
 
 
 @router.post(
@@ -135,10 +144,13 @@ async def register(
         return TokenResponse(access_token=token, token_type="bearer")
     except HTTPException:
         raise
-    except Exception:
-        # Fallback for dev/test environment without active PostgreSQL database engine
-        token = create_access_token(subject=101)
-        return TokenResponse(access_token=token, token_type="bearer")
+    except Exception as exc:
+        # No account was created, so no token is owed. This previously returned a valid
+        # token for student 101 whenever the write failed.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Registration is temporarily unavailable.",
+        ) from exc
 
 
 @router.get(
@@ -151,22 +163,22 @@ async def register(
 async def get_me(
     current_student: Student = Depends(get_current_user)
 ) -> StudentUserResponse:
-    """Get authenticated student info."""
-    budget_val = 15000.0
-    try:
-        if current_student.budget:
+    """Get authenticated student info. Unset fields are returned as null, not filled in."""
+    budget_val: Optional[float] = None
+    if current_student.budget:
+        try:
             budget_val = float(current_student.budget)
-    except ValueError:
-        pass
+        except ValueError:
+            budget_val = None
 
-    degree_val: DegreeLevel = "master"
+    degree_val: Optional[DegreeLevel] = None
     if current_student.degree_level in ["bachelor", "master", "phd"]:
         degree_val = current_student.degree_level  # type: ignore
 
     return StudentUserResponse(
-        id=current_student.id or 101,
-        email=current_student.email or "student@ausa.edu.az",
-        gpa=current_student.gpa or 3.5,
+        id=current_student.id,
+        email=current_student.email,
+        gpa=current_student.gpa,
         budget=budget_val,
         ielts=current_student.ielts,
         toefl=current_student.toefl,

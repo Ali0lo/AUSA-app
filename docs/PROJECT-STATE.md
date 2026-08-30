@@ -203,8 +203,7 @@ profile was updated. Forbidden by ADR-0004. Grep for it before trusting any modu
 
 | Gap | Impact |
 |---|---|
-| **`auth.py` issues a valid token for user 101 when the DB is unreachable** | Authentication bypass on database failure — not merely a data-quality bug |
-| `deps.py`, `applications.py`, `admin.py`, `export.py` fall back to `DEMO_*` records | Endpoints return invented rows indistinguishable from real ones |
+| `applications.py`, `admin.py`, `export.py` fall back to `DEMO_*` records | Endpoints return invented rows indistinguishable from real ones |
 | `prediction.py` still pre-pivot | Must become batch precompute per ADR-0004 |
 | `engine.py` carries false attribution strings | Claims reasoning it does not perform |
 | Missing `student_applications` migration | Table exists in code, not in Alembic |
@@ -233,7 +232,27 @@ Three tests were removed with them. Each asserted `status == "success"` or a
 correctly-shaped vector, so each stayed green *because* of the fabrication — the suite
 was confirming the mock, not the source.
 
-Suite: **44 passing**, up from 40 defined before this work.
+### 7b. Authentication bypass fixed — 30 August
+
+`auth.py` login and register each ended in `except Exception:` → `create_access_token(subject=101)`.
+**Any** database error — an outage, a timeout, anything that could provoke one — returned a
+valid token for student 101 with no credential check performed. `deps.py` completed the
+loop: a correctly signed token whose student row did not exist returned a synthetic
+`Student(gpa=3.7, budget="20000.0")` instead of failing, so a deleted account still
+authenticated and the invented profile then fed matching.
+
+The synthetic student's email and GPA were copied verbatim from `test_auth.py`, which ran
+against no database at all. Every request in that test fell into the fallback, so the flow
+it claimed to assert was never executed — **the mock was written to satisfy the test, and
+the test then certified the bypass.**
+
+Now: a database error returns **503** and no token; a valid token for a missing student
+returns **401**; `/auth/me` returns `null` for unset fields rather than substituting
+gpa 3.5 / budget 15000. `test_auth.py` runs against a real in-memory SQLite database
+(`aiosqlite`, added to requirements — this also closes the CI gap) and covers wrong
+password, unknown email, missing student, and database failure.
+
+Suite: **48 passing**, up from 40 defined before this work.
 
 ---
 
