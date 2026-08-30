@@ -56,7 +56,10 @@ def _clean(value: Any) -> Any:
     """
     if isinstance(value, np.generic):
         value = value.item()
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    # pd.NA is neither a float nor an np.generic, so it needs its own arm: today every
+    # blank cell arrives as float nan via read_csv, but collect_azerbaijan.py writes a
+    # literal pd.NA into its frame, so the two paths are one refactor from meeting.
+    if value is None or value is pd.NA or (isinstance(value, float) and pd.isna(value)):
         return None
     if isinstance(value, str) and value.strip() == "":
         return None

@@ -21,6 +21,12 @@ class ProgramCutoffHistory(Base):
     # distinct competitions, so they are kept apart rather than merged -- merging would
     # interleave unrelated series and corrupt every lag feature built from them.
     variant_index = Column(Integer, nullable=True)
+    # Read this flag carefully: True does NOT mean "we know which variant this row is".
+    # It means the opposite of a variant existing at all. collect_azerbaijan.py sets it
+    # to `not multiple`, so True <=> this code had no siblings <=> variant_index IS NULL,
+    # and False <=> the row is one of N look-alikes we could only tell apart by position.
+    # Filtering `== True` to get reliably-labelled variants returns exactly the rows that
+    # have no variant. Filter on `variant_index IS NOT NULL` if you want the variants.
     variant_discriminator_known = Column(Boolean, nullable=True)
 
     intake_year = Column(Integer, nullable=False, index=True)
