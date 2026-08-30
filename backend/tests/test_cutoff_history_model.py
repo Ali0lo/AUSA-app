@@ -8,6 +8,18 @@ from app.core.database import Base
 from app.models.cutoff_history import ProgramCutoffHistory
 
 
+def test_model_is_registered_in_the_models_package():
+    """alembic/env.py builds target_metadata from `import app.models`.
+
+    A model absent from that package is invisible to autogenerate, which then
+    emits a migration dropping its table.
+    """
+    import app.models
+
+    assert "program_cutoff_history" in Base.metadata.tables
+    assert hasattr(app.models, "ProgramCutoffHistory")
+
+
 @pytest_asyncio.fixture
 async def session():
     engine = create_async_engine(
