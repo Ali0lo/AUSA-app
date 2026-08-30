@@ -90,9 +90,37 @@ The second number does not mean the same thing everywhere. Ranking a genuine suc
 against a selectivity percentile in one list is misleading, and sorting them against each
 other is worse. Three blocks, three card types, one-to-one:
 
+> **Correction, 30 August 2026 — Azerbaijan is not a destination.**
+> The table below originally listed Azerbaijan in the **Your chances** block. That was
+> wrong, and it was wrong in a way worth recording rather than quietly editing away.
+>
+> The product exists to help an Azerbaijani student find a suitable university **abroad**.
+> The 1,028 programmes at 42 Azerbaijani universities in our corpus are studying *in*
+> Azerbaijan — the domestic market, which is not what AUSA is for. The listing happened
+> because that corpus is our best-evidenced data (2,576 rows, three intake years, a
+> published mechanical cutoff), so it optimised for where the ML is most defensible
+> instead of for what the student asked. Evidence quality is not a reason to recommend a
+> destination nobody came here for.
+>
+> **Azerbaijan's role is score calibration, not destination.** The DİM corpus stays, and
+> stays load-bearing, for three things: it is the scale the student's own score arrives on
+> (`dim_score_700`), it is the training corpus that demonstrates the cutoff-prediction
+> method works on real published data, and it is the domestic baseline a student is
+> implicitly comparing against. None of those require showing an Azerbaijani programme as
+> a recommendation, and it is no longer shown as one.
+>
+> **What this costs, stated plainly:** the "Your chances" block now rests entirely on
+> Germany and Poland, and as of today we have collected **zero** cutoff rows for either.
+> The block is currently a promise, not a capability. Germany therefore moves from
+> "collect if there's time" to the top of the data queue — it is the only target where the
+> strongest available ML and the actual product goal coincide. Until German NC values and
+> Polish *próg punktowy* history are collected and loaded, this block ships empty, and it
+> ships empty rather than being backfilled with the Azerbaijani rows that made it look
+> full.
+
 | Block | Countries | Second number | Why |
 |---|---|---|---|
-| **Your chances** | Azerbaijan, Germany, Poland | Genuine success rate | Admission is mechanical — clearing the cutoff *is* admission, so `P(next year's cutoff ≤ your score)` is not a proxy for the success rate, it **is** the success rate |
+| **Your chances** | Germany, Poland | Genuine success rate | Admission is mechanical — clearing the cutoff *is* admission, so `P(next year's cutoff ≤ your score)` is not a proxy for the success rate, it **is** the success rate |
 | **How hard it is** | Turkey | Selectivity only | Cutoffs are published for the domestic YKS route; Azerbaijani applicants enter by protocol, SAT or attestat, and those cutoffs are not published (ADR-0006) |
 | **Requirements only** | USA, UK, **all scholarships** | None | USA admits holistically and publishes no field dimension; the UK publishes *stated* entry requirements, not realized cutoffs, so there is nothing to regress on; funded scholarships select by committee |
 
@@ -103,7 +131,17 @@ that the design degrades honestly rather than an omission to hide.
 
 ### 4. Coverage
 
-Six countries. Five carry a second number; the UK does not.
+**Five destinations** — Germany, Poland, Turkey, the USA, the UK — plus Azerbaijan, which
+is in the corpus for score calibration and is not offered as a destination (see the
+correction in §3).
+
+Three of the five destinations carry a second number: Germany and Poland a success rate,
+Turkey a selectivity percentile. The USA and the UK carry none.
+
+*(Corrected 30 Aug 2026: this section previously read "Six countries. Five carry a second
+number; the UK does not." Both halves were wrong — Azerbaijan was being counted as a
+destination, and the USA has never carried a second number either; the §3 table has said
+so since the ADR was written.)*
 
 Requirements are extracted for **~90 universities**, split **~55 by destination** (where
 Azerbaijani students actually enrol) and **~35 by aspiration** (the names students type
@@ -307,9 +345,20 @@ honest table beats a long invented one.
 
 ### 12. Cut order, agreed in advance
 
-If the schedule slips: **Poland first, then the UK, then the gated percentage.** Poland is
-the only country here with no data, no collector and no compensating role. Deciding this
-now is cheaper than improvising it on 13 September.
+If the schedule slips: **Poland first, then the UK, then the gated percentage.** Deciding
+this now is cheaper than improvising it on 13 September.
+
+*(Corrected 30 Aug 2026.)* The original reason given — "Poland is the only country here
+with no data, no collector and no compensating role" — no longer holds. Germany is in the
+identical state: `collect_germany.py` was deleted on 30 August because all three of its
+target URLs were invented and its only working path was a mock-HTML fallback, so Germany
+now has no data and no collector either.
+
+The order survives anyway, on a better reason. After the §3 correction, Germany is the
+country the "Your chances" block *rests on* — cutting it empties the block that carries
+the ML entirely, and the second number becomes a claim we never demonstrate. Poland is
+the redundant one: it proves the same mechanism Germany proves, so cutting it costs
+breadth and costs nothing structural. **Germany is not cuttable. Poland is.**
 
 ---
 

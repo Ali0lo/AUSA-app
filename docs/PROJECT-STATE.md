@@ -313,9 +313,18 @@ checklist, process checklist, and alternatives that close the gap.
 
 | Block | Countries | Second number |
 |---|---|---|
-| Your chances | AZ, DE, PL | genuine success rate — admission is mechanical |
+| Your chances | DE, PL | genuine success rate — admission is mechanical |
 | How hard it is | TR | selectivity only |
 | Requirements only | US, UK, all scholarships | none |
+
+**AZ was removed from that first row on 30 Aug** (ADR-0007 §3, dated correction). AUSA
+helps an Azerbaijani student find a university *abroad*; the 1,028 programmes at 42
+Azerbaijani universities are the domestic market. The DİM corpus keeps three jobs — the
+scale the student's score arrives on, the training corpus that shows the method works on
+real published data, and the domestic baseline — none of which need it shown as a
+recommendation. The cost is real and is not hidden: **the "Your chances" block now rests
+on two countries for which we have collected zero cutoff rows.** German collection is
+therefore the top data priority, and Germany is no longer cuttable (ADR-0007 §12).
 
 **One model, one stored number.** Batch precompute writes `predicted_cutoff`, `p10..p90`,
 band thresholds and `model_run_id`; both modes read that row and nothing is recomputed at
