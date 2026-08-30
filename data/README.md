@@ -134,7 +134,7 @@ collection and open question **F1** requires a named owner first.
 
 | Country | Status | Blocked on |
 |---|---|---|
-| **Germany** | Not started | Open question **A1** (aggregator vs direct) and **F1** (legal sign-off). ⚠️ `collect_germany.py` currently **fabricates data** on network failure — fix or delete it before running anything |
+| **Germany** | Not started | Source decided: **hochschulstart.de** for NC values plus official university pages, *not* nc-werte.info. `collect_germany.py` was **deleted on 30 Aug** — it fabricated GPA/IELTS/tuition for TU Munich, Heidelberg and RWTH from mock HTML and could never return real data (its target URLs were invented). See `../docs/PROJECT-STATE.md` §7a |
 | **Poland** | Not scoped | Open question **A2** |
 | **UK** | Deferred | UCAS entry-grade data confirmed to exist; deprioritised per **B1** |
 | **China** | Deferred | Open question **A3** — likely no cutoff exists to predict |

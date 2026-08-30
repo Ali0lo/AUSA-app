@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.services.agent.graph import application_agent
 from app.services.agent.state import AgentState
 from app.services.agent.tools import DEMO_STUDENT_STORE, draft_motivation_letter, extract_and_update_profile
+from app.services.embeddings import EmbeddingUnavailableError
 from app.services.rag.generator import answer_student_question
 from app.services.rag.retriever import retrieve_relevant_chunks
 
@@ -155,6 +156,13 @@ async def ask_university_guideline(
             )
 
         return RAGQuestionResponse(answer=answer, sources=sources)
+    except EmbeddingUnavailableError as e:
+        # The query cannot be embedded, so retrieval is impossible. Say so -- an
+        # unretrieved answer would be ungrounded, which is worse than no answer.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Search is unavailable: {str(e)}"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -272,7 +280,16 @@ async def upload_document_and_update_profile(
         parsed_text = extract_text_from_pdf_bytes(file_bytes)
 
         if not parsed_text.strip():
-            parsed_text = f"Academic Transcript Document: GPA 3.8, IELTS 7.5. Student ID: {student_id}."
+            # Previously substituted "GPA 3.8, IELTS 7.5" here, which invented the student's
+            # own qualifications and fed them into every subsequent eligibility check.
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"No text could be extracted from '{file.filename}'. It may be a scanned "
+                    "image without an OCR layer, or an unsupported format. Please upload a "
+                    "text-based PDF, or enter the scores manually."
+                )
+            )
 
         summary = extract_and_update_profile.invoke({
             "document_text": parsed_text,
@@ -310,6 +327,10 @@ async def upload_document_and_update_profile(
                 degree_level=profile.get("degree_level")
             )
         )
+    except HTTPException:
+        # A deliberate 4xx (e.g. unreadable upload) must reach the client as itself,
+        # not be relabelled a 500 by the handler below.
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

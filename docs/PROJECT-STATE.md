@@ -199,10 +199,12 @@ continue silently. It produced the auth bypass, and it still makes `agent/tools.
 invent GPA 3.8 / IELTS 7.5 from a failed transcript parse and tell the student their
 profile was updated. Forbidden by ADR-0004. Grep for it before trusting any module.
 
+**Fixed 30 August** — see §7a below for what was removed and what remains.
+
 | Gap | Impact |
 |---|---|
-| `agent/tools.py` fabricates GPA/IELTS on parse failure | Fake numbers drive match scores and an exported PDF |
-| **`collect_germany.py` has the identical fabrication pattern** — bare `except`, then mock HTML for Heidelberg / RWTH / TU Munich | Same defect as the Azerbaijan collector removed on 29 Aug. Not fixed, because Germany is gated on the 5 Sep go/no-go — **fix or delete it before any German collection runs** |
+| **`auth.py` issues a valid token for user 101 when the DB is unreachable** | Authentication bypass on database failure — not merely a data-quality bug |
+| `deps.py`, `applications.py`, `admin.py`, `export.py` fall back to `DEMO_*` records | Endpoints return invented rows indistinguishable from real ones |
 | `prediction.py` still pre-pivot | Must become batch precompute per ADR-0004 |
 | `engine.py` carries false attribution strings | Claims reasoning it does not perform |
 | Missing `student_applications` migration | Table exists in code, not in Alembic |
@@ -213,6 +215,25 @@ profile was updated. Forbidden by ADR-0004. Grep for it before trusting any modu
 | `scikit-learn` unpinned | `InconsistentVersionWarning`; artifacts not reproducible |
 | USA CSV has no `cutoff_value` column | Blocks a shared training path with Turkey |
 | `lower_is_better` is one flag for two opposite polarities | Rank vs score confusion |
+
+### 7a. Fabrication paths removed — 30 August
+
+Five sites were deleted. All five shared one shape: catch everything, substitute invented
+data, continue, and report success.
+
+| Site | What it invented | Now |
+|---|---|---|
+| `services/embeddings.py` | A sha256-derived sine wave whenever the API key was missing or any call failed. Two near-identical strings hashed to unrelated vectors, so every similarity search returned arbitrary documents and nothing raised | No fallback exists. Raises `EmbeddingUnavailableError`; `/chat/ask` returns **503**, not an ungrounded answer |
+| `scripts/collect_germany.py` | GPA, IELTS, tuition and deadlines for TU Munich, Heidelberg and RWTH Aachen. Its three target URLs were invented, so every fetch 404'd and **every run returned mock data**. Also hardcoded `blocked_account_eur = 11208.0` | **Deleted.** Germany will be collected from hochschulstart.de and official university pages |
+| `data_pipeline/jobs.py` (Germany job) | Marked those mock records `"verified"` above 85% LLM confidence | **Deleted** with the collector |
+| `data_pipeline/jobs.py` (generic job) | `"Sample University Program Catalog… GPA 3.2, IELTS 6.5, $15,000 USD"` on any fetch failure | A URL that cannot be fetched now yields `status: "failed"` and no data. Provenance is always `claude-extracted`; LLM confidence never promotes a record to verified |
+| `api/v1/chat.py` + `agent/tools.py` | **The student's own GPA 3.8 / IELTS 7.5** when a transcript could not be parsed — then reported "successfully updated" | Unreadable upload returns **422**. A document yielding no metrics updates nothing and says so |
+
+Three tests were removed with them. Each asserted `status == "success"` or a
+correctly-shaped vector, so each stayed green *because* of the fabrication — the suite
+was confirming the mock, not the source.
+
+Suite: **44 passing**, up from 40 defined before this work.
 
 ---
 
@@ -228,7 +249,7 @@ restored · sklearn pinned to 1.7.2.
 3. **Implement the qualification → route matrix** and the Bavarian-formula conversion as deterministic arithmetic.
 4. **Wire the selectivity index** (within-country percentile, Reach / Match / Safety) into the match response.
 5. **Rewrite `prediction.py`** as batch precompute; strip false attribution from `engine.py`; delete `train_prediction_models.py` and its stale sklearn 1.9.0 artifacts.
-6. **5 September — Germany go/no-go.** If yes, `collect_germany.py` must be fixed or deleted first (§7).
+6. **Germany collection** from hochschulstart.de and official university pages. The fabricating `collect_germany.py` was deleted on 30 Aug (§7a), so there is nothing to fix first.
 7. Clear the rest of the §7 defect list.
 
 ---

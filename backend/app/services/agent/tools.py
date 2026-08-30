@@ -69,7 +69,7 @@ def draft_motivation_letter(student_id: str, program_id: str) -> str:
         Structured motivation letter text template.
     """
     profile = DEMO_STUDENT_STORE.get(student_id, {})
-    gpa_str = f"with a GPA of {profile.get('gpa', 3.8)}" if profile.get('gpa') else ""
+    gpa_str = f"with a GPA of {profile.get('gpa')}" if profile.get("gpa") else ""
     return (
         f"Dear Admissions Committee,\n\n"
         f"I am writing to express my strong interest in enrolling in program {program_id}. "
@@ -134,31 +134,37 @@ def extract_and_update_profile(document_text: str, student_id: str = "std_demo")
         if toefl_match:
             extracted_toefl = int(toefl_match.group(1))
 
-    # Standard fallback defaults if document was sparse
-    if extracted_gpa is None:
-        extracted_gpa = 3.8
-    if extracted_ielts is None and extracted_toefl is None:
-        extracted_ielts = 7.5
+    # A document that yields nothing updates nothing. This previously defaulted to
+    # GPA 3.8 / IELTS 7.5 and reported them as "successfully updated" -- inventing the
+    # student's own qualifications, which then drive every eligibility check made for
+    # them. An unreadable transcript is a fact to report, not a gap to fill (ADR-0004).
+    if extracted_gpa is None and extracted_ielts is None and extracted_toefl is None:
+        return (
+            "No academic metrics could be read from this document. Nothing was changed on "
+            "the profile. Please check the file is a readable transcript or certificate, "
+            "or enter the scores manually."
+        )
 
-    # Update in-memory / database student store
+    # Update in-memory / database student store. Fields the document did not mention keep
+    # whatever the profile already held -- absent is not the same as zero.
     current_profile = DEMO_STUDENT_STORE.get(student_id, {})
     current_profile.update({
-        "gpa": extracted_gpa,
+        "gpa": extracted_gpa if extracted_gpa is not None else current_profile.get("gpa"),
         "ielts": extracted_ielts if extracted_ielts is not None else current_profile.get("ielts"),
         "toefl": extracted_toefl if extracted_toefl is not None else current_profile.get("toefl"),
         "degree_level": degree,
     })
     DEMO_STUDENT_STORE[student_id] = current_profile
 
-    summary = f"Successfully updated student profile: GPA is now {extracted_gpa:.2f}"
-    if extracted_ielts:
-        summary += f" and IELTS is {extracted_ielts:.1f}."
-    elif extracted_toefl:
-        summary += f" and TOEFL is {extracted_toefl}."
-    else:
-        summary += "."
+    found = []
+    if extracted_gpa is not None:
+        found.append(f"GPA {extracted_gpa:.2f}")
+    if extracted_ielts is not None:
+        found.append(f"IELTS {extracted_ielts:.1f}")
+    if extracted_toefl is not None:
+        found.append(f"TOEFL {extracted_toefl}")
 
-    return summary
+    return f"Updated student profile from the document: {', '.join(found)}."
 
 
 # Exported tool registry list for LangGraph node binding

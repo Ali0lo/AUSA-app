@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -77,12 +77,31 @@ async def test_chat_ask_rag_endpoint(override_db_dependency):
         "top_k": 3
     }
 
+    # Stub the embedding: this covers the endpoint's wiring, not OpenAI. It previously
+    # passed without a key only because the service fabricated a vector.
+    with patch(
+        "app.services.rag.retriever.get_embedding_async",
+        new=AsyncMock(return_value=[0.1] * 1536),
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            res = await client.post("/api/v1/chat/ask", json=payload)
+            assert res.status_code == 200
+            data = res.json()
+            assert "answer" in data
+            assert "sources" in data
+
+
+@pytest.mark.asyncio
+async def test_chat_ask_returns_503_when_embeddings_unavailable(override_db_dependency, monkeypatch):
+    """No key means no retrieval. The endpoint must say so, not answer ungrounded."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        res = await client.post("/api/v1/chat/ask", json=payload)
-        assert res.status_code == 200
-        data = res.json()
-        assert "answer" in data
-        assert "sources" in data
+        res = await client.post(
+            "/api/v1/chat/ask",
+            json={"question": "What is the minimum IELTS requirement?", "top_k": 3},
+        )
+        assert res.status_code == 503
 
 
 @pytest.mark.asyncio
