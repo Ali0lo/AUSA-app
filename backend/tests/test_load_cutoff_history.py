@@ -75,6 +75,42 @@ async def test_verified_by_is_never_populated_by_the_loader(session, tmp_path):
     assert all(r.verified_by is None for r in rows)
 
 
+# --- Round-2 fix: a numeric source_program_code (as Turkey's real CSV has) must not --
+# --- defeat the dedupe. pandas infers int64 for an unquoted numeric column, but the --
+# --- model column is String(300); the CSV-side key and the DB-side key must be built -
+# --- by the same function so they cannot silently drift into different types. -------
+
+NUMERIC_CODE_CSV = """country,source_program_code,variant_index,intake_year,cutoff_value,cutoff_unit,lower_is_better,university_name,department_name,source_url,verified_by
+TR,12345,,2024,600.0,dim_score_700,False,Uni,Dept,,
+"""
+
+
+@pytest.mark.asyncio
+async def test_numeric_source_program_code_is_idempotent(session, tmp_path):
+    path = tmp_path / "numeric_code.csv"
+    path.write_text(NUMERIC_CODE_CSV, encoding="utf-8")
+
+    assert await load_csv(session, path) == 1
+    assert await load_csv(session, path) == 0, (
+        "a numeric source_program_code (int64 from pandas) must not defeat the "
+        "dedupe against the DB-stored str value"
+    )
+
+    total = (await session.execute(select(func.count()).select_from(ProgramCutoffHistory))).scalar()
+    assert total == 1
+
+
+@pytest.mark.asyncio
+async def test_source_program_code_is_stored_as_str(session, tmp_path):
+    path = tmp_path / "numeric_code.csv"
+    path.write_text(NUMERIC_CODE_CSV, encoding="utf-8")
+    await load_csv(session, path)
+
+    row = (await session.execute(select(ProgramCutoffHistory))).scalars().one()
+    assert isinstance(row.source_program_code, str)
+    assert row.source_program_code == "12345"
+
+
 # --- Ruling 1 (generalized in the round-1 fix): all three Boolean columns must be ----
 # --- parsed explicitly via _parse_bool_or_none, never via bool(). --------------------
 

@@ -106,6 +106,31 @@ def _parse_bool_or_none(value: Any) -> bool | None:
     raise ValueError(f"cannot interpret value {value!r} as a boolean")
 
 
+def _natural_key(
+    country: Any, source_program_code: Any, variant_index: Any, intake_year: Any
+) -> tuple[str | None, str | None, int | None, int | None]:
+    """Build the (country, source_program_code, variant_index, intake_year) natural key.
+
+    This is the ONLY place allowed to construct this key -- for rows freshly parsed
+    from a CSV, and for rows read back from the database, alike. The bug this exists
+    to prevent: Turkey's real CSV has purely numeric source_program_code values (e.g.
+    100110027), so pandas infers int64 for that column and hands back a Python int,
+    while the model column is String(300), so a value read back from the database is
+    a str. When the CSV-side key and the DB-side key were built separately, one used
+    the int and the other used the str, `100110027 != "100110027"`, every "is this
+    row already there" check missed, and a re-run silently duplicated the entire
+    115,482-row file. Routing both sides through this one function -- which
+    normalises each component to the type its own column actually declares -- makes
+    that drift structurally impossible rather than merely patched for today's data.
+    """
+    return (
+        None if country is None else str(country),
+        None if source_program_code is None else str(source_program_code),
+        None if variant_index is None else int(variant_index),
+        None if intake_year is None else int(intake_year),
+    )
+
+
 def rows_from_csv(path: Path) -> list[dict]:
     """Parse one collected CSV into ORM kwargs. Raises if the schema does not match."""
     frame = pd.read_csv(path)
@@ -123,6 +148,13 @@ def rows_from_csv(path: Path) -> list[dict]:
         row["cutoff_value"] = float(row["cutoff_value"])
         if row["variant_index"] is not None:
             row["variant_index"] = int(row["variant_index"])
+
+        # source_program_code is String(300) in the model. A purely numeric code
+        # (as Turkey's CSV has) makes pandas infer int64 for this column, so cast
+        # explicitly here rather than relying on SQLite's TEXT affinity to coerce it
+        # on write -- Postgres (asyncpg, production) will not do that for you.
+        if row["source_program_code"] is not None:
+            row["source_program_code"] = str(row["source_program_code"])
 
         # lower_is_better is NOT NULL with a False default in the model, so "the
         # source did not say" collapses to False here -- explicitly, at this call
@@ -144,8 +176,9 @@ async def load_csv(session: AsyncSession, path: Path) -> int:
     """Insert rows not already present. Returns the number inserted."""
     rows = rows_from_csv(path)
 
-    existing = set(
-        (
+    existing = {
+        _natural_key(*db_row)
+        for db_row in (
             await session.execute(
                 select(
                     ProgramCutoffHistory.country,
@@ -155,11 +188,11 @@ async def load_csv(session: AsyncSession, path: Path) -> int:
                 )
             )
         ).all()
-    )
+    }
 
     inserted = 0
     for row in rows:
-        key = (row["country"], row["source_program_code"], row["variant_index"], row["intake_year"])
+        key = _natural_key(row["country"], row["source_program_code"], row["variant_index"], row["intake_year"])
         if key in existing:
             continue
         session.add(ProgramCutoffHistory(**row))
