@@ -1,16 +1,18 @@
 # AUSA — Project State
 
-**Written 29 August 2026. Deadline 15 September 2026 — 17 days left.**
+**Written 29 August 2026, updated 30 August. Deadline 15 September 2026 — 16 days left.**
 
 This is the single clean starting point. It records what is decided, what is built, what
 is measured, what is still open, and what happens next. The ADRs hold the *reasoning*;
 this file holds the *status*.
 
-> **Read §9 first.** A design discussion late on 29 August reframed the product
-> (success rate vs matching as separate numbers) and uncovered the real bottleneck: the
-> catalogue has **7 programmes**, not the modelling. §9 is **open and undecided** —
-> it goes to a grilling session before anything in it is built. Sections 1–8 describe
-> what is already committed and working.
+> **The product spec is [ADR-0007](adr/0007-three-number-model-and-honesty-tiers.md).**
+> A grilling session on 29–30 August took seventeen decisions and closed the reframe that
+> §9 used to hold open. §9 is now a summary and a pointer; ADR-0007 is authoritative.
+>
+> **The bottleneck is the catalogue, not the model.** `programs` holds 7 seed rows while
+> 127k rows of cutoff history sit in CSVs with no table and no join. Do not propose more
+> modelling work without checking whether that has changed.
 
 ---
 
@@ -273,195 +275,86 @@ restored · sklearn pinned to 1.7.2.
 
 ---
 
-## 9. Product reframe — 29 August (OPEN, not yet decided)
+## 9. Product spec — decided 30 August
 
-A design discussion on 29 Aug reframed the product. **Nothing here is committed.** It is
-recorded so the next session can resume, and the open items go to a grilling session.
+**Authoritative document: [ADR-0007](adr/0007-three-number-model-and-honesty-tiers.md).**
+This section is the index; the ADR carries the reasoning and the costs.
 
-### 9.1 The reframe
+Seventeen decisions were taken in a grilling session on 29–30 August, closing the reframe
+this section previously held open.
 
-Success rate and matching are **orthogonal** and were being conflated. A student can have
-a 100% success rate at 100 programmes — that does not help them choose. Split into three
-numbers with three different mechanisms:
+| # | Decision | ADR-0007 |
+|---|---|---|
+| 1 | **Coursework first.** 15 Sep graded deliverable; real users after | Context |
+| 2 | **Six countries**, requirements extracted by Claude at *university* level | §4, §11 |
+| 3 | **Three provenance states**; unverified requirements filter but never silently | §5 |
+| 4 | **Five countries carry a second number**; the UK is eligibility-only and says so | §3 |
+| 5 | **Bands headline, percentage gated** on post-recalibration error ≤ ~2pt | §8 |
+| 6 | **Field via offline LLM labelling** of ~1,200 unique names, served by indexed SQL | §9 |
+| 7 | **Profile-first, one step.** Destination ranks, never excludes | §2 |
+| 8 | **CatBoost ships** for point estimates and the quantile ladder | §8 |
+| 9 | **~90 universities**: ~55 destination + ~35 aspiration | §4 |
+| 10 | **New ADR-0007 + ADR-0004 amendment.** Nothing superseded, nothing reversed | header |
+| 11 | **Mode B in scope**, full roadmap, no study plan | §2 |
+| 12 | **Contract by claim type** — numeric ML-only, qualitative cite-or-drop | §6 |
+| 13 | **Scholarships first-class**, ~15 funded programmes; closes Hungary and Italy | §10 |
+| 14 | **Cut order: Poland → UK → gated percentage** | §12 |
+| 15 | **Fabrication paths deleted before building on them** | §7a |
+| 16 | **Cold-start calibration measured separately**, then decided from evidence | §8 |
+| 17 | **Extraction: auto-discover, human-review, script the rest** | §11 |
 
-| # | Number | Mechanism | Honest about |
-|---|---|---|---|
-| 1. Eligibility | Do you meet the stated requirements? | **Deterministic**, from curated requirements | Binary, never guessed |
-| 2. Success rate / selectivity | Can you get in? How hard is it? | **ML** — cutoff regression | See 9.2 — differs per country |
-| 3. Fit | Does it match your goals? | **User-controlled** filters + sort | Your preference, not our judgment |
+### 9.1 The shape, in brief
 
-**On the fit score:** it must not become a system-weighted formula. There are no
-preference labels to learn from, and inventing weights re-creates exactly the hardcoded
-scoring the course requires removing. The user sets the weights. The ML requirement rests
-entirely on number 2.
+**Two modes.** *Discovery* — one profile step (scores, GPA, budget, destination, field),
+results refining live. *Mode B* — name a university, get a gap statement, requirement
+checklist, process checklist, and alternatives that close the gap.
 
-**Default ordering: hardest-you-can-still-get first.** A student sorted safest-first sees
-places they are overqualified for. Sorted by most competitive where they still have a real
-chance, they see the actual decision.
+**Three blocks, grouped by what we can tell you**, not by geography:
 
-### 9.2 A genuine success rate is only possible where admission is mechanical
+| Block | Countries | Second number |
+|---|---|---|
+| Your chances | AZ, DE, PL | genuine success rate — admission is mechanical |
+| How hard it is | TR | selectivity only |
+| Requirements only | US, UK, all scholarships | none |
 
-`P(admit)` is unlearnable — no labels. But **`P(next year's cutoff ≤ your score)` is
-learnable** from cutoff variance, and where clearing the cutoff *is* admission, that is
-not a proxy for the success rate — it is the success rate.
+**One model, one stored number.** Batch precompute writes `predicted_cutoff`, `p10..p90`,
+band thresholds and `model_run_id`; both modes read that row and nothing is recomputed at
+request time.
 
-| Destination | Route our users take | Cutoff data | Real success rate? |
-|---|---|---|---|
-| **Azerbaijan** | DIM | ✅ collected, partly verified | ✅ **Yes — genuine** |
-| **Germany** | attestat → Abiturnote | ❌ not collected | ✅ **Yes if collected** — NC is a true threshold |
-| **Turkey** | DIM protocol / SAT / attestat | ❌ those routes unpublished | ❌ selectivity only |
-| **USA** | SAT | ✅ collected, but holistic admission | ❌ selectivity only |
+**No number reaches a student unless a model produced it** — enforced by a numeral check
+against the payload, not by convention.
 
-**Consequence to face:** demoting Azerbaijan removes the only market where the success
-rate currently works. Germany is therefore the highest-value collection target — not just
-the largest market.
+**AUSA takes no commission**, which is why destination ranks rather than excludes: a filter
+that hides options is the steering behaviour the agency reference criticises, automated.
 
-### 9.3 Experiments run 29 Aug (scratchpad, not yet in the repo)
+### 9.2 Still open, deliberately
 
-**CatBoost beats HistGradientBoosting by 25%** on Turkish cold start:
+Two items have code but no decided role. Left for a later grilling rather than settled by
+default — see ADR-0007, *"Open, deliberately not decided here"*:
 
-```
-baseline department-mean                     38.96
-HistGradientBoosting (label-encoded cats)    18.93   +51.4%
-CatBoost (native categoricals)               14.18   +63.6%
-```
+1. **Motivation letter drafting.** `agent/tools.py` ships a hardcoded generic template.
+   The agency reference lists recycled motivation letters as an industry red flag that
+   admissions boards detect and reject, and advises students to write their own.
+   Recommendation, not decision: shift from **generation** to **critique** — the student
+   writes, AUSA reviews against that programme's extracted criteria.
+2. **Stateful application tracking.** `student_applications` is a model with no migration;
+   stages, missing documents and dossier export exist as code. Whether tracking a student's
+   live applications is in scope for 15 Sep was never decided.
 
-Cause: `.cat.codes` tells the tree that university #47 sits between #46 and #48. It does
-not. CatBoost's ordered target statistics handle high-cardinality categoricals properly.
-**Recommendation: adopt CatBoost**, and keep all four algorithms in the comparison.
+### 9.3 Build order
 
-**Quantile regression for the success rate — works directionally, NOT shippable as a
-percentage yet:**
+**Claude:** fabrication deletions ✅ → ADR-0007 ✅ → `program_cutoff_history` + loader →
+DE/PL cutoff collection → ~90 university extraction → field labelling → ~15 scholarships →
+CatBoost + MultiQuantile + recalibration → notebook.
 
-```
-nominal   empirical    error
-   0.10       0.098   -0.002   excellent
-   0.25       0.218   -0.032
-   0.50       0.431   -0.069   meaningful miss
-   0.75       0.678   -0.072
-   0.90       0.838   -0.062
-```
+**Team:** `student_qualifications` → route join + filtered-out panel → batch precompute →
+three UI surfaces → `student_applications` migration.
 
-Two defects, one dangerous:
+Task-level plans live in [`superpowers/plans/`](superpowers/plans/).
 
-1. **Systematic over-optimism of 6–7 points.** Real cutoffs land *higher* than predicted
-   more often than claimed. We would tell a student "you clear this 75% of the time" when
-   the truth is 68% — telling students they are safer than they are, the exact failure
-   ADR-0001 exists to prevent. Worst in the middle of the range, where most students sit.
-2. **Quantile crossing** — independently fitted quantiles are not monotone (`p10=378.3`
-   while `p25=375.1`), which breaks the interpolation the success rate depends on.
+**Checkpoint 6 September.** If the tables and one UI surface are not working by then, apply
+the cut order (§12) rather than discovering the problem on the 13th.
 
-Both fixes are standard, not research: sort quantiles for monotonicity, then fit a
-nominal→empirical recalibration on the validation year and invert it at serving time.
-Estimated half a day. **Until the calibration table is flat, ship Reach/Match/Safe bands
-only** — a 6-point shift rarely crosses a band boundary; it does corrupt a percentage.
-
-### 9.4 The catalogue gap — the real bottleneck
-
-Verified in the code on 29 Aug:
-
-| | Reality |
-|---|---|
-| `programs` table | **7 hardcoded seed rows** — the entire product catalogue |
-| `program_cutoff_history` | **No such table.** 127k rows exist only as CSVs |
-| `students` table | `gpa`, `ielts`, `toefl` only — **no DIM, SAT or YÖS** |
-| `student_applications` | Model exists, **migration never written** |
-
-**We have cutoffs without requirements, and requirements without cutoffs.** The 29,293
-Turkish programmes have competitiveness but no `min_ielts`, tuition, deadline or
-international-route data, so the hard filter has nothing to filter on. The 7 seed
-programmes have requirements but no cutoff history. The two datasets do not join.
-
-**The modelling is nearly done; the catalogue barely exists.** Requirements curation for
-~150–200 programmes is the critical path, and it is team work.
-
-**Proposed fix — a two-tier catalogue:**
-
-| Tier | Source | Shows | Count today |
-|---|---|---|---|
-| **Curated** | verified requirements + cutoff history | eligibility ✓, success rate, band, tuition, deadline | 7 → needs 150–200 |
-| **Catalogue** | cutoff history alone | selectivity only, labelled *"requirements not yet verified"* | ~30,000 |
-
-The student sees everything, but the system never claims to have filtered on requirements
-it does not hold.
-
-### 9.5 Proposed intake flow
-
-**Field-first, country-grouped, never country-gated.**
-
-1. **Field / career goal** — the only thing asked up front
-2. **Qualifications** — four optional fields, refining the list live
-3. **Budget** — blank or 0 means scholarship-only
-4. **Country** — a *facet on the results*, not a gate. Default: all countries. Plus an
-   optional must-have / rule-out for students with a hard constraint
-5. Hard filter on the curated tier → results, **grouped by country**
-6. Within each group, ordered hardest-achievable first, banded Reach / Match / Safe
-
-**Why country must not be asked first.** It assumes the answer to the question the
-product exists to answer. A student who already knows they want Germany goes to DAAD;
-AUSA's highest-value output is *"consider Poland — your DIM score goes further there."*
-Gating on country destroys that and reduces the product to a filtered search box. There
-is also a plain asymmetry: students reliably know roughly *what* they want to study, and
-much less reliably *where*. **Country is an output, not an input.**
-
-> **Correction to an earlier recommendation in this session.** Claude first proposed
-> asking field **and country** together, arguing that the chosen countries determine
-> which exams to ask for. That argument is weak at this scale: an Azerbaijani
-> school-leaver plausibly holds only attestat, DIM, a language certificate and possibly
-> SAT — four optional fields, with YÖS already dropped. There was never a wall of inputs
-> to save the user from, so the benefit did not justify gating on country.
-
-**Do not build a wizard.** Multi-step forms lose users at every step. One page, result
-list always visible, refining as fields are filled. Before any input it can show the most
-competitive or most popular programmes in the field, so the page is never empty.
-
-**The catch that forces country grouping.** The number means different things per
-country: Azerbaijan and (once collected) Germany give a genuine success rate, while
-Turkey and the USA give selectivity only. Showing "82%" beside "top 6% competitive" in
-one ranked list is misleading, and sorting them against each other is worse. Grouping by
-country preserves discovery while giving each block a place to state honestly what its
-number means — e.g. *"Turkey: we can tell you how hard this is, not whether you'd clear
-it."*
-
-This supersedes the G2 answer's generic "which of these do you have?" step.
-
-### 9.6 Build order implied
-
-1. `program_cutoff_history` table + CSV loader (ADR-0004 specifies it; never built)
-2. `student_qualifications` — DIM, SAT, YÖS, attestat beside the language fields
-3. Route join: student qualification → programme requirement (ADR-0006)
-4. Field taxonomy: "robotics" → {Mechatronics, Control, Mech Eng, Computer Eng}, ×3 languages
-5. **Requirements curation, 150–200 programmes — critical path, team work**
-6. Batch precompute of selectivity onto programme rows
-7. `student_applications` migration (cheap, pre-existing bug)
-
-### 9.7 Germany — committed to Claude on 29 Aug
-
-The user directed that Claude collect German data rather than the team.
-
-**Source choice:** official university NC pages and **hochschulstart.de** (official central
-allocation, publishes real NC values for restricted subjects), indexed via
-auswahlgrenzen.de. **Not** nc-werte.info — that aggregator's database *is* its product,
-which is the ToS risk `data-sourcing.md` warns about. Official sources sidestep F1 rather
-than gambling on it.
-
-**Undecided:** breadth (many programmes, NC only → catalogue tier) vs depth (40–50
-programmes with NC + language + tuition + deadline → curated tier). Recommendation:
-**depth**, because requirements are the bottleneck, not cutoffs.
-
-### 9.8 Open questions for the grilling session
-
-0. **Confirm field-first / country-grouped intake (§9.5)** — the one place an earlier recommendation in this session was reversed.
-1. **Success rate as a percentage or bands only?** Evidence says bands until recalibration ships.
-2. **Does Azerbaijan stay** as a local section, given it is the only working success-rate market?
-3. **Germany breadth vs depth.**
-4. **Who builds the field taxonomy?** Curation, on the critical path for matching.
-5. **Is 150–200 curated programmes achievable** by 15 Sep, and if not, what is the minimum viable catalogue?
-6. **Does ML-does-ranking-not-eligibility satisfy the course?** C1 says yes; worth confirming once.
-7. **Adopt CatBoost** as the shipped model?
-8. **Do ADR-0001 and ADR-0006 get amended** for the three-number model, or superseded by a new ADR-0007?
-
----
 
 ## 10. Repository state
 
