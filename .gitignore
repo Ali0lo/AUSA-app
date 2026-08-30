@@ -50,3 +50,7 @@ models/*.joblib
 
 # CatBoost training logs
 catboost_info/
+
+# Subagent-driven-development scratch: ledgers, briefs, reports, review packages.
+# Git history is the durable record; this is the coordination trail while a plan runs.
+.superpowers/
