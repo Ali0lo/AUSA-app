@@ -63,21 +63,30 @@ def _clean(value: Any) -> Any:
     return value
 
 
-def _parse_lower_is_better(value: Any) -> bool:
-    """Parse the lower_is_better flag explicitly. Never use bool(value) here.
+def _parse_bool_or_none(value: Any) -> bool | None:
+    """Parse a nullable boolean flag explicitly. Never use bool(value) here.
 
-    pandas types this column as `object` rather than `bool` the moment a single row is
-    blank or quoted, so the value a loader can see for a "false" row is the *string*
-    "False" -- and `bool("False")` is True in Python, because every non-empty string is
-    truthy. That silently flips a "score, higher is better" row into "rank, lower is
-    better" and corrupts every downstream comparison that trusts this flag. Instead we
-    enumerate every representation the collectors are known to emit and raise on
-    anything else, rather than guessing what an unrecognised value means.
+    This backs all three Boolean columns in the model (`lower_is_better`,
+    `variant_discriminator_known`, `is_undergraduate`). pandas types a column as
+    `object` rather than `bool` the moment a single row is blank or quoted, so the
+    value a loader can see for a "false" row can be the *string* "False" -- and
+    `bool("False")` is True in Python, because every non-empty string is truthy. For
+    a flag like `lower_is_better` that silently flips "score, higher is better" into
+    "rank, lower is better" and corrupts every downstream comparison that trusts it.
+    So we enumerate every representation the collectors are known to emit and raise
+    on anything else, rather than guessing what an unrecognised value means.
+
+    Blank/NaN/None means "the source did not say" and is returned as None here --
+    NOT False. None is not a valid boolean, so whether "did not say" should collapse
+    to False (as `lower_is_better`, a NOT NULL column with a False default, requires)
+    or stay None (as the two nullable columns require) is a decision for the caller
+    to make explicitly at the call site, not something this parser decides for every
+    caller alike.
     """
     if isinstance(value, np.generic):
         value = value.item()
     if value is None:
-        return False
+        return None
     if isinstance(value, bool):
         return value
     if isinstance(value, (int, float)):
@@ -85,16 +94,16 @@ def _parse_lower_is_better(value: Any) -> bool:
             return True
         if value == 0:
             return False
-        raise ValueError(f"lower_is_better: cannot interpret numeric value {value!r} as a boolean")
+        raise ValueError(f"cannot interpret numeric value {value!r} as a boolean")
     if isinstance(value, str):
         normalized = value.strip().lower()
         if normalized == "":
-            return False
+            return None
         if normalized in ("true", "1"):
             return True
         if normalized in ("false", "0"):
             return False
-    raise ValueError(f"lower_is_better: cannot interpret value {value!r} as a boolean")
+    raise ValueError(f"cannot interpret value {value!r} as a boolean")
 
 
 def rows_from_csv(path: Path) -> list[dict]:
@@ -114,7 +123,19 @@ def rows_from_csv(path: Path) -> list[dict]:
         row["cutoff_value"] = float(row["cutoff_value"])
         if row["variant_index"] is not None:
             row["variant_index"] = int(row["variant_index"])
-        row["lower_is_better"] = _parse_lower_is_better(row["lower_is_better"])
+
+        # lower_is_better is NOT NULL with a False default in the model, so "the
+        # source did not say" collapses to False here -- explicitly, at this call
+        # site, not inside the parser.
+        row["lower_is_better"] = _parse_bool_or_none(row["lower_is_better"])
+        if row["lower_is_better"] is None:
+            row["lower_is_better"] = False
+
+        # variant_discriminator_known and is_undergraduate are nullable in the model:
+        # "the source did not say" must stay None, not collapse to False.
+        row["variant_discriminator_known"] = _parse_bool_or_none(row["variant_discriminator_known"])
+        row["is_undergraduate"] = _parse_bool_or_none(row["is_undergraduate"])
+
         rows.append(row)
     return rows
 
