@@ -12,6 +12,15 @@ it, a later reader re-proposes the `P(admit)` classifier that 0001 rejected.
 
 ---
 
+**Amended by:** [ADR-0008](0008-selectivity-replaces-cutoff-prediction.md) — the second
+number becomes **selectivity** rather than `P(next year's cutoff ≤ your score)`, because
+published cutoffs describe the domestic route in all five destinations and our students
+enter through the international one. §3's blocks are redefined there; the 30 August
+correction below, which demoted Azerbaijan to score calibration inside this flow, is
+superseded — Azerbaijan becomes a separate product surface.
+
+---
+
 ## Context
 
 Three things forced this ADR.

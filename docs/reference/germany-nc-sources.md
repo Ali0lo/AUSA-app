@@ -3,6 +3,23 @@
 **Status:** reconnaissance, 30 August 2026. Every claim below was verified by fetching the
 page named. Nothing here is inferred from a search-result snippet.
 
+> **Correction, 31 August 2026 — this survey asked the wrong question.**
+> It measured *how many years of NC values* a university publishes. Verified the next day on
+> the same Marburg page: the published tables carry the footnote *"Anzahl der gültigen
+> Bewerbungen (ohne Bildungsausländer\*innen)"* — they **exclude international applicants**,
+> who are allocated from a separate quota of roughly 5–8% of places. So archive depth in the
+> main tables measures a threshold our students are never ranked against.
+>
+> The same page also publishes a separate `Zulassungsverfahren der Ausländer*innen` section
+> with its own per-programme values — Humanbiologie **1.6** for WS 2025/26, **1.4** for
+> WS 2024/25 — and, for many programmes, the outcome *"Es konnten alle Bewerbungen zugelassen
+> werden"*: every application admitted. **That** section is the one that matters.
+>
+> **The survey question is therefore: does this university publish its international-quota
+> outcome, and how far back?** Not how deep the main NC archive runs. The table below stays
+> because the format and robots findings are still accurate, but its depth column measures
+> the wrong series. See [ADR-0008](../adr/0008-selectivity-replaces-cutoff-prediction.md).
+
 **Why this document exists.** `backend/scripts/collect_germany.py` was deleted on 30 August
 because all three of its target URLs were invented — every fetch 404'd and an
 `except Exception: pass` fell through to a mock-HTML constant, so the collector could never
