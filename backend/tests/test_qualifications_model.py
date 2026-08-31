@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.cutoff_history import ProgramCutoffHistory
 from app.models.dp_catalogue import DPCatalogueEntry
 from app.models.qualifications import (
     QUALIFICATION_ATTESTAT,
@@ -34,6 +35,7 @@ async def session():
                 StudentQualification.__table__,
                 ProgramRequirement.__table__,
                 DPCatalogueEntry.__table__,
+                ProgramCutoffHistory.__table__,
             ],
         )
     factory = async_sessionmaker(engine, expire_on_commit=False)
@@ -149,6 +151,30 @@ async def test_a_requirement_row_must_carry_its_source(session):
         level="bachelor", intake_year=2026, country_code="TR",
         retrieved_at=datetime.now(timezone.utc),
     ))
+    with pytest.raises(IntegrityError):
+        await session.commit()
+    await session.rollback()
+
+
+@pytest.mark.asyncio
+async def test_the_cutoff_history_natural_key_is_unique(session):
+    """Deferred from the 2026-08-30 run (its Ruling 6): one row per country, code and year.
+
+    The 4-column key considered there included variant_index, which is NULL on 99.2% of rows,
+    and NULL is distinct from NULL in a unique index -- so it would have read as protection
+    while protecting almost nothing.
+    """
+    def _row():
+        return ProgramCutoffHistory(
+            country="TR", source_program_code="100110027", intake_year=2025,
+            cutoff_value=412.5, cutoff_unit="score", lower_is_better=False,
+            university_name="Some University",
+        )
+
+    session.add(_row())
+    await session.commit()
+
+    session.add(_row())
     with pytest.raises(IntegrityError):
         await session.commit()
     await session.rollback()

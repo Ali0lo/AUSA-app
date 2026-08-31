@@ -108,8 +108,24 @@ def upgrade() -> None:
     op.create_index("ix_program_requirements_country_code", "program_requirements", ["country_code"])
     op.create_index("ix_program_requirements_intake_year", "program_requirements", ["intake_year"])
 
+    # Deferred from the 2026-08-30 run (its Ruling 6). The 4-column key considered there
+    # includes variant_index, which is NULL on all 115,482 Turkey rows and 1,598 of 2,576 AZ
+    # rows -- and NULL is distinct from NULL in unique indexes on both SQLite and Postgres,
+    # so that version would have protected 0.8% of rows while reading as full protection.
+    # These three columns are NOT NULL, and the reviewer verified zero duplicates across
+    # both real files. Safe because collect_azerbaijan.py already bakes the variant into the
+    # code itself (f"{base}--v{index}"), so every variant row carries a --vN suffix and the
+    # collision variant_index was invented for never reaches this key.
+    op.create_index(
+        "uq_cutoff_history_natural_key",
+        "program_cutoff_history",
+        ["country", "source_program_code", "intake_year"],
+        unique=True,
+    )
+
 
 def downgrade() -> None:
+    op.drop_index("uq_cutoff_history_natural_key", table_name="program_cutoff_history")
     op.drop_table("program_requirements")
     op.drop_table("student_qualifications")
     op.drop_table("dp_catalogue")

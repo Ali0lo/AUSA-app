@@ -55,4 +55,16 @@ class ProgramCutoffHistory(Base):
             "variant_index",
             "intake_year",
         ),
+        # One published cutoff per country, programme code and intake year. Deferred from
+        # the 2026-08-30 run (its Ruling 6), which established these three NOT NULL columns
+        # as the only portable key: the 4-column version including variant_index protects
+        # 0.8% of rows, because NULL is distinct from NULL in a unique index on both SQLite
+        # and Postgres.
+        Index(
+            "uq_cutoff_history_natural_key",
+            "country",
+            "source_program_code",
+            "intake_year",
+            unique=True,
+        ),
     )

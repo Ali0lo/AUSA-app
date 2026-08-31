@@ -62,12 +62,17 @@ async def test_cutoff_row_round_trips(session):
 
 @pytest.mark.asyncio
 async def test_variant_index_distinguishes_identical_programmes(session):
-    """sec.az publishes rows identical but for their scores; merging corrupts lag features."""
+    """sec.az publishes rows identical but for their scores; merging corrupts lag features.
+
+    collect_azerbaijan.py bakes the variant into source_program_code itself
+    (f"{base}--v{index}") whenever more than one row shares a code, so two variant rows
+    never collide on the (country, source_program_code, intake_year) natural key.
+    """
     for idx, value in ((0, 400.0), (1, 355.0)):
         session.add(
             ProgramCutoffHistory(
                 country="AZ",
-                source_program_code="aqronomluq--adau--g3",
+                source_program_code=f"aqronomluq--adau--g3--v{idx}",
                 variant_index=idx,
                 intake_year=2025,
                 cutoff_value=value,
