@@ -1,7 +1,6 @@
 import pytest
 from app.schemas.matching import ProgramRequirements, ScholarshipSchema, StudentProfile
 from app.services.matching.engine import evaluate_match
-from app.services.matching.prediction import admission_predictor
 from app.services.matching.scoring import (
     calculate_academic_score,
     calculate_budget_score,
@@ -69,8 +68,7 @@ def test_evaluate_match_perfect_match():
     assert result.breakdown.academic.score == 100.0
     assert result.breakdown.budget.score == 100.0
     assert result.breakdown.language.score == 100.0
-    assert result.admission_probability is not None
-    assert 0.0 <= result.admission_probability <= 1.0
+    assert result.admission_probability is None
     assert result.admission_prediction_rationale is not None
 
 
@@ -176,9 +174,16 @@ def test_scholarship_first_net_cost_evaluation():
 
 
 # -------------------------------------------------------------
-# Tests for ADR-0001 & ADR-0002 Predictive ML Cutoff Inference
+# Tests for ADR-0008: admission probability is withdrawn, not estimated
 # -------------------------------------------------------------
-def test_admission_predictor_turkey_and_usa():
+def test_no_admission_probability_is_published():
+    """ADR-0008 withdrew this number. Its absence is deliberate and must stay absent.
+
+    This previously asserted `admission_probability is not None`, which certified a
+    fabrication: with the model artifacts absent -- and they are gitignored, so absent on
+    every fresh clone -- the number came from a hardcoded arithmetic formula, computed over
+    an IELTS of 6.0 invented for students who never sat the exam.
+    """
     student = StudentProfile(
         gpa=3.8,
         budget=25000.0,
@@ -204,16 +209,45 @@ def test_admission_predictor_turkey_and_usa():
         min_ielts=7.0
     )
 
-    prob_tr = admission_predictor.calculate_admission_probability(student, program_turkey)
-    prob_us = admission_predictor.calculate_admission_probability(student, program_usa)
+    result_tr = evaluate_match(student, program_turkey)
+    result_us = evaluate_match(student, program_usa)
 
-    assert 0.0 <= prob_tr <= 1.0
-    assert 0.0 <= prob_us <= 1.0
+    assert result_tr.admission_probability is None
+    assert result_us.admission_probability is None
+
+
+def test_the_rationale_promises_no_percentage_and_cites_no_dataset():
+    """The withdrawn strings cited '2019-2024' and 'US College Scorecard data' for a number
+    that was frequently a formula. Neither claim may return."""
+    student = StudentProfile(
+        gpa=3.8,
+        budget=25000.0,
+        ielts=7.5,
+        degree_level="master"
+    )
+    program_turkey = ProgramRequirements(
+        university_name="Bilkent University",
+        program_name="M.Sc. Computer Engineering",
+        degree_level="master",
+        country="Turkey",
+        min_gpa=3.2,
+        tuition_fee=15000.0,
+        min_ielts=6.5
+    )
+    program_usa = ProgramRequirements(
+        university_name="MIT",
+        program_name="M.Sc. Artificial Intelligence",
+        degree_level="master",
+        country="USA",
+        min_gpa=3.5,
+        tuition_fee=50000.0,
+        min_ielts=7.0
+    )
 
     result_tr = evaluate_match(student, program_turkey)
     result_us = evaluate_match(student, program_usa)
 
-    assert result_tr.admission_probability == prob_tr
-    assert "2019-2024" in result_tr.admission_prediction_rationale
-    assert result_us.admission_probability == prob_us
-    assert "Scorecard" in result_us.admission_prediction_rationale
+    for rationale in (result_tr.admission_prediction_rationale, result_us.admission_prediction_rationale):
+        assert "%" not in rationale
+        assert "Scorecard" not in rationale
+        assert "2019-2024" not in rationale
