@@ -218,13 +218,18 @@ async def verify_and_approve_program(
 
     try:
         await db.commit()
-        await db.refresh(prog)
     except Exception as exc:
+        # Only a commit that did not happen is a failed write. Guarding refresh() here
+        # too would let a post-commit error (the write already persisted) come back as
+        # the same 503 as a genuine failed write -- a false failure, the mirror image
+        # of the false success this endpoint used to report.
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="The verification could not be saved.",
         ) from exc
+
+    await db.refresh(prog)
 
     return VerifyProgramResponse(
         message=f"Program '{prog.program_name}' verified in the database.",

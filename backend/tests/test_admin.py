@@ -171,6 +171,48 @@ async def test_verify_writes_to_the_database(admin_env):
 
 
 @pytest.mark.asyncio
+async def test_a_post_commit_refresh_failure_is_not_reported_as_a_failed_write(admin_env, monkeypatch):
+    """commit() succeeding and refresh() then raising must not read as "could not be saved".
+
+    The write already persisted by the time refresh() runs, so a failure there is a read
+    failure, not a write failure. Reporting it with the same 503 as a genuinely failed
+    commit would be a false failure -- the mirror image of the false success this whole
+    endpoint used to report.
+    """
+    session, admin_headers, _ = admin_env
+    program = ProgramModel(
+        university_name="Real University",
+        program_name="B.Sc. Real Programme",
+        verification_status="flagged_for_review",
+    )
+    session.add(program)
+    await session.commit()
+    await session.refresh(program)
+    program_id = program.id
+
+    async def _explode_refresh(*args, **kwargs):
+        raise RuntimeError("refresh exploded after a successful commit")
+
+    monkeypatch.setattr(session, "refresh", _explode_refresh)
+
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        res = await c.put(
+            f"/api/v1/admin/programs/{program_id}/verify",
+            json={"program_name": "B.Sc. Corrected Name"},
+            headers=admin_headers,
+        )
+
+    assert res.status_code != 503
+    assert "could not be saved" not in res.text.lower()
+
+    # The endpoint's own lookup shares this session's identity map, so `program` was
+    # mutated and committed in place -- no refresh needed to see the persisted write.
+    assert program.program_name == "B.Sc. Corrected Name"
+    assert program.verification_status == "verified"
+
+
+@pytest.mark.asyncio
 async def test_verify_reports_404_for_a_programme_that_does_not_exist(admin_env):
     """The endpoint used to answer 'successfully verified and published' for any id.
 
