@@ -203,6 +203,67 @@ This is a deliberate, labelled absence, not a gap to be filled by estimation.
 | Scholarships (Türkiye Bursları, DP, Chevening, DAAD, NAWA, CSC) | **does not exist** | funding layer |
 | AZ DİM cutoffs (2,576 rows), Turkish YKS (115,482 rows) | in repo | training corpora only; **no further investment** |
 
+### 5.1 What we extract from a university's application page
+
+This is the critical path and the largest uncertainty, so the target schema is fixed here
+rather than discovered during collection. One row per (university, programme, intake), and
+**every field carries `source_url`, `retrieved_at` and a provenance state.**
+
+| Field | Notes |
+|---|---|
+| `entry_qualification_accepted` | attestat / attestat+foundation / 1-year university / A-level / IB / bachelor degree. **The field that decides whether a route is open.** |
+| `foundation_required` | boolean, and which providers if so |
+| `language_requirement` | test, minimum score, and the language of instruction |
+| `entrance_exam` | SAT / ACT / YÖS / TestAS / CSCA / GRE / GMAT / none, with minimum |
+| `gpa_minimum` | in the source's own scale, plus the scale itself |
+| `tuition_per_year` + `currency` | for **international** students — the domestic figure is the wrong one |
+| `living_cost_estimate` | city-level where the university publishes one |
+| `application_deadline` | per intake; multiple rows where a university runs several |
+| `application_portal` | UCAS, uni-assist, Common App, IRK, campuschina, YÖS portal, direct |
+| `application_fee` | often overlooked and a real barrier at UK/US volume |
+| `documents_required` | apostille, translation, transcript, motivation letter, references |
+
+`tuition_per_year` deserves emphasis: quoting a domestic or EU fee to a non-EU applicant is a
+silent error of exactly the kind §7 warns about, and it is the single easiest field to get
+wrong because it is usually the more prominent number on the page.
+
+### 5.2 Funding: three tiers, all eligibility-gated
+
+Funding is not one list. It has three distinct tiers with different owners and, critically,
+**different gates — several of which have nothing to do with academic merit.**
+
+**Tier 1 — Azerbaijani state (`təqaüd`)**
+
+| Programme | Level | Gate |
+|---|---|---|
+| **Dövlət Proqramı** — financed by SOFAZ, run by the Ministry | bachelor · master · PhD | C1 + DİM 400–550 (or SAT/ACT p75, or Olympiad medal); **only the 223 listed universities** |
+| **SOCAR Xarici Təqaüd Proqramı** | master's | **employment-gated — SOCAR group employees only**; age ≤40 (45 for MBA); IELTS 6.0 / TOEFL 80 / B2 |
+| **Prezident Təqaüdü** | — | 600–700 AZN/month, ~100–150 places/year, **domestic study only — not for abroad** |
+
+The Presidential scholarship is listed precisely so the product does *not* offer it as a
+study-abroad option. It is the most prestigious domestic award and students will ask about it.
+
+**Tier 2 — Destination-country government**
+
+| Programme | Level | Verified detail |
+|---|---|---|
+| **Türkiye Bursları** | bachelor+ | fully funded; **under 21** for bachelor; applications 10 Jan – 20 Feb |
+| **CSC** (China) | bachelor · master · PhD | English-taught needs **no HSK at application**; master's requires IELTS 6.5 / TOEFL 80 or 2 years' prior English-medium study; **bachelor requires a CSCA score**; Chinese-taught master's needs HSK 4 + a year of Chinese; deadlines Feb–late April via campuschina.org; Type A (embassy) vs Type B (university) |
+| **Chevening** (UK) | master's only | |
+| **DAAD** (Germany) | overwhelmingly master's/PhD | |
+| **NAWA Banach** (Poland) | master's only | for Azerbaijanis, humanities/social sciences only |
+| **Erasmus Mundus** | master's only | |
+
+**Tier 3 — University-level:** merit scholarships, tuition discounts, need-based aid. Turkish
+private universities discount heavily, which is why they appear affordable in agency
+marketing; the discount is real but is not a scholarship and is recorded as a discount.
+
+**Scholarships run through the same eligibility engine as programmes.** A scholarship the
+student cannot win is a false inclusion, and the gates above show why: SOCAR's is employment,
+Türkiye Bursları' is age, Chevening's and Banach's is degree level, DP's is a fixed university
+list. None of those are visible from a scholarship's marketing page, and all of them are
+checkable.
+
 **Legal position unchanged:** qebulai.az remains excluded (robots.txt disallows ClaudeBot,
 `Content-Signal: ai-train=no`, Article 4 EU 2019/790 reservation, and a direct competitor).
 hochschulstart.de's PDFs sit under a `Disallow: /fileadmin/` path and are not to be crawled.
@@ -302,6 +363,15 @@ authoritative, and it is the clearest differentiator against every agency in the
   programme's eligibility is stable.
 - Türkiye Bursları' 2026 window (10 Jan – 20 Feb) has closed; next is January 2027. Does the
   product show closed cycles with their next opening, or hide them?
-- China entered scope today and has had no route research. HSK requirements, CSC scholarship
-  mechanics and English-taught coverage are all unknown.
+- China's **funding** mechanics are now verified (§5.2) but its **entry route** is not. The
+  CSCA requirement for CSC bachelor applicants is a new exam we have never modelled, and
+  whether an Azerbaijani attestat gives direct entry to Chinese universities outside CSC is
+  unchecked — this is the same question that turned out to close Germany and the UK.
+- SOFAZ reportedly supports 200+ master's students a year. Whether that is the funding
+  mechanism *behind* the Dövlət Proqramı or a separate award with its own application is
+  unresolved, and it matters: if separate, it is a Tier 1 entry we are missing.
+- Türkiye Bursları' under-21 bachelor limit interacts with the prep-year routes. A student
+  who spends a year at an Azerbaijani university to open Germany may age out of Türkiye
+  Bursları in the process. The engine should surface that trade-off; whether it can is
+  untested.
 - Poland's 8 master's programmes may not justify its curation budget even before any cut.
