@@ -1,6 +1,5 @@
 import pytest
 import pytest_asyncio
-from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -11,8 +10,6 @@ from app.core.security import create_access_token
 from app.main import app
 from app.models.program import Program as ProgramModel
 from app.models.student import Student
-
-client = TestClient(app)
 
 ADMIN_EMAIL = "curator@ausa.edu.az"
 STUDENT_EMAIL = "ordinary_student@ausa.edu.az"
@@ -144,27 +141,65 @@ async def test_flagged_queue_returns_real_rows_and_preserves_unscored_confidence
     assert by_name["Zero Confidence University"]["confidence_score"] == 0.0
 
 
-def test_verify_and_approve_program():
-    payload = {
-        "university_name": "Heidelberg University",
-        "program_name": "B.Sc. Computer Science",
-        "tuition_fee": 3000.0,
-        "min_gpa": 3.0,
-        "min_ielts": 6.5,
-        "verified_by": "admin@ausa.edu.az"
-    }
-    response = client.put("/api/v1/admin/programs/1001/verify", json=payload)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["verification_status"] == "verified"
-    assert data["program_id"] == 1001
+@pytest.mark.asyncio
+async def test_verify_writes_to_the_database(admin_env):
+    session, admin_headers, _ = admin_env
+    program = ProgramModel(
+        university_name="Real University",
+        program_name="B.Sc. Real Programme",
+        verification_status="flagged_for_review",
+    )
+    session.add(program)
+    await session.commit()
+    await session.refresh(program)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        res = await c.put(
+            f"/api/v1/admin/programs/{program.id}/verify",
+            json={"program_name": "B.Sc. Corrected Name", "min_ielts": 6.5},
+            headers=admin_headers,
+        )
+
+    assert res.status_code == 200
+    assert res.json()["verification_status"] == "verified"
+
+    await session.refresh(program)
+    assert program.program_name == "B.Sc. Corrected Name"
+    assert program.min_ielts == 6.5
+    assert program.verification_status == "verified"
+    assert program.verified_by == ADMIN_EMAIL
 
 
-def test_seed_database_endpoint():
-    response = client.post("/api/v1/admin/seed")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "success"
-    assert "programs_seeded" in data
-    assert "scholarships_seeded" in data
-    assert "documents_seeded" in data
+@pytest.mark.asyncio
+async def test_verify_reports_404_for_a_programme_that_does_not_exist(admin_env):
+    """The endpoint used to answer 'successfully verified and published' for any id.
+
+    Ids 1001-1004 hit an in-memory demo list and returned success having written nothing;
+    every other unknown id fell through to a success response at the end of the function.
+    """
+    _, admin_headers, _ = admin_env
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        for unknown_id in (1001, 424242):
+            res = await c.put(
+                f"/api/v1/admin/programs/{unknown_id}/verify",
+                json={"program_name": "Does Not Exist"},
+                headers=admin_headers,
+            )
+            assert res.status_code == 404, f"id {unknown_id} was not reported missing"
+
+
+@pytest.mark.asyncio
+async def test_seed_endpoint_reports_failure_as_failure(admin_env, monkeypatch):
+    """A failed seed used to return status='success' with invented counts (7/3/3)."""
+    _, admin_headers, _ = admin_env
+
+    async def _explode(session):
+        raise RuntimeError("seeding is broken")
+
+    monkeypatch.setattr("scripts.seed_db.seed_database", _explode)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        res = await c.post("/api/v1/admin/seed", headers=admin_headers)
+
+    assert res.status_code == 503
+    assert "success" not in res.text.lower()

@@ -22,89 +22,6 @@ router = APIRouter(prefix="/admin", tags=["Admin Curation & Data Verification"])
 
 
 # -------------------------------------------------------------
-# Demo / Fallback Data Store for Unseeded Environments
-# -------------------------------------------------------------
-DEMO_FLAGGED_PROGRAMS: List[Dict[str, Any]] = [
-    {
-        "id": 1001,
-        "university_name": "Heidelberg University",
-        "program_name": "B.Sc. Computer Science",
-        "degree_level": "bachelor",
-        "field": "Computer Science",
-        "country": "Germany",
-        "min_gpa": 3.0,
-        "min_ielts": 6.5,
-        "tuition_fee": 3250.0,
-        "currency": "USD",
-        "confidence_score": 68.5,
-        "verification_status": "flagged_for_review",
-        "extraction_notes": "Studienkolleg required for non-EU diplomas; tuition extracted from German semester fee text.",
-        "source_url": "https://www.uni-heidelberg.de/en/study/all-subjects/computer-science",
-        "dim_score_required": None,
-        "blocked_account_eur": 11208.0,
-        "requires_studienkolleg": True,
-    },
-    {
-        "id": 1002,
-        "university_name": "ADA University",
-        "program_name": "B.Sc. Computer Science",
-        "degree_level": "bachelor",
-        "field": "Computer Science",
-        "country": "Azerbaijan",
-        "min_gpa": 3.2,
-        "min_ielts": 6.0,
-        "tuition_fee": 3820.0,
-        "currency": "USD",
-        "confidence_score": 72.0,
-        "verification_status": "flagged_for_review",
-        "extraction_notes": "Extracted local 6,500 AZN tuition; DIM exam group 1 requirement ambiguity.",
-        "source_url": "https://ada.edu.az/en/admissions/bachelor/computer-science",
-        "dim_score_required": 600,
-        "blocked_account_eur": None,
-        "requires_studienkolleg": False,
-    },
-    {
-        "id": 1003,
-        "university_name": "Technical University of Berlin",
-        "program_name": "M.Sc. Data Engineering",
-        "degree_level": "master",
-        "field": "Data Engineering",
-        "country": "Germany",
-        "min_gpa": 3.0,
-        "min_ielts": 7.0,
-        "tuition_fee": 0.0,
-        "currency": "USD",
-        "confidence_score": 62.0,
-        "verification_status": "flagged_for_review",
-        "extraction_notes": "TestDaF requirement unclear for English module track.",
-        "source_url": "https://www.tu.berlin/en/studying/study-programs/data-engineering",
-        "dim_score_required": None,
-        "blocked_account_eur": 11208.0,
-        "requires_studienkolleg": False,
-    },
-    {
-        "id": 1004,
-        "university_name": "UNEC (Azerbaijan State University of Economics)",
-        "program_name": "B.Sc. Data Analytics",
-        "degree_level": "bachelor",
-        "field": "Data Analytics",
-        "country": "Azerbaijan",
-        "min_gpa": 2.8,
-        "min_ielts": 5.5,
-        "tuition_fee": 1880.0,
-        "currency": "USD",
-        "confidence_score": 79.5,
-        "verification_status": "flagged_for_review",
-        "extraction_notes": "State grant cutoff score stated as 620 DIM points.",
-        "source_url": "https://unec.edu.az/en/admissions/undergraduate/data-analytics",
-        "dim_score_required": 520,
-        "blocked_account_eur": None,
-        "requires_studienkolleg": False,
-    },
-]
-
-
-# -------------------------------------------------------------
 # Admin Security Dependency
 # -------------------------------------------------------------
 async def require_admin_user(
@@ -261,81 +178,68 @@ async def verify_and_approve_program(
 ) -> VerifyProgramResponse:
     """Correct and verify a program record, changing status to 'verified'."""
     now_iso = datetime.now(timezone.utc).isoformat()
-    # The signed-in administrator is the authority on who verified a row. A caller-supplied
-    # verified_by is a claim about a third party, and ADR-0004 rule 2 gives that field to
-    # the person who actually opened the source.
+    # The signed-in administrator is the authority on who verified a row.
     verified_by_email = admin.email
 
-    # 1. Check in-memory demo store
-    demo_item = next((p for p in DEMO_FLAGGED_PROGRAMS if p["id"] == program_id), None)
-    if demo_item is not None:
-        demo_item["verification_status"] = "verified"
-        demo_item["confidence_score"] = 100.0
-        if payload.university_name: demo_item["university_name"] = payload.university_name
-        if payload.program_name: demo_item["program_name"] = payload.program_name
-        if payload.tuition_fee is not None: demo_item["tuition_fee"] = payload.tuition_fee
-        if payload.min_gpa is not None: demo_item["min_gpa"] = payload.min_gpa
-        if payload.min_ielts is not None: demo_item["min_ielts"] = payload.min_ielts
-        if payload.dim_score_required is not None: demo_item["dim_score_required"] = payload.dim_score_required
-
-        return VerifyProgramResponse(
-            message=f"Program '{demo_item['program_name']}' successfully verified and published.",
-            program_id=program_id,
-            verification_status="verified",
-            verified_by=verified_by_email,
-            last_updated=now_iso,
-            program_details=demo_item
-        )
-
-    # 2. Update PostgreSQL database entity if present
     try:
         stmt = select(ProgramModel).where(ProgramModel.id == program_id)
         result = await db.execute(stmt)
         prog = result.scalar_one_or_none()
+    except Exception as exc:
+        # A write that could not be attempted is not a verification. This used to be
+        # `except Exception: pass` followed by an unconditional success response.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cannot reach the programs store; nothing was verified.",
+        ) from exc
 
-        if prog is not None:
-            if payload.university_name: prog.university_name = payload.university_name
-            if payload.program_name: prog.program_name = payload.program_name
-            if payload.degree_level: prog.degree_level = payload.degree_level
-            if payload.field: prog.field = payload.field
-            if payload.country: prog.country = payload.country
-            if payload.min_gpa is not None: prog.min_gpa = payload.min_gpa
-            if payload.min_ielts is not None: prog.min_ielts = payload.min_ielts
-            if payload.tuition_fee is not None: prog.tuition_fee = payload.tuition_fee
-            if payload.currency: prog.currency = payload.currency
+    if prog is None:
+        # A programme we do not hold cannot be verified. The endpoint previously answered
+        # "successfully verified and published" here -- for ids 1001-1004 from an in-memory
+        # demo list, and for every other unknown id from a trailing success response.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No programme with id {program_id}.",
+        )
 
-            prog.verification_status = "verified"
-            prog.confidence_score = 100.0
-            prog.verified_by = verified_by_email
+    if payload.university_name: prog.university_name = payload.university_name
+    if payload.program_name: prog.program_name = payload.program_name
+    if payload.degree_level: prog.degree_level = payload.degree_level
+    if payload.field: prog.field = payload.field
+    if payload.country: prog.country = payload.country
+    if payload.min_gpa is not None: prog.min_gpa = payload.min_gpa
+    if payload.min_ielts is not None: prog.min_ielts = payload.min_ielts
+    if payload.tuition_fee is not None: prog.tuition_fee = payload.tuition_fee
+    if payload.currency: prog.currency = payload.currency
 
-            await db.commit()
-            await db.refresh(prog)
+    prog.verification_status = "verified"
+    prog.confidence_score = 100.0
+    prog.verified_by = verified_by_email
 
-            return VerifyProgramResponse(
-                message=f"Program '{prog.program_name}' successfully verified in database.",
-                program_id=program_id,
-                verification_status="verified",
-                verified_by=verified_by_email,
-                last_updated=now_iso,
-                program_details={
-                    "id": prog.id,
-                    "university_name": prog.university_name,
-                    "program_name": prog.program_name,
-                    "tuition_fee": prog.tuition_fee,
-                    "min_gpa": prog.min_gpa,
-                    "min_ielts": prog.min_ielts,
-                }
-            )
-    except Exception:
-        pass
+    try:
+        await db.commit()
+        await db.refresh(prog)
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The verification could not be saved.",
+        ) from exc
 
     return VerifyProgramResponse(
-        message=f"Program {program_id} verified.",
+        message=f"Program '{prog.program_name}' verified in the database.",
         program_id=program_id,
         verification_status="verified",
         verified_by=verified_by_email,
         last_updated=now_iso,
-        program_details={"id": program_id, "verification_status": "verified"}
+        program_details={
+            "id": prog.id,
+            "university_name": prog.university_name,
+            "program_name": prog.program_name,
+            "tuition_fee": prog.tuition_fee,
+            "min_gpa": prog.min_gpa,
+            "min_ielts": prog.min_ielts,
+        },
     )
 
 
@@ -355,11 +259,10 @@ async def seed_database_endpoint(
         from scripts.seed_db import seed_database
         summary = await seed_database(db)
         return SeedDatabaseResponse(**summary)
-    except Exception as e:
-        return SeedDatabaseResponse(
-            status="success",
-            programs_seeded=7,
-            scholarships_seeded=3,
-            documents_seeded=3,
-            message=f"Database fixture seeding completed (with fallback summary: {str(e)})."
-        )
+    except Exception as exc:
+        # A seed that failed did not seed anything. This used to return status="success"
+        # with counts of 7/3/3 that nobody had written, so a broken seeder looked healthy.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database seeding failed: {exc}",
+        ) from exc
