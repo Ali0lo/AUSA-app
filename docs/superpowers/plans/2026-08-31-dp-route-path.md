@@ -21,6 +21,7 @@
 - **Six countries:** Turkey (TR), Germany (DE), United Kingdom (GB), USA (US), Poland (PL), China (CN).
 - **Numbers come from the source or from arithmetic, never from a default.** A missing value renders as "not stated", not as a plausible figure.
 - **Tests run from `backend/`.** The virtualenv is at the repository root: `.venv` (not `backend/.venv` — the README is wrong and Task 5 fixes it). Baseline before this plan: **78 passed**.
+- **The per-task "expected N passed" figures drift, and the delta is what binds.** Review rounds legitimately add covering tests the plan did not predict, so by Task 4 the actual count already ran ahead of the projection. Verify the **number of tests your task adds** and that the suite is **green**, and report the actual total. A count below the projection means something was skipped; a count above it is normal and needs only a line in your report saying what the extra tests cover.
 - **Every task ends green.** Run the whole suite, not only the new test.
 
 ---
@@ -1732,11 +1733,72 @@ Append to the `upgrade()` of `2026_08_31_0002-b2c3d4e5f6a7_add_dp_catalogue.py`:
     op.create_index("ix_program_requirements_intake_year", "program_requirements", ["intake_year"])
 ```
 
+Then add the deferred unique index on the **existing** `program_cutoff_history` table. This
+is Ruling 6 of the 2026-08-30 catalogue-join run, which decided the constraint and deferred
+it to "the next migration" — this is that migration, and it was omitted from this plan by
+oversight:
+
+```python
+    # Deferred from the 2026-08-30 run (its Ruling 6). The 4-column key considered there
+    # includes variant_index, which is NULL on all 115,482 Turkey rows and 1,598 of 2,576 AZ
+    # rows -- and NULL is distinct from NULL in unique indexes on both SQLite and Postgres,
+    # so that version would have protected 0.8% of rows while reading as full protection.
+    # These three columns are NOT NULL, and the reviewer verified zero duplicates across
+    # both real files. Safe because collect_azerbaijan.py already bakes the variant into the
+    # code itself (f"{base}--v{index}"), so every variant row carries a --vN suffix and the
+    # collision variant_index was invented for never reaches this key.
+    op.create_index(
+        "uq_cutoff_history_natural_key",
+        "program_cutoff_history",
+        ["country", "source_program_code", "intake_year"],
+        unique=True,
+    )
+```
+
+If this index fails to create because the target database already holds duplicates, **do not
+drop rows and do not weaken the index to non-unique.** Stop and report it: the loader is
+idempotent on a 4-column key, so a duplicate on these three columns means a collector emitted
+two distinct competitions under one code and year without suffixing, which is a data question
+for a person, not a migration to force through.
+
 And in `downgrade()`, before the existing `op.drop_table("dp_catalogue")`:
 
 ```python
+    op.drop_index("uq_cutoff_history_natural_key", table_name="program_cutoff_history")
     op.drop_table("program_requirements")
     op.drop_table("student_qualifications")
+```
+
+- [ ] **Step 2b: Declare the same index on the model**
+
+A migration alone is not enough: the tests build their schema with `Base.metadata.create_all`,
+which reads the model, so an index declared only in the migration is unenforced in every test
+and the two definitions drift apart silently. Add it to `backend/app/models/cutoff_history.py`,
+alongside the existing `ix_cutoff_history_series` in `__table_args__` (keep that one — it is a
+non-unique lookup index on a different column set and both are wanted):
+
+```python
+    __table_args__ = (
+        Index(
+            "ix_cutoff_history_series",
+            "country",
+            "source_program_code",
+            "variant_index",
+            "intake_year",
+        ),
+        # One published cutoff per country, programme code and intake year. Deferred from
+        # the 2026-08-30 run (its Ruling 6), which established these three NOT NULL columns
+        # as the only portable key: the 4-column version including variant_index protects
+        # 0.8% of rows, because NULL is distinct from NULL in a unique index on both SQLite
+        # and Postgres.
+        Index(
+            "uq_cutoff_history_natural_key",
+            "country",
+            "source_program_code",
+            "intake_year",
+            unique=True,
+        ),
+    )
 ```
 
 - [ ] **Step 3: Write the test**
@@ -1756,6 +1818,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.models.cutoff_history import ProgramCutoffHistory
 from app.models.dp_catalogue import DPCatalogueEntry
 from app.models.qualifications import (
     QUALIFICATION_ATTESTAT,
@@ -1780,6 +1843,7 @@ async def session():
                 StudentQualification.__table__,
                 ProgramRequirement.__table__,
                 DPCatalogueEntry.__table__,
+                ProgramCutoffHistory.__table__,
             ],
         )
     factory = async_sessionmaker(engine, expire_on_commit=False)
@@ -1885,6 +1949,30 @@ async def test_the_same_programme_carries_different_requirements_per_level(sessi
     by_level = {r.level: r for r in rows}
     assert by_level["bachelor"].entry_qualification_accepted == "one_year_university"
     assert by_level["master"].entry_qualification_accepted == "bachelor_degree"
+
+
+@pytest.mark.asyncio
+async def test_the_cutoff_history_natural_key_is_unique(session):
+    """Deferred from the 2026-08-30 run (its Ruling 6): one row per country, code and year.
+
+    The 4-column key considered there included variant_index, which is NULL on 99.2% of rows,
+    and NULL is distinct from NULL in a unique index -- so it would have read as protection
+    while protecting almost nothing.
+    """
+    def _row():
+        return ProgramCutoffHistory(
+            country="TR", source_program_code="100110027", intake_year=2025,
+            cutoff_value=412.5, cutoff_unit="score", lower_is_better=False,
+            university_name="Some University",
+        )
+
+    session.add(_row())
+    await session.commit()
+
+    session.add(_row())
+    with pytest.raises(IntegrityError):
+        await session.commit()
+    await session.rollback()
 
 
 @pytest.mark.asyncio

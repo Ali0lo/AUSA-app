@@ -1,3 +1,15 @@
+> **SUPERSEDED, 31 August 2026 — do not execute this plan.**
+> Tasks 1 and 2 are **done and merged** (`program_cutoff_history`, its migration, and the
+> idempotent CSV loader — commits `1821e4d..0647d20`). Tasks 3-6 were re-planned against the
+> route-first spec, which made study level part of every key and turned "route matching" from
+> a lookup into a two-hop engine. They now live in
+> [`2026-08-31-dp-route-path.md`](2026-08-31-dp-route-path.md): old Task 3 and Task 4 became
+> its Task 7, old Task 5 became its Tasks 8 and 9, old Task 6 became its Task 10.
+> This plan's Ruling 6 — the deferred unique index on `program_cutoff_history` — is carried
+> into that plan's Task 7, Steps 2 and 2b.
+> Kept as the record of what was built and why; its rulings ledger is still authoritative for
+> the decisions it made.
+
 # Catalogue Join Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
