@@ -1,6 +1,10 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.data_pipeline.extraction import ExtractedProgramData, extract_program_info_from_text
+from app.data_pipeline.extraction import (
+    ExtractedProgramData,
+    ExtractionUnavailableError,
+    extract_program_info_from_text,
+)
 from app.data_pipeline.jobs import refresh_university_data_job
 from app.data_pipeline.scraper import fetch_page_content
 
@@ -51,16 +55,61 @@ async def test_fetch_page_content_html_stripping():
 
 
 @pytest.mark.asyncio
-async def test_extract_program_info_from_text_fallback():
+async def test_extraction_raises_rather_than_inventing_a_record():
+    """A page we cannot extract yields no record -- not a heuristic guess.
+
+    This replaces test_extract_program_info_from_text_fallback, which asserted the opposite.
+    That test passed in CI precisely BECAUSE there is no OPENAI_API_KEY there: the LLM call
+    raised, a bare `except Exception` swallowed it, and a regex parser returned a record with
+    university_name="Extracted University" and a confidence score of up to 100.0 computed
+    from how many regexes happened to match. The assertion `confidence_score > 0.0` was
+    therefore satisfied by fabricated data, every run.
+    """
     raw_text = (
         "University of Amsterdam. Master of Science in Data Science. "
         "Minimum GPA requirement: 3.5. IELTS requirement: 7.0. "
         "Annual tuition fee: $18,000 USD. Application deadline: December 1, 2026."
     )
-    extracted = await extract_program_info_from_text(raw_text)
-    assert isinstance(extracted, ExtractedProgramData)
-    assert extracted.confidence_score > 0.0
-    assert extracted.min_gpa == 3.5 or extracted.min_ielts == 7.0
+    with patch(
+        "langchain_openai.ChatOpenAI",
+        side_effect=RuntimeError("no API key configured"),
+    ):
+        with pytest.raises(ExtractionUnavailableError):
+            await extract_program_info_from_text(raw_text)
+
+
+@pytest.mark.asyncio
+async def test_extraction_returns_the_model_result_when_the_llm_answers():
+    """The success path is unchanged: whatever the model returns is what we store."""
+    expected = ExtractedProgramData(
+        university_name="University of Amsterdam",
+        program_name="M.Sc. Data Science",
+        min_gpa=3.5,
+        confidence_score=88.0,
+    )
+    chain = MagicMock()
+    chain.ainvoke = AsyncMock(return_value=expected)
+
+    with patch("langchain_core.prompts.ChatPromptTemplate.from_template",
+               return_value=MagicMock(__or__=MagicMock(return_value=chain))), \
+         patch("langchain_openai.ChatOpenAI", return_value=MagicMock()):
+        result = await extract_program_info_from_text("Some real page text.")
+
+    assert result.university_name == "University of Amsterdam"
+    assert result.confidence_score == 88.0
+
+
+def test_blocked_account_is_not_defaulted():
+    """blocked_account_eur must be absent unless the source stated it.
+
+    It defaulted to 11208.0 on the model itself, so every extraction that did not find the
+    figure still reported one -- on the LLM path too, not just the deleted fallback. The
+    Auswaertiges Amt revises this number annually, so the constant was also going stale.
+    """
+    data = ExtractedProgramData(confidence_score=50.0)
+    assert data.blocked_account_eur is None
+    assert data.university_name is None
+    assert data.program_name is None
 
 
 @pytest.mark.asyncio

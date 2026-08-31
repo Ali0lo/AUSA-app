@@ -126,7 +126,9 @@ class FlaggedProgramResponse(BaseModel):
     min_ielts: Optional[float] = None
     tuition_fee: Optional[float] = None
     currency: str = "USD"
-    confidence_score: float
+    # Nullable: a record nobody scored has no confidence. The reviewer must be able to tell
+    # "not scored" from a low score, so this stays None rather than collapsing to a number.
+    confidence_score: Optional[float] = None
     verification_status: str
     extraction_notes: Optional[str] = None
     source_url: Optional[str] = None
@@ -204,7 +206,9 @@ async def get_flagged_programs(
                     min_ielts=p.min_ielts,
                     tuition_fee=p.tuition_fee,
                     currency=p.currency or "USD",
-                    confidence_score=p.confidence_score or 70.0,
+                    # Not `or 70.0`: that invented a score for unscored rows, and because
+                    # 0.0 is falsy it also rewrote a genuine zero-confidence record as 70.
+                    confidence_score=p.confidence_score,
                     verification_status=p.verification_status or "flagged_for_review",
                     extraction_notes=p.requirements_text,
                     source_url=p.source_url,
@@ -212,12 +216,20 @@ async def get_flagged_programs(
                 for p in db_programs
             ]
 
-        # Return demo / seeded dataset if database is empty in dev environment
-        return [FlaggedProgramResponse(**p) for p in DEMO_FLAGGED_PROGRAMS if p["verification_status"] == "flagged_for_review"]
+        # An empty queue is a real answer and is returned as one. This used to fall through
+        # to DEMO_FLAGGED_PROGRAMS, so a reviewer with an empty database was shown four
+        # invented programmes -- Heidelberg, TUM and the rest -- as though they were records
+        # awaiting their approval. The human-in-the-loop safeguard cannot itself be a source
+        # of fabricated data.
+        return []
 
-    except Exception:
-        # Fallback to demo items if database session is uninitialized
-        return [FlaggedProgramResponse(**p) for p in DEMO_FLAGGED_PROGRAMS if p["verification_status"] == "flagged_for_review"]
+    except Exception as exc:
+        # And a database that cannot be read is an outage, not an empty queue. Serving demo
+        # rows here hid the outage behind plausible content.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cannot read the review queue; the programs store is unavailable.",
+        ) from exc
 
 
 @router.put(

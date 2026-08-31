@@ -1,9 +1,17 @@
-import re
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
 DegreeLevel = Literal["bachelor", "master", "phd"]
+
+
+class ExtractionUnavailableError(RuntimeError):
+    """Raised when extraction cannot run. Never return heuristically-invented fields.
+
+    The caller decides what to do with a page it could not read. What it must not do is
+    receive a plausible-looking record that nobody extracted -- see the note above the
+    fallback that used to live in extract_program_info_from_text.
+    """
 
 
 class ExtractedProgramData(BaseModel):
@@ -22,7 +30,10 @@ class ExtractedProgramData(BaseModel):
     # Germany-specific fields
     requires_studienkolleg: Optional[bool] = Field(None, description="Whether Studienkolleg preparatory course is required")
     min_testdaf_score: Optional[str] = Field(None, description="Minimum German TestDaF or DSH level required")
-    blocked_account_eur: Optional[float] = Field(11208.0, description="Blocked bank account financial minimum in EUR for German visa")
+    # No default. The blocked-account minimum is set annually by the Auswärtiges Amt, so a
+    # constant baked in here would be quietly stale AND would be indistinguishable from a
+    # figure actually read off the page. Absent means absent.
+    blocked_account_eur: Optional[float] = Field(None, description="Blocked bank account financial minimum in EUR for German visa, as stated by the source")
 
     # Azerbaijan-specific fields (DIM / TQDK entrance exam)
     dim_score_required: Optional[int] = Field(None, ge=0, le=700, description="Minimum required DIM/TQDK entrance exam score (0-700 scale)")
@@ -67,66 +78,34 @@ async def extract_program_info_from_text(text: str) -> ExtractedProgramData:
             extraction_notes="Webpage text was empty."
         )
 
+    # A regex fallback stood here until 2026-08-31. When the LLM call raised for ANY reason
+    # -- missing OPENAI_API_KEY, network failure, rate limit, malformed response, import
+    # error -- a bare `except Exception` silently substituted a heuristic parser that then
+    # invented the record: university_name="Extracted University" and
+    # program_name="Extracted Program" written as literal values, blocked_account_eur
+    # hardcoded to 11208.0, requires_studienkolleg set by mere substring presence, and
+    # country inferred from "baku" appearing anywhere in the page.
+    #
+    # Worst of all it fabricated the confidence score that the human review queue gates on:
+    # (found_count / 3.0) * 100, so three regex hits produced a confidence of 100.0 -- a
+    # perfect score from a parser that had just invented the university name -- which cleared
+    # the 85% threshold and published without any human ever seeing it. And in CI, where no
+    # API key exists, the try block ALWAYS raised, so the pipeline tests were green on the
+    # fabricated path rather than on extraction.
+    #
+    # ADR-0004 forbids exactly this. A page we could not read yields no record.
     try:
         from langchain_core.prompts import ChatPromptTemplate
         from langchain_openai import ChatOpenAI
-        
+
         prompt = ChatPromptTemplate.from_template(EXTRACTION_PROMPT_TEMPLATE)
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)
         structured_llm = llm.with_structured_output(ExtractedProgramData)
-        
+
         chain = prompt | structured_llm
         result: ExtractedProgramData = await chain.ainvoke({"text": text})
         return result
-    except Exception:
-        # Fallback heuristic extractor when live LLM API is unavailable (e.g. offline testing)
-        gpa_match = re.search(r"gpa[^\d]*(\d\.\d+)", text, re.IGNORECASE)
-        ielts_match = re.search(r"ielts[^\d]*(\d\.\d+)", text, re.IGNORECASE)
-        toefl_match = re.search(r"toefl[^\d]*(\d+)", text, re.IGNORECASE)
-        tuition_usd_match = re.search(r"(?:tuition|fee)[^\d]*\$?\s*([\d,]+)\s*(?:usd|\$)?", text, re.IGNORECASE)
-        tuition_azn_match = re.search(r"([\d,]+)\s*azn", text, re.IGNORECASE)
-        dim_match = re.search(r"(?:dim|tqdk)[^\d]*(\d{3})", text, re.IGNORECASE)
-        testdaf_match = re.search(r"(testdaf[^\s\.\,]+|dsh-\d|c1|b2)", text, re.IGNORECASE)
-        
-        studienkolleg_required = "studienkolleg" in text.lower()
-
-        found_count = sum(1 for m in [gpa_match, ielts_match, toefl_match, tuition_usd_match, dim_match] if m)
-        calc_confidence = round(min(100.0, max(40.0, (found_count / 3.0) * 100.0)), 1) if found_count > 0 else 50.0
-
-        min_gpa = float(gpa_match.group(1)) if gpa_match else None
-        min_ielts = float(ielts_match.group(1)) if ielts_match else None
-        min_toefl = int(toefl_match.group(1)) if toefl_match else None
-        tuition_fee_usd = float(tuition_usd_match.group(1).replace(",", "")) if tuition_usd_match else None
-        tuition_fee_azn = float(tuition_azn_match.group(1).replace(",", "")) if tuition_azn_match else None
-        dim_score = int(dim_match.group(1)) if dim_match else None
-        testdaf = testdaf_match.group(1) if testdaf_match else None
-
-        degree_level: Optional[DegreeLevel] = None
-        if "master" in text.lower() or "m.sc" in text.lower():
-            degree_level = "master"
-        elif "bachelor" in text.lower() or "b.sc" in text.lower() or "bakalavr" in text.lower():
-            degree_level = "bachelor"
-        elif "phd" in text.lower() or "doctorate" in text.lower():
-            degree_level = "phd"
-
-        country = "Germany" if ("germany" in text.lower() or "deutschland" in text.lower() or "daad" in text.lower()) else None
-        if "azerbaijan" in text.lower() or "azərbaycan" in text.lower() or "baku" in text.lower() or dim_score is not None:
-            country = "Azerbaijan"
-
-        return ExtractedProgramData(
-            university_name="Extracted University",
-            program_name="Extracted Program",
-            degree_level=degree_level,
-            country=country,
-            min_gpa=min_gpa,
-            min_ielts=min_ielts,
-            min_toefl=min_toefl,
-            tuition_fee_usd=tuition_fee_usd,
-            tuition_fee_azn=tuition_fee_azn,
-            requires_studienkolleg=studienkolleg_required,
-            min_testdaf_score=testdaf,
-            blocked_account_eur=11208.0 if country == "Germany" else None,
-            dim_score_required=dim_score,
-            confidence_score=calc_confidence,
-            extraction_notes="Extracted via fallback parser."
-        )
+    except Exception as exc:
+        raise ExtractionUnavailableError(
+            f"Extraction failed and no substitute is produced: {exc}"
+        ) from exc

@@ -135,7 +135,32 @@ connect to it rather than reinvent it.
 
 ---
 
-## 3.1 🔴 A live fabrication path in the extraction pipeline
+## 3.1 ✅ A live fabrication path in the extraction pipeline — FIXED 31 Aug
+
+**Status: fixed.** The fallback is deleted and replaced with `ExtractionUnavailableError`;
+the `11208.0` model default and the `70.0` confidence defaults are gone; the review queue no
+longer serves demo rows. Suite 75 → **78 passing**. Details of what was wrong follow, kept
+because the same shape keeps recurring.
+
+**Still open in the same family, deliberately not in that change:**
+
+- `export.py:40-56` — a PDF dossier request with no payload substitutes an invented student
+  (`gpa 3.65`, `ielts 7.0`) and an invented TUM programme, then renders a student-facing
+  document from them. Should be a 422.
+- `admin.py:107` — `require_admin_user` returns `{"is_admin": True}` unconditionally. **The
+  admin endpoints have no authentication at all**, so anyone can mark a record verified and
+  publish it. This is a security defect, not a fabrication one, and it is arguably more
+  serious than what was fixed above.
+- `admin.py:252-271` — the verify endpoint checks the in-memory demo store *before* the
+  database, so verifying ids 1001-1004 mutates a dict and reports "successfully verified and
+  published" without writing anything.
+- `pdf_export.py:176-182` — `.get('gpa', 3.5)`, `.get('ielts', 7.0)`,
+  `.get('blocked_account_eur', 11208.0)`. Currently dead code because each is guarded by a
+  truthiness check, but they read as fabrication and one removed guard would make them live.
+
+---
+
+### What was wrong
 
 `backend/app/data_pipeline/extraction.py:81` — found while verifying the admin claim above.
 This is the same defect class deleted on 30 August, still in place, and it feeds the
