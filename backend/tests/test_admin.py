@@ -5,20 +5,27 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.api.v1.admin import DEMO_FLAGGED_PROGRAMS
+from app.core.config import settings
 from app.core.database import Base, get_db
+from app.core.security import create_access_token
 from app.main import app
 from app.models.program import Program as ProgramModel
+from app.models.student import Student
 
 client = TestClient(app)
 
+ADMIN_EMAIL = "curator@ausa.edu.az"
+STUDENT_EMAIL = "ordinary_student@ausa.edu.az"
+
 
 @pytest_asyncio.fixture
-async def db_session():
-    """A real SQLite database holding only `programs`.
+async def admin_env(monkeypatch):
+    """A database holding `programs` and `students`, plus one admin and one non-admin.
+
+    Yields (session, admin_headers, student_headers).
 
     Base.metadata as a whole cannot be created here: university_documents uses pgvector's
-    Vector type, which SQLite has no equivalent for. The review queue touches only programs.
+    Vector type, which SQLite has no equivalent for.
     """
     engine = create_async_engine(
         "sqlite+aiosqlite://",
@@ -26,45 +33,94 @@ async def db_session():
         poolclass=StaticPool,
     )
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all, tables=[ProgramModel.__table__])
+        await conn.run_sync(
+            Base.metadata.create_all,
+            tables=[ProgramModel.__table__, Student.__table__],
+        )
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session:
+        admin = Student(email=ADMIN_EMAIL)
+        ordinary = Student(email=STUDENT_EMAIL)
+        session.add_all([admin, ordinary])
+        await session.commit()
+        await session.refresh(admin)
+        await session.refresh(ordinary)
+
+        monkeypatch.setattr(settings, "ADMIN_EMAILS", [ADMIN_EMAIL])
+
         async def _get_test_db():
             yield session
 
         app.dependency_overrides[get_db] = _get_test_db
-        yield session
+        yield (
+            session,
+            {"Authorization": f"Bearer {create_access_token(subject=admin.id)}"},
+            {"Authorization": f"Bearer {create_access_token(subject=ordinary.id)}"},
+        )
         app.dependency_overrides.clear()
 
     await engine.dispose()
 
 
 @pytest.mark.asyncio
-async def test_empty_review_queue_returns_nothing_not_demo_data(db_session):
-    """An empty queue is an empty list -- never the demo programmes.
-
-    This previously asserted `len(data) >= 1`, which held only because the endpoint fell
-    through to DEMO_FLAGGED_PROGRAMS whenever the database was empty or unreadable. A
-    reviewer was shown four invented programmes (Heidelberg, TUM and friends) as records
-    awaiting approval, and the test guarding the review queue asserted the fabrication.
-    """
+async def test_admin_queue_rejects_an_anonymous_caller(admin_env):
+    """No token, no queue. This endpoint used to be open to the entire internet."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-        response = await c.get("/api/v1/admin/programs/flagged")
+        assert (await c.get("/api/v1/admin/programs/flagged")).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_admin_queue_rejects_an_authenticated_non_admin(admin_env):
+    """A valid student token is not an admin token."""
+    _, _, student_headers = admin_env
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        res = await c.get("/api/v1/admin/programs/flagged", headers=student_headers)
+        assert res.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_verify_endpoint_rejects_an_anonymous_caller(admin_env):
+    """Publishing unverified data to students required no credentials at all."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        res = await c.put("/api/v1/admin/programs/1/verify", json={"program_name": "X"})
+        assert res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_admin_on_the_allowlist_is_admitted(admin_env):
+    _, admin_headers, _ = admin_env
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        res = await c.get("/api/v1/admin/programs/flagged", headers=admin_headers)
+        assert res.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_an_empty_allowlist_admits_nobody(admin_env, monkeypatch):
+    """The default is deny-all. An unconfigured deployment must not be an open one."""
+    _, admin_headers, _ = admin_env
+    monkeypatch.setattr(settings, "ADMIN_EMAILS", [])
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        res = await c.get("/api/v1/admin/programs/flagged", headers=admin_headers)
+        assert res.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_empty_review_queue_returns_nothing_not_demo_data(admin_env):
+    """An empty queue is an empty list -- never the demo programmes."""
+    _, admin_headers, _ = admin_env
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        response = await c.get("/api/v1/admin/programs/flagged", headers=admin_headers)
 
     assert response.status_code == 200
     assert response.json() == []
 
 
 @pytest.mark.asyncio
-async def test_flagged_queue_returns_real_rows_and_preserves_unscored_confidence(db_session):
-    """A row nobody scored reports confidence null, not an invented number.
-
-    `p.confidence_score or 70.0` used to fill one in -- and because 0.0 is falsy it also
-    rewrote a genuine zero-confidence record as 70.0, which is the difference between
-    "worthless extraction" and "nearly good enough to publish".
-    """
-    db_session.add_all([
+async def test_flagged_queue_returns_real_rows_and_preserves_unscored_confidence(admin_env):
+    """A row nobody scored reports confidence null, not an invented number."""
+    session, admin_headers, _ = admin_env
+    session.add_all([
         ProgramModel(
             university_name="Real University",
             program_name="B.Sc. Real Programme",
@@ -77,20 +133,15 @@ async def test_flagged_queue_returns_real_rows_and_preserves_unscored_confidence
             confidence_score=0.0,
         ),
     ])
-    await db_session.commit()
+    await session.commit()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-        response = await c.get("/api/v1/admin/programs/flagged")
+        response = await c.get("/api/v1/admin/programs/flagged", headers=admin_headers)
 
     assert response.status_code == 200
-    data = response.json()
-    by_name = {item["university_name"]: item for item in data}
-
+    by_name = {item["university_name"]: item for item in response.json()}
     assert by_name["Real University"]["confidence_score"] is None
     assert by_name["Zero Confidence University"]["confidence_score"] == 0.0
-
-    demo_ids = {p["id"] for p in DEMO_FLAGGED_PROGRAMS}
-    assert not demo_ids & {item["id"] for item in data}
 
 
 def test_verify_and_approve_program():

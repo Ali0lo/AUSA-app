@@ -19,7 +19,14 @@ class Settings(BaseSettings):
     )
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-    
+
+    # Administrator allowlist. Empty means nobody is an administrator -- an
+    # unconfigured deployment must be a closed one, not an open one.
+    ADMIN_EMAILS: List[str] = Field(
+        default_factory=list,
+        description="Emails permitted to use /api/v1/admin. Empty denies everyone.",
+    )
+
     # Database
     POSTGRES_USER: str = "ausa_user"
     POSTGRES_PASSWORD: str = "ausa_password"

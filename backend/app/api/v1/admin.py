@@ -12,8 +12,11 @@ backend_dir = str(Path(__file__).parent.parent.parent.parent)
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
+from app.api.deps import get_current_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.program import Program as ProgramModel
+from app.models.student import Student
 
 router = APIRouter(prefix="/admin", tags=["Admin Curation & Data Verification"])
 
@@ -104,11 +107,23 @@ DEMO_FLAGGED_PROGRAMS: List[Dict[str, Any]] = [
 # -------------------------------------------------------------
 # Admin Security Dependency
 # -------------------------------------------------------------
-async def require_admin_user() -> Dict[str, Any]:
+async def require_admin_user(
+    current_user: Student = Depends(get_current_user),
+) -> Student:
+    """Admit only an authenticated student whose email is on the allowlist.
+
+    This previously returned {"is_admin": True} for every caller, so the entire admin
+    surface -- including the endpoint that publishes unverified programme data to
+    students -- was open to anyone who could reach the API. An empty allowlist denies
+    everyone: a deployment that forgot to configure this is closed, not open.
     """
-    Dependency checking that the authenticated session holds administrative permissions.
-    """
-    return {"email": "admin@ausa.edu.az", "is_admin": True}
+    allowed = {email.strip().lower() for email in settings.ADMIN_EMAILS if email.strip()}
+    if not current_user.email or current_user.email.strip().lower() not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator privileges are required for this endpoint.",
+        )
+    return current_user
 
 
 # -------------------------------------------------------------
@@ -151,7 +166,6 @@ class VerifyProgramPayload(BaseModel):
     dim_score_required: Optional[int] = Field(None, ge=0, le=700, description="Corrected DIM score requirement")
     blocked_account_eur: Optional[float] = Field(None, ge=0.0, description="Corrected German blocked account requirement")
     requires_studienkolleg: Optional[bool] = Field(None, description="Corrected Studienkolleg requirement")
-    verified_by: Optional[str] = Field("admin@ausa.edu.az", description="Admin user email performing verification")
 
 
 class VerifyProgramResponse(BaseModel):
@@ -184,7 +198,7 @@ class SeedDatabaseResponse(BaseModel):
     description="Retrieve all university program records with confidence_score < 85% flagged for human curation."
 )
 async def get_flagged_programs(
-    admin: Dict[str, Any] = Depends(require_admin_user),
+    admin: Student = Depends(require_admin_user),
     db: AsyncSession = Depends(get_db)
 ) -> List[FlaggedProgramResponse]:
     """Query and return all programs flagged for human review."""
@@ -242,12 +256,15 @@ async def get_flagged_programs(
 async def verify_and_approve_program(
     program_id: int,
     payload: VerifyProgramPayload,
-    admin: Dict[str, Any] = Depends(require_admin_user),
+    admin: Student = Depends(require_admin_user),
     db: AsyncSession = Depends(get_db)
 ) -> VerifyProgramResponse:
     """Correct and verify a program record, changing status to 'verified'."""
     now_iso = datetime.now(timezone.utc).isoformat()
-    verified_by_email = payload.verified_by or admin.get("email", "admin@ausa.edu.az")
+    # The signed-in administrator is the authority on who verified a row. A caller-supplied
+    # verified_by is a claim about a third party, and ADR-0004 rule 2 gives that field to
+    # the person who actually opened the source.
+    verified_by_email = admin.email
 
     # 1. Check in-memory demo store
     demo_item = next((p for p in DEMO_FLAGGED_PROGRAMS if p["id"] == program_id), None)
@@ -330,7 +347,7 @@ async def verify_and_approve_program(
     description="Seed baseline universities, programs, scholarships, and RAG document vector chunks."
 )
 async def seed_database_endpoint(
-    admin: Dict[str, Any] = Depends(require_admin_user),
+    admin: Student = Depends(require_admin_user),
     db: AsyncSession = Depends(get_db)
 ) -> SeedDatabaseResponse:
     """Trigger background seeding routine for baseline universities, programs, and scholarships."""
