@@ -1,8 +1,9 @@
 # AUSA — route-first advisor: design
 
 **Date:** 2026-08-31
-**Status:** proposed, awaiting review
-**Supersedes in part:** [ADR-0007](../../adr/0007-three-number-model-and-honesty-tiers.md) §2, §3, §4; [ADR-0008](../../adr/0008-selectivity-replaces-cutoff-prediction.md) §4 (country and level scope)
+**Status:** approved — implementation plan next
+**Supersedes in part:** [ADR-0007](../../adr/0007-three-number-model-and-honesty-tiers.md) §3, §4; [ADR-0008](../../adr/0008-selectivity-replaces-cutoff-prediction.md) §4 (country and level scope)
+**Carries forward:** ADR-0007 §2 (the two modes) — see §6; `architecture-decisions.md` §3 (freshness) — see §5.4
 **Deadline:** 15 September 2026
 
 ---
@@ -148,17 +149,32 @@ collection cost. Shipping the DP path first de-risks the deadline.
 The primary object is a **Route**, not a university.
 
 ```
-Route = qualification held → entry mechanism → country
+Route = qualification held → entry mechanism → country, at a level
 ```
 
 | Field | Meaning |
 |---|---|
+| `level` | `bachelor` \| `master` — **part of the key, not a filter** (see below) |
 | `preconditions` | qualification state required to start |
 | `produces` | qualification state on completion |
 | `time_cost_months` | 0 for direct, 12 for Studienkolleg / prep year |
 | `money_cost_range` | AZN, low–high |
 | `exams_required` | e.g. IELTS 6.0, TestAS, SAT, HSK, none |
 | `provenance` | `seed` / `claude-extracted` / `human-verified` (ADR-0007 §5) |
+
+**Level is a key, not a filter.** Every finding in §2 is level-specific and several invert
+between the two: Germany and the UK are blocked to a school-leaver but **open to a bachelor
+holder**, since a completed degree is an accepted entry qualification where an attestat is
+not. Scholarships invert the other way — Chevening, Banach, Erasmus Mundus and most of DAAD
+exist only at master's, while Türkiye Bursları' hard **under-21** limit exists only at
+bachelor. The DP publishes two separate catalogues with different countries in them (USA and
+Poland have **zero** bachelor programmes and 289 and 8 master's respectively).
+
+A design that filtered a level-agnostic route set would therefore produce confident wrong
+answers in both directions: Germany BLOCKED for a master's applicant it is open to, and DP
+programmes offered in countries that fund none at that level. So the student's `level` is
+asked in the first profile step alongside their qualification, and it selects which routes,
+which requirement rows and which funding tiers exist at all.
 
 Against a student's qualification state the engine classifies each route:
 
@@ -243,11 +259,12 @@ of ADR-0007 §3. That is a deliberate, labelled absence, never filled by estimat
 ### 5.1 What we extract from a university's application page
 
 This is the critical path and the largest uncertainty, so the target schema is fixed here
-rather than discovered during collection. One row per (university, programme, intake), and
-**every field carries `source_url`, `retrieved_at` and a provenance state.**
+rather than discovered during collection. One row per (university, programme, **level**,
+intake), and **every field carries `source_url`, `retrieved_at` and a provenance state.**
 
 | Field | Notes |
 |---|---|
+| `level` | `bachelor` \| `master`. Part of the key — the same university publishes different requirements, fees and deadlines per level |
 | `entry_qualification_accepted` | attestat / attestat+foundation / 1-year university / A-level / IB / bachelor degree. **The field that decides whether a route is open.** |
 | `foundation_required` | boolean, and which providers if so |
 | `language_requirement` | test, minimum score, and the language of instruction |
@@ -261,7 +278,7 @@ rather than discovered during collection. One row per (university, programme, in
 | `documents_required` | apostille, translation, transcript, motivation letter, references |
 
 `tuition_per_year` deserves emphasis: quoting a domestic or EU fee to a non-EU applicant is a
-silent error of exactly the kind §7 warns about, and it is the single easiest field to get
+silent error of exactly the kind §8 warns about, and it is the single easiest field to get
 wrong because it is usually the more prominent number on the page.
 
 ### 5.2 Funding: three tiers, all eligibility-gated
@@ -309,6 +326,17 @@ Türkiye Bursları' is age, Chevening's and Banach's is degree level, DP's is a 
 list. None of those are visible from a scholarship's marketing page, and all of them are
 checkable.
 
+**Wording rule: "possibly eligible", never "you will get it".** Eligibility and award are
+different events, and every programme here is competitive — the DP funds roughly 400 places
+against a pool far larger, Chevening and Türkiye Bursları more sharply still. What the engine
+checks is whether the student clears the *stated gates*; the selection that follows is a
+committee decision no dataset in this project models. So the product's strongest permitted
+claim is **"you meet the published requirements for this award"**, with the gate that was
+checked shown beside it. "You qualify for a full scholarship" is prohibited output, in
+generated text and in UI labels alike, and it is precisely the phrasing that makes agency
+marketing untrustworthy. The absence of a probability here is deliberate and labelled, the
+same as the missing second number in §4.2.
+
 ### 5.3 Source order — aggregator before scraper
 
 `data-sourcing.md` (28 Aug) prescribes this order and it was not followed, which cost two days
@@ -345,16 +373,75 @@ hochschulstart.de's PDFs sit under a `Disallow: /fileadmin/` path and are not to
 `nc-werte.info`, `studis-online.de` and `auswahlgrenzen.de` are aggregators — usable to
 *discover* official URLs, never as sources.
 
+### 5.4 Freshness
+
+`architecture-decisions.md` §3 (28 Aug) settled this and it is carried forward unchanged,
+because a deadline is the field most likely to be wrong and the most damaging when it is:
+
+| Mechanism | Behaviour |
+|---|---|
+| **Text hash** | Fingerprint each page. Re-fetch, re-hash, compare. Identical → do nothing, no re-extraction cost. Different → re-extract the fields and refresh |
+| **`last_checked`** | Stored per record and **shown to the student**. Honesty beats false confidence |
+| **Tiered re-check** | Deadlines and fees checked often; descriptions rarely change |
+| **Change guardrail** | Keep previous values rather than overwriting blindly. Implausible jumps — tuition triples — are flagged for human review, **not published** |
+
+The guardrail is the same rule as ADR-0004 in a different costume: an implausible new value
+is a suspected extraction failure, and the correct response is to hold the old value and
+raise a flag, never to publish the new one because it arrived more recently.
+
 ---
 
-## 6. Scope
+## 6. What the student sees
+
+ADR-0007 §2 defined two modes over one spine. They survive this redesign intact — the routes
+change what each mode *says*, not that there are two — and step 9 of §10 builds them.
+
+**Discovery.** One profile step: level, qualification held, exam scores, budget, destination
+preference, field. Results refine live as fields are filled, and the page is never empty
+before input — it opens on the most competitive or most popular programmes in the field.
+**Destination is asked first and never excludes**: chosen countries fill the main results,
+while a persistent *"your score goes further here"* section surfaces the strongest matches
+from countries the student did not name. Gating on destination would be the steering
+behaviour this product exists to refuse, implemented in software.
+
+**Target.** The student names a university. They get a gap statement, a requirement
+checklist, a process checklist, and alternatives that close the gap. A named university we
+do not hold produces a plain *"we don't have this yet"* plus what we do hold for that
+country — never a guessed cutoff, never a silent substitution.
+
+**Target excludes a study plan.** *"You are 68 points short"* is supported by the data.
+*"Retake DİM in March, target +70, focus on maths"* is not — nothing in any dataset links
+effort to score change. The roadmap is a gap, a checklist, a deadline and alternatives.
+
+**The walkthrough step 9 must complete**, for a profile of *attestat, DİM 520, IELTS 7.0,
+bachelor, engineering, budget 8,000 AZN/year*:
+
+```
+1  Turkey and Poland OPEN — direct entry on the attestat.
+   Germany and the UK BLOCKED — attestat opens Studienkolleg only.
+2  Two unlocks named for Germany: Studienkolleg (12 months, TestAS)
+   — or one year at an Azerbaijani university, which ALSO opens the UK
+   and preserves DP eligibility. Both costed.
+3  DP: DİM 520 clears the 400–550 band, IELTS 7.0 clears C1.
+   The funded bachelor set for open countries is listed, with the band shown.
+4  Everything ranked by total cost to degree, each row carrying its
+   last_checked date and its source.
+5  Student picks one. Roadmap: gap, requirement checklist, process
+   checklist, deadlines — and every claim cited or absent.
+```
+
+Nothing in that sequence needs a number the project cannot honestly produce.
+
+---
+
+## 7. Scope
 
 **Six countries:** Turkey, Germany, UK, USA, Poland, China.
 **Two levels:** bachelor and master's. **PhD excluded** — supervisor-driven admission and
 funded-position financing share no mechanics with the rest and would need data we cannot get.
 
 **Coverage target**, weighted to where students actually go and consistent with the cut
-order in §8 — Poland is not given a Turkey-sized budget when it is first to be cut:
+order in §10 — Poland is not given a Turkey-sized budget when it is first to be cut:
 
 ```
 Turkey    ~25    #1 destination, cheaper than home, 286 DP master's programmes
@@ -379,7 +466,7 @@ The DP list supplies buckets 1 and 2 for free and authoritatively.
 
 ---
 
-## 7. Where the LLM sits
+## 8. Where the LLM sits
 
 Per ADR-0007 §6, the contract is by claim type, not by layer:
 
@@ -402,30 +489,78 @@ silently: every exclusion is shown with its reason and source.
 
 ---
 
-## 8. Build order, and what gets cut
+## 9. How this lands on the existing codebase
+
+This design has been written as though the repository were empty. It is not, and a spec that
+does not say what happens to the running code is a spec that gets ignored the first time they
+disagree. There is no rewrite here — the spine is sound and the additions are additive.
+
+**Kept as-is.** FastAPI + SQLAlchemy 2.0 async + Alembic + Postgres/pgvector; the auth flow;
+`students`, `programs`, `scholarships`, `applications`, `documents`; the migration chain
+(`ca962f4261fb` → `a1b2c3d4e5f6`); the test setup (aiosqlite + `StaticPool`). New tables are
+new migrations on that chain, never a reset.
+
+**Added.** `routes`, `student_qualifications`, `program_requirements`, `funding_programmes` —
+steps 1–4 of §10. `programs` gains `level`, and `program_cutoff_history` gains the 3-column
+unique index `(country, source_program_code, intake_year)`, which is the key that was
+verified duplicate-free; the 4-column version considered earlier covers 0.8% of rows because
+`variant_index` is NULL on all 115,482 Turkey rows.
+
+**Provenance reuses the existing review queue.** `admin.py` already has the flagged-programme
+queue, the verify endpoint and `confidence_score` (now nullable, since 31 Aug). The three
+provenance states of §4.1 map onto it rather than defining a parallel mechanism: a
+`claude-extracted` row is a queued row, and `verified_by` is written only by the verify
+endpoint — which means the endpoint must first be given authentication, per the table below.
+
+**Re-aimed, not deleted.** `matching.py` computes a deterministic explainable match score —
+that is the §4.2 eligibility number and it survives. What changes is what sits beside it: a
+route classification instead of an implied admission probability. `chat.py` becomes the §8
+advisory layer under the cite-or-drop contract. `embeddings.py` and pgvector keep their
+`architecture-decisions.md` §2 role — filter in SQL, search in the same store.
+
+**Blocking defects, found 31 August and now carried as step 0 of §10.** These are on the
+path this spec writes through, and each ships bad data or worse:
+
+| Defect | Why it blocks |
+|---|---|
+| `require_admin_user` returns `{"is_admin": True}` **unconditionally** | No authentication on the admin endpoints at all — anyone can call `/programs/{id}/verify` and publish unverified data to students. The single most serious item in the repo |
+| `admin.py:252-271` — verify checks the demo store **before** the database | Reports "successfully verified and published" without writing anything |
+| `export.py:40-56` invents a student (`gpa 3.65`, `ielts 7.0`) and a TUM programme on an empty payload | The same fabrication class fixed in `extraction.py` on 31 Aug, in a second location. Should be a 422 |
+| `pdf_export.py:176-182` — three fabricated defaults behind truthiness guards | Dead today, live the moment a guard changes |
+| Rows written by the deleted extraction fallback | Quarantine any `programs` row with `extraction_notes="Extracted via fallback parser."` or university `"Extracted University"` before the catalogue is trusted |
+| `README.md` | Three broken ADR links, a false "admission probability" claim, deleted DAAD scrapers advertised, wrong venv path |
+
+Budget **2 days** for this table. It is not optional cleanup: ADR-0004 is the project's
+central promise, and three of the six rows are that promise being broken in code.
+
+---
+
+## 10. Build order, and what gets cut
 
 Ordered so that each step ships something usable alone.
 
-**This spec is larger than one implementation plan.** Steps 1–4 form the first plan — they
-deliver the DP path end to end and are the deadline-critical core. Steps 5–7 get their own
-plans; step 6 in particular is a collection project whose size is not yet known, and
-scoping it as a task inside a larger plan would hide that.
+**This spec is larger than one implementation plan.** Step 0 plus steps 1–4 form the first
+plan — they close the defects and deliver the DP path end to end, which is the
+deadline-critical core. Steps 5–9 get their own plans; step 7 in particular is a collection
+project whose size is not yet known, and scoping it as a task inside a larger plan would
+hide that.
 
 | # | Step | Days | Done when |
 |---|---|---|---|
 | 1 | **DP catalogue loader** — two CSVs, 4,121 rows | 1 | Both files load idempotently; a second run inserts 0 rows; counts match §2.2 exactly |
-| 2 | **`student_qualifications` + `program_requirements`** — Tasks 3–4, plus a route dimension | 4 | A profile round-trips; requirements join to catalogue rows; every row carries provenance and `source_url` |
+| 2 | **`student_qualifications` + `program_requirements`** — the §5.1 schema, keyed by level | 4 | A profile round-trips; requirements join to catalogue rows on (university, programme, level, intake); every row carries provenance and `source_url` |
 | 3 | **Route definitions + engine** — ~15 hand-written, cited | 3 | Attestat-only profile returns Germany and UK **BLOCKED** with both unlocks named, and Turkey/Poland/China **OPEN**; two-hop composition produces the prep-year path |
 | 4 | **DP eligibility as a route** | 2 | DİM 520 + IELTS 7.0 returns the funded programme set filtered by country and level, with the band that decided it shown |
 | 5 | **DAAD import** — 2,306 programmes via the JSON API | 2 | Tuition and deadline populated for ≥95% of imported rows; `Crawl-delay: 2` honoured; terms read and recorded |
 | 6 | **DİM cutoff model** — the primary ML | 2 | Beats the department-mean baseline on a held-out year (baseline 57.37); ships quantile bands, not a point estimate; refuses to predict where history < 2 years |
 | 7 | **Manual curation** — 50 programmes for Turkey, UK, Poland, USA | 3 | 50 rows human-verified with sources; the schema survives contact with all four countries unchanged |
 | 8 | **Scholarship layer** — DP, Türkiye Bursları, CSC, SOCAR, Chevening, DAAD, NAWA | 2 | Every scholarship carries its gate; an under-21 check and an employment check both demonstrably exclude |
-| 9 | **Results UI + roadmap view** | 5 | The §"what the flow looks like" walkthrough completes end to end for one real profile |
+| 9 | **Results UI + roadmap view** — Discovery and Target (§6) | 5 | The §6 walkthrough completes end to end for the profile named there |
+| 0 | **Defect table (§9)** — admin auth, `export.py`, verify ordering, quarantine, README | 2 | No endpoint publishes without authentication; no code path fabricates a record; the six rows of §9 are closed |
 
-**~24 person-days against 4 people × 15 days.** The margin is real but thin, and it does not
-yet absorb the defects found on 31 August (`export.py` fabrication, the unauthenticated admin
-endpoints) or any second discovery of that kind.
+**~26 person-days against 4 people × 15 days**, now including the §9 defects. Step 0 is
+numbered last and sequenced first: it is the smallest item on the list and the only one that
+is already shipping wrong behaviour.
 
 **Step 7 must start immediately and in parallel.** It is the only item that cannot be
 compressed by writing better code, and `data-sourcing.md` is right that 50 records is two to
@@ -441,7 +576,7 @@ authoritative, and it is the clearest differentiator against every agency in the
 
 ---
 
-## 9. Open questions
+## 11. Open questions
 
 - The DİM open-data API is found but unprofiled. What does it actually expose, and does it
   cover cutoffs or only aggregate statistics?

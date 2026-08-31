@@ -222,6 +222,12 @@ Concrete changes to `docs/superpowers/specs/2026-08-31-route-first-advisor-desig
 5. **Connect provenance to the existing admin review queue** rather than defining a parallel
    mechanism — after confirming what actually exists in the code.
 
+**All five are now in the spec (31 Aug).** 1 → §5.3 with the tier-1 check results; 2 → §10
+step 7; 3 → §5.4; 4 → §5.2; 5 → §9, which confirms the queue exists in `admin.py` and notes
+that the verify endpoint needs authentication before `verified_by` can mean anything. Two
+further gaps found while doing it: study level was not a key anywhere (now §4.1, §5.1), and
+the spec had no landing plan for the running code (now §9).
+
 And separately from the spec: **rewrite the README.** It is the cheapest high-value fix
 available — broken links and a false ML claim in the public-facing document of a graded
 project.
