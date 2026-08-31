@@ -18,10 +18,10 @@ By combining deterministic decision-tree logic, predictive machine learning mode
 
 ## ✨ Key Features
 
-- 🎓 **Scholarship-First Net-Cost Evaluation ([ADR-0005](docs/adr/0005-scholarship-first-net-cost-evaluation.md))**: Evaluates eligible institutional and state scholarships *before* applying hard budget filters, ensuring low-income students are not falsely excluded from high-tuition target programs.
-- 📈 **Predictive Cutoff ML Inference ([ADR-0001](docs/adr/0001-ml-predictive-cutoff-layer.md) & [ADR-0002](docs/adr/0002-data-science-training-pipeline.md))**: In-memory Random Forest models trained on historical admission data predict admission cutoff scores and success probabilities for Turkey (YKS) and USA (SAT/GPA).
+- 🎓 **Scholarship-First Net-Cost Evaluation ([ADR-0005](docs/adr/0005-scholarship-pass-precedes-budget-filter.md))**: Evaluates eligible institutional and state scholarships *before* applying hard budget filters, ensuring low-income students are not falsely excluded from high-tuition target programs.
+- 📈 **DİM Cutoff Prediction ([ADR-0001](docs/adr/0001-cutoff-prediction-replaces-weighted-scoring.md), [ADR-0002](docs/adr/0002-per-country-models-and-normalization.md) & [ADR-0008](docs/adr/0008-selectivity-replaces-cutoff-prediction.md))**: The model predicts next year's DİM cutoff for Azerbaijani university programmes — the one place in the project where admission is mechanical, so `P(cutoff ≤ your score)` is the success rate rather than a proxy for it. Measured against a department-mean baseline of 57.37, the model scores 41.34. Elsewhere the product gives eligibility and cost, and shows no probability at all.
 - 📄 **Autonomous Document Parsing (LangGraph Agent)**: Students can attach PDF transcripts or IELTS certificates directly in the chat interface. The application agent parses metrics (GPA, IELTS/TOEFL scores) via structured LLM output and automatically updates the student's database profile.
-- 🌐 **Asynchronous Data Collection Pipelines**: Custom `asyncio` scrapers ingest program directories from DAAD/Uni-Assist and local Azerbaijani universities, extracting Studienkolleg, TestDaF language levels, €11,208 blocked account visa requirements, and DIM/TQDK entrance exam score scales (0–700 points).
+- 🌐 **Asynchronous Data Collection Pipeline**: An `asyncio`/`httpx` fetcher and LLM-based extractor (`app/data_pipeline`) pulls program requirements from supplied university URLs, extracting Studienkolleg, TestDaF language levels, €11,208 blocked account visa requirements, and DIM/TQDK entrance exam score scales (0–700 points). DAAD's own catalogue is read through its JSON API (not yet built); the earlier per-site DAAD scrapers have been removed.
 - 🛠️ **Human-in-the-Loop Admin Dashboard**: Scraping records with confidence scores below 85% are automatically assigned `verification_status="flagged_for_review"`. Administrators inspect, edit, and approve flagged data before publication to the student matching engine.
 
 ---
@@ -38,12 +38,12 @@ graph TD
     AdminDash --> API
     
     API --> Scoring["Scholarship-First Engine (ADR-0005)"]
-    API --> ML["ML Admission Predictor (Random Forest Joblib)"]
+    API --> ML["DİM Cutoff Predictor (HistGradientBoosting, Joblib)"]
     API --> Agent["LangGraph Agent (Document Parsing Tool)"]
     API --> RAG["RAG Vector Retriever (LangChain)"]
     
     API --> DB[(PostgreSQL 16 + pgvector)]
-    API --> Pipeline["Async Ingestion Jobs (DAAD & DIM)"]
+    API --> Pipeline["Async Data Collection (per-URL fetch + LLM extraction)"]
 ```
 
 ### Stack Components
@@ -51,7 +51,7 @@ graph TD
 - **Backend Framework**: FastAPI, Pydantic v2, Python 3.11+, Uvicorn.
 - **Database & Storage**: PostgreSQL 16 with `pgvector` extension, Async SQLAlchemy 2.0, `asyncpg` driver.
 - **Database Migrations**: Alembic (Async migration environment).
-- **Machine Learning & AI**: Scikit-Learn (Random Forest), Joblib, LangChain, LangGraph, OpenAI GPT-4o-mini.
+- **Machine Learning & AI**: Scikit-Learn (HistGradientBoosting), Joblib, LangChain, LangGraph, OpenAI GPT-4o-mini.
 - **Data Ingestion**: `httpx`, `BeautifulSoup4`, `asyncio.gather`.
 - **DevOps & Infrastructure**: Docker, Docker Compose, GitHub Actions CI/CD.
 
@@ -93,9 +93,13 @@ npm run dev
 
 ## 🧪 Testing & Code Verification
 
-Run backend unit test suites (Matching engine, Net-cost, ML predictors, Data pipelines, Admin endpoints):
+Run backend unit test suites (Matching engine, Net-cost, ML predictors, Data pipelines, Admin endpoints). The virtualenv lives at the repository root, not under `backend/`:
 ```bash
-PYTHONPATH=backend ./backend/.venv/bin/python -m pytest backend/tests/
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+source .venv/bin/activate     # macOS / Linux
+pip install -r backend/requirements.txt
+cd backend && python -m pytest -q
 ```
 
 Run frontend type checking & production build verification:
@@ -108,14 +112,14 @@ npm run build
 
 ## 💻 Key Technical Engineering Accomplishments (My part)
 
-- **Scholarship-First Net-Cost Matching Architecture ([ADR-0005](docs/adr/0005-scholarship-first-net-cost-evaluation.md))**: Designed and implemented the evaluation algorithm that calculates eligible institutional & state scholarships prior to executing hard budget filters.
-- **Predictive Machine Learning Admission Models ([ADR-0001](docs/adr/0001-ml-predictive-cutoff-layer.md) & [ADR-0002](docs/adr/0002-data-science-training-pipeline.md))**: Developed and serialized Random Forest classifier pipelines to infer admission probability for Turkey (YKS) and US (SAT/GPA) programs, integrating them into FastAPI via an in-memory singleton predictor service.
+- **Scholarship-First Net-Cost Matching Architecture ([ADR-0005](docs/adr/0005-scholarship-pass-precedes-budget-filter.md))**: Designed and implemented the evaluation algorithm that calculates eligible institutional & state scholarships prior to executing hard budget filters.
+- **DİM Cutoff Prediction ([ADR-0001](docs/adr/0001-cutoff-prediction-replaces-weighted-scoring.md), [ADR-0002](docs/adr/0002-per-country-models-and-normalization.md) & [ADR-0008](docs/adr/0008-selectivity-replaces-cutoff-prediction.md))**: Developed and serialized the HistGradientBoosting pipeline that predicts next year's DİM cutoff for Azerbaijani university programmes — the one country where the published cutoff is what the student is actually measured against — integrating it into FastAPI via an in-memory singleton predictor service. No other country carries a learned number.
 - **Autonomous PDF Transcript Parsing & Agent Workflows**: Built stateful LangGraph agent tools and FastAPI file upload endpoints capable of extracting structured academic metrics (GPA, IELTS, TOEFL) from raw transcript PDFs to update student database profiles in real time.
-- **Async Cross-Border Data Pipelines**: Created asynchronous scraping routines (`httpx` + `BeautifulSoup4`) for Germany (DAAD/Uni-Assist) and local Azerbaijani universities (ADA, UNEC, BANM, BSU) mapping TestDaF, Studienkolleg, €11,208 blocked accounts, and DIM/TQDK 0–700 exam score scales.
+- **Async Data Collection Pipeline**: Built an `httpx` + `BeautifulSoup4` fetcher and LLM extraction step (`app/data_pipeline`) that pulls per-university requirements — TestDaF, Studienkolleg, €11,208 blocked accounts, and DIM/TQDK 0–700 exam score scales — from supplied URLs for Germany and local Azerbaijani universities (ADA, UNEC, BANM, BSU). The earlier automated DAAD/Uni-Assist scrapers were removed; DAAD's catalogue is intended to be read through its own JSON API, not yet built.
 - **Human-in-the-Loop Admin Verification Dashboard**: Built the `/admin` curation interface and FastAPI endpoints to flag low-confidence (<85%) scraped records for human review before publishing them to the student matching engine.
 - **Asynchronous Database & Migration Stack**: Implemented PostgreSQL 16 `pgvector` schemas, Async SQLAlchemy 2.0 ORM models, and an async Alembic migration environment.
 - **DevOps & Production Infrastructure**: Authored production Docker container builds, `docker-compose.prod.yml`, Vercel routing rules, NextAuth Google OAuth integration, and GitHub Actions CI/CD workflows.
 
 ---
 
-*Licensed under the [MIT License](LICENSE).*
+*This repository does not currently include a LICENSE file.*
