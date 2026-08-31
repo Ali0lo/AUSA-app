@@ -3,7 +3,7 @@ API Endpoints for Exporting Application Dossiers and Motivation Letters to PDF.
 """
 
 from typing import Any, Dict, Optional
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,58 +37,70 @@ async def export_motivation_letter_pdf(
     db: AsyncSession = Depends(get_db)
 ) -> Response:
     """Generate and return binary PDF application dossier."""
-    student_dict = payload.student_data or {
-        "email": "student@ausa.edu.az",
-        "gpa": 3.65,
-        "ielts": 7.0,
-        "degree_level": "master",
-        "field_of_study": "Computer Science",
-    }
+    student_dict: Optional[Dict[str, Any]] = payload.student_data
+    program_dict: Optional[Dict[str, Any]] = payload.program_data
 
-    program_dict = payload.program_data or {
-        "university_name": "Technical University of Munich (TUM)",
-        "program_name": "M.Sc. Informatics",
-        "degree_level": "master",
-        "country": "Germany",
-        "tuition_fee": 0.0,
-        "blocked_account_eur": 11208.0,
-        "deadline": "2026-07-15",
-    }
-
-    # If student_id or program_id provided, query database for exact entity details
     if payload.student_id:
         try:
             stmt = select(StudentModel).where(StudentModel.id == payload.student_id)
             res = await db.execute(stmt)
             st = res.scalar_one_or_none()
-            if st:
-                student_dict = {
-                    "email": st.email,
-                    "gpa": st.gpa,
-                    "ielts": st.ielts,
-                    "toefl": st.toefl,
-                    "degree_level": st.degree_level,
-                    "field_of_study": st.field_of_study,
-                }
-        except Exception:
-            pass
+        except Exception as exc:
+            # A profile we could not read is not a profile we may invent.
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Cannot reach the student store; no dossier was generated.",
+            ) from exc
+        if st is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No student with id {payload.student_id}.",
+            )
+        student_dict = {
+            "email": st.email,
+            "gpa": st.gpa,
+            "ielts": st.ielts,
+            "toefl": st.toefl,
+            "degree_level": st.degree_level,
+            "field_of_study": st.field_of_study,
+        }
 
     if payload.program_id:
         try:
             stmt = select(ProgramModel).where(ProgramModel.id == payload.program_id)
             res = await db.execute(stmt)
             pr = res.scalar_one_or_none()
-            if pr:
-                program_dict = {
-                    "university_name": pr.university_name,
-                    "program_name": pr.program_name,
-                    "degree_level": pr.degree_level,
-                    "country": pr.country,
-                    "tuition_fee": pr.tuition_fee,
-                    "deadline": str(pr.deadline) if pr.deadline else "Upcoming",
-                }
-        except Exception:
-            pass
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Cannot reach the programs store; no dossier was generated.",
+            ) from exc
+        if pr is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No programme with id {payload.program_id}.",
+            )
+        program_dict = {
+            "university_name": pr.university_name,
+            "program_name": pr.program_name,
+            "degree_level": pr.degree_level,
+            "country": pr.country,
+            "tuition_fee": pr.tuition_fee,
+            "deadline": str(pr.deadline) if pr.deadline else None,
+        }
+
+    # A dossier is a document the student submits under their own name. Filling either half
+    # of it with a plausible default -- gpa 3.65, a TU Munich programme, an 11208 EUR
+    # blocked account -- is the fabrication ADR-0004 forbids, and it is worse here than in
+    # the pipeline because the output leaves the building.
+    if not student_dict or not program_dict:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "A dossier needs both a student and a programme. Supply student_data or a "
+                "resolvable student_id, and program_data or a resolvable program_id."
+            ),
+        )
 
     pdf_bytes = generate_application_dossier_pdf(
         student_data=student_dict,

@@ -173,13 +173,23 @@ def generate_application_dossier_pdf(
     # 3. Academic & Financial Checklist Table
     elements.append(Paragraph("Academic & Financial Requirements Checklist", section_heading))
 
-    gpa_val = f"{student_data.get('gpa', 3.5):.2f}" if student_data.get("gpa") else "N/A"
-    ielts_val = f"{student_data.get('ielts', 7.0):.1f}" if student_data.get("ielts") else "N/A"
-    toefl_val = str(student_data.get("toefl")) if student_data.get("toefl") else "N/A"
+    # No defaults. A student who did not give us a GPA has no GPA, and printing 3.5 or a
+    # 11,208 EUR blocked account into a document they submit invents a fact about them.
+    # `is not None` rather than truthiness: a genuine 0.0 is a value, not a blank.
+    gpa = student_data.get("gpa")
+    gpa_val = f"{gpa:.2f}" if gpa is not None else "Not stated"
+    ielts = student_data.get("ielts")
+    ielts_val = f"{ielts:.1f}" if ielts is not None else "Not stated"
+    toefl = student_data.get("toefl")
+    toefl_val = str(toefl) if toefl is not None else "Not stated"
 
-    tuition_val = f"${program_data.get('tuition_fee', 0.0):,.2f} USD" if program_data.get("tuition_fee") is not None else "Tuition Free"
-    dim_req = str(program_data.get("dim_score_required", "Not Applicable"))
-    blocked_acc = f"€{program_data.get('blocked_account_eur', 11208.0):,.2f}" if program_data.get("blocked_account_eur") else "Not Required"
+    tuition = program_data.get("tuition_fee")
+    tuition_val = f"${tuition:,.2f} USD" if tuition is not None else "Not stated"
+    dim = program_data.get("dim_score_required")
+    dim_req = str(dim) if dim is not None else "Not stated"
+    blocked = program_data.get("blocked_account_eur")
+    # "Not Required" was a claim about the country's visa rules that we had not checked.
+    blocked_acc = f"€{blocked:,.2f}" if blocked is not None else "Not stated"
 
     checklist_table_data = [
         [

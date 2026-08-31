@@ -56,3 +56,43 @@ def test_export_motivation_letter_pdf_endpoint():
     assert "attachment; filename=" in response.headers["content-disposition"]
     assert response.content.startswith(b"%PDF")
 
+
+def test_export_refuses_to_invent_a_student():
+    """An empty payload used to produce a dossier about a fictional person.
+
+    The defaults were gpa 3.65, ielts 7.0, and a TU Munich programme with an
+    11208.0 EUR blocked account -- rendered into a PDF the student could submit.
+    """
+    response = client.post(
+        "/api/v1/export/motivation-letter/pdf",
+        json={"motivation_letter_text": "Dear Admissions Committee, ..."},
+    )
+    assert response.status_code == 422
+    assert b"%PDF" not in response.content
+
+
+def test_export_refuses_when_only_the_programme_is_known():
+    """Half a dossier is still a fabricated dossier."""
+    response = client.post(
+        "/api/v1/export/motivation-letter/pdf",
+        json={
+            "motivation_letter_text": "Dear Admissions Committee, ...",
+            "program_data": {
+                "university_name": "TU Munich",
+                "program_name": "M.Sc. Informatics",
+            },
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_pdf_renders_missing_values_as_not_stated():
+    """A missing GPA is 'not stated', never 3.5. A missing blocked account is not
+    'Not Required' either -- we were not told, and that is a different claim."""
+    pdf_bytes = generate_application_dossier_pdf(
+        student_data={"email": "someone@ausa.edu.az"},
+        program_data={"university_name": "Some University", "program_name": "Some Programme"},
+        motivation_letter="Dear Admissions Committee, ...",
+    )
+    assert pdf_bytes.startswith(b"%PDF")
+
