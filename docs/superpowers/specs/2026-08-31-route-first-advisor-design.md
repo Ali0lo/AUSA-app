@@ -37,9 +37,14 @@ Everything in this section was confirmed by fetching the source named. Nothing i
 | **Germany** | Studienkolleg / Feststellungsprüfung **only** | 1 year at a recognised Azerbaijani university → direct subject-restricted access |
 | **UK** | *"not accepted for direct entry to undergraduate programmes"* | Foundation year, A-levels, IB, **or** 1 year at an Azerbaijani university |
 | Poland | accepted with apostille | — direct |
-| Turkey | international quota / YÖS / SAT | — direct |
+| **Turkey** | **direct** — most private universities accept the diploma and grades with no YÖS at all; some public universities require TR-YÖS or SAT for competitive programmes | — |
 | USA | 11-vs-12-year gap; SAT helps, many test-optional | varies |
-| China | varies by institution; HSK or English-taught | — direct |
+| China | direct for DP-funded study; **CSC bachelor is Chinese-taught** (see §5.2) | — |
+
+Turkey is the most open of the six and also the largest destination, which is consistent:
+TR-YÖS is run by ÖSYM twice a year and can be sat in Turkish, German, Arabic, French,
+English or Russian, and **Turkish language ability is not required to take it** — the
+language bar is set by the receiving university, not the exam.
 
 Source for Germany: anabin/KMK, *"eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung"*,
 with direct access conditional on one completed year of university study. Applies to
@@ -180,13 +185,41 @@ scraped.
 | Number | Mechanism | Applies to |
 |---|---|---|
 | **Eligibility** | Deterministic rules | everything |
-| **Selectivity** | **ML** — trained on published admit rates | **US bachelor only** |
+| **Admission chance / selectivity** | **ML** | see below |
 | **Total cost to degree** | Arithmetic: tuition + living + prep-year − scholarship | everything |
 
-Selectivity is honest only where we hold real admit-rate labels: College Scorecard, which is
-US and undergraduate. Master's programmes and non-US countries get eligibility and cost with
-**no selectivity badge** — the "requirements only" pattern ADR-0007 §3 already established.
-This is a deliberate, labelled absence, not a gap to be filled by estimation.
+**The ML has two homes, and the primary one is the prep-year route.**
+
+*Primary — DİM cutoff prediction for the prep year.* Germany and the UK are blocked to a
+school-leaver, and both unlock through **one year at an Azerbaijani university**. So the
+question "which Azerbaijani programme can I get into next year?" is not a domestic
+side-feature — it is **step one of two blocked routes**, and answering it is what makes those
+routes actionable rather than merely named.
+
+This is also the only place in the entire project where the honest claim is available. DİM
+admission is mechanical: clearing the cutoff *is* admission, so `P(next year's cutoff ≤ your
+score)` **is** the success rate rather than a proxy for it. Nowhere else survives that test —
+which is precisely why every earlier attempt to state it elsewhere had to be withdrawn
+(ADR-0008). Measured on real data: department-mean baseline 57.37 → HistGradientBoosting
+**41.34, a 27.9% improvement**.
+
+The DİM model also feeds two other surfaces: the DP eligibility band (400–550 by field, §2.2)
+and the domestic baseline a student is implicitly comparing against.
+
+*Honest limit, stated up front:* the Azerbaijani corpus has **three intake years**. Cold-start
+prediction works and is measured; year-over-year forecasting is thin, and AZ forecasting was
+skipped in the earlier evaluation for exactly this reason. The model therefore ships with an
+uncertainty band, validated on the single held-out year available, and labelled as such. It
+does not ship as a point estimate.
+
+*Secondary — selectivity from College Scorecard.* 1,853 US institutions over nine years with
+real admit-rate labels. Its product reach is narrow (US bachelor, where DP funds nothing), so
+its role is to demonstrate the method **generalises to a second country** rather than to carry
+the product.
+
+Everywhere else — master's programmes, and non-US countries without published rates — gets
+eligibility and cost with **no ML number at all**, following the "requirements only" pattern
+of ADR-0007 §3. That is a deliberate, labelled absence, never filled by estimation.
 
 ---
 
@@ -199,7 +232,11 @@ This is a deliberate, labelled absence, not a gap to be filled by estimation.
 | College Scorecard (`usa_cutoff_history.csv`) | **in repo** — 1,853 institutions × 9 years, admit rate on every row | selectivity model |
 | DİM open-data API (`ws.dim.gov.az/wa_open_data/api/json/…`) | **found, unprofiled** | DİM scores; official, and *not* the forbidden qebulai.az |
 | `ixtisas-istiqamətləri` (field taxonomy) | **found** | field labelling (ADR-0007 §9) |
-| Per-university international requirements | **does not exist** | the critical path |
+| **DAAD International Programmes JSON API** | **verified 31 Aug** — 2,306 programmes | Germany: catalogue, tuition, deadlines |
+| UCAS Courses Data Service | **ruled out** — commercial licence only | — UK stays manual |
+| studyinturkiye.gov.tr (ÖSYM / TR-YÖS) | official, unprofiled | Turkey route + exam rules |
+| campuschina.org (CSC) | official; CUCAS is a third-party aggregator and excluded | China funding |
+| Per-university international requirements | **partly solved for Germany; the critical path elsewhere** | the remaining collection work |
 | Scholarships (Türkiye Bursları, DP, Chevening, DAAD, NAWA, CSC) | **does not exist** | funding layer |
 | AZ DİM cutoffs (2,576 rows), Turkish YKS (115,482 rows) | in repo | training corpora only; **no further investment** |
 
@@ -248,7 +285,7 @@ study-abroad option. It is the most prestigious domestic award and students will
 | Programme | Level | Verified detail |
 |---|---|---|
 | **Türkiye Bursları** | bachelor+ | fully funded; **under 21** for bachelor; applications 10 Jan – 20 Feb |
-| **CSC** (China) | bachelor · master · PhD | English-taught needs **no HSK at application**; master's requires IELTS 6.5 / TOEFL 80 or 2 years' prior English-medium study; **bachelor requires a CSCA score**; Chinese-taught master's needs HSK 4 + a year of Chinese; deadlines Feb–late April via campuschina.org; Type A (embassy) vs Type B (university) |
+| **CSC** (China) | bachelor · master · PhD | **Bachelor recipients must register for Chinese-taught courses** — English-taught is open to graduate and non-degree students only. Bachelor also requires a **CSCA** score, an exam this project has never modelled. Master's English-taught needs IELTS 6.5 / TOEFL 80 or 2 years' prior English-medium study; Chinese-taught master's needs HSK 4 plus a year of Chinese. Applications early January to early April via campuschina.org; Type A (embassy) vs Type B (university) |
 | **Chevening** (UK) | master's only | |
 | **DAAD** (Germany) | overwhelmingly master's/PhD | |
 | **NAWA Banach** (Poland) | master's only | for Azerbaijanis, humanities/social sciences only |
@@ -258,11 +295,49 @@ study-abroad option. It is the most prestigious domestic award and students will
 private universities discount heavily, which is why they appear affordable in agency
 marketing; the discount is real but is not a scholarship and is recorded as a discount.
 
-**Scholarships run through the same eligibility engine as programmes.** A scholarship the
+**A funding programme IS a route.** The Dövlət Proqramı has preconditions (C1, DİM 400–550),
+`produces` funded access, carries a time and money cost of zero, and gates a fixed list of
+223 universities. That is exactly the Route shape in §4.1, and it is modelled as one rather
+than as a parallel concept — so "Germany is blocked, and here are two ways to open it" and
+"DP is available, and here is what it requires" run through a single engine and compose with
+each other. A student can then be told that the prep year at an Azerbaijani university both
+opens Germany *and* preserves DP eligibility, which neither concept could express alone.
+
+**Scholarships therefore run through the same eligibility engine as programmes.** A scholarship the
 student cannot win is a false inclusion, and the gates above show why: SOCAR's is employment,
 Türkiye Bursları' is age, Chevening's and Banach's is degree level, DP's is a fixed university
 list. None of those are visible from a scholarship's marketing page, and all of them are
 checkable.
+
+### 5.3 Source order — aggregator before scraper
+
+`data-sourcing.md` (28 Aug) prescribes this order and it was not followed, which cost two days
+on hochschulstart and per-university NC pages before anyone checked DAAD. It is now binding:
+
+```
+1. National aggregator / open dataset   DP CSVs · DAAD API · anabin · College Scorecard
+2. Sitemap                              /sitemap.xml, filter /programmes/ /courses/
+3. The catalogue's own JSON endpoint     DevTools -> Network -> XHR, before writing a parser
+4. Manual curation                       30-50 records is 2-3 days, and beats a pipeline
+5. LLM extraction at scale               only once the schema is proven by 1-4
+```
+
+**Checked at tier 1 on 31 August:**
+
+| | Result |
+|---|---|
+| **DAAD** (Germany) | **Open.** JSON API found at tier 3: `www2.daad.de/…/api/solr/en/search.json`. **2,306 programmes** — 363 bachelor, 1,747 master, 171 PhD, **25 preparatory courses** (the Studienkolleg route). `academy`, `city`, `subject`, `tuitionFees`, `applicationDeadline`, `programmeDuration` and `link` are **100% populated** over a 100-record sample. Language levels are **not** in the list endpoint — they need the HTML detail pages, ~77 minutes at the site's own `Crawl-delay: 2` |
+| **UCAS** (UK) | **Closed.** Courses Data Service is a paid 12-month licence with silver/gold tiers and no public API. The UK requires manual curation |
+
+`tuitionFees` values are real and directly support §2.3: **53% "No tuition fees"**, 32%
+"Tuition varies", the remainder actual figures. Deadlines are real dates
+("Register by 15 July 2027").
+
+**Terms not yet cleared.** `www2.daad.de/robots.txt` returns 404, so nothing is stated there;
+the main host sets `Crawl-delay: 2`, carries no AI-specific rules and no TDM reservation, and
+explicitly disallows the **scholarship** database (`/deutschland/foerderung/stipendiendatenbank/00462.*`)
+— not the programmes one. That reads as permissible but DAAD's terms of use have not been
+read. **Read them before any bulk fetch**, and honour `Crawl-delay: 2` regardless.
 
 **Legal position unchanged:** qebulai.az remains excluded (robots.txt disallows ClaudeBot,
 `Content-Signal: ai-train=no`, Article 4 EU 2019/790 reservation, and a direct competitor).
@@ -336,19 +411,30 @@ deliver the DP path end to end and are the deadline-critical core. Steps 5–7 g
 plans; step 6 in particular is a collection project whose size is not yet known, and
 scoping it as a task inside a larger plan would hide that.
 
-1. **DP catalogue loader** — two CSVs, 4,121 rows, official schema. Small, high value.
-2. **`student_qualifications` + `program_requirements`** — Tasks 3–4 of the existing
-   catalogue-join plan, largely intact; they gain a route dimension.
-3. **Route definitions + engine** — ~15 hand-written routes, OPEN/UNLOCKABLE/BLOCKED.
-4. **DP eligibility check** — DİM + C1 against the funded list. First end-to-end user value.
-5. **Selectivity model** — College Scorecard, US bachelor. The ML deliverable.
-6. **Requirement extraction** — the self-funded path; the largest and most uncertain task.
-7. **Scholarship layer** — Türkiye Bursları, DP, and university-level discounts.
+| # | Step | Days | Done when |
+|---|---|---|---|
+| 1 | **DP catalogue loader** — two CSVs, 4,121 rows | 1 | Both files load idempotently; a second run inserts 0 rows; counts match §2.2 exactly |
+| 2 | **`student_qualifications` + `program_requirements`** — Tasks 3–4, plus a route dimension | 4 | A profile round-trips; requirements join to catalogue rows; every row carries provenance and `source_url` |
+| 3 | **Route definitions + engine** — ~15 hand-written, cited | 3 | Attestat-only profile returns Germany and UK **BLOCKED** with both unlocks named, and Turkey/Poland/China **OPEN**; two-hop composition produces the prep-year path |
+| 4 | **DP eligibility as a route** | 2 | DİM 520 + IELTS 7.0 returns the funded programme set filtered by country and level, with the band that decided it shown |
+| 5 | **DAAD import** — 2,306 programmes via the JSON API | 2 | Tuition and deadline populated for ≥95% of imported rows; `Crawl-delay: 2` honoured; terms read and recorded |
+| 6 | **DİM cutoff model** — the primary ML | 2 | Beats the department-mean baseline on a held-out year (baseline 57.37); ships quantile bands, not a point estimate; refuses to predict where history < 2 years |
+| 7 | **Manual curation** — 50 programmes for Turkey, UK, Poland, USA | 3 | 50 rows human-verified with sources; the schema survives contact with all four countries unchanged |
+| 8 | **Scholarship layer** — DP, Türkiye Bursları, CSC, SOCAR, Chevening, DAAD, NAWA | 2 | Every scholarship carries its gate; an under-21 check and an employment check both demonstrably exclude |
+| 9 | **Results UI + roadmap view** | 5 | The §"what the flow looks like" walkthrough completes end to end for one real profile |
+
+**~24 person-days against 4 people × 15 days.** The margin is real but thin, and it does not
+yet absorb the defects found on 31 August (`export.py` fabrication, the unauthenticated admin
+endpoints) or any second discovery of that kind.
+
+**Step 7 must start immediately and in parallel.** It is the only item that cannot be
+compressed by writing better code, and `data-sourcing.md` is right that 50 records is two to
+three days of human work — but only once someone begins.
 
 **Cut order if the schedule slips:** Poland first (8 DP master's programmes, zero bachelor,
 absent from destination rankings), then the USA bachelor path (zero DP programmes), then
-requirement extraction depth — reduce universities per country rather than dropping a
-country, so the product stays consistent.
+curation depth — reduce universities per country rather than dropping a country, so the
+product stays consistent.
 
 **Not cuttable:** the DP path (1, 3, 4). It is the only segment where the data is already
 authoritative, and it is the clearest differentiator against every agency in the market.
