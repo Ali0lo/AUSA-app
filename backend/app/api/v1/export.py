@@ -93,12 +93,23 @@ async def export_motivation_letter_pdf(
     # of it with a plausible default -- gpa 3.65, a TU Munich programme, an 11208 EUR
     # blocked account -- is the fabrication ADR-0004 forbids, and it is worse here than in
     # the pipeline because the output leaves the building.
-    if not student_dict or not program_dict:
+    #
+    # We do not require every field: a student legitimately has no TOEFL score, and a gate
+    # that rejects every honest partial profile would be as unusable as one that fabricates
+    # data. Missing fields render "Not stated" instead. But the dossier is *about* a specific
+    # programme, so the programme half must at least name that programme.
+    has_named_program = bool(
+        program_dict
+        and str(program_dict.get("university_name") or "").strip()
+        and str(program_dict.get("program_name") or "").strip()
+    )
+    if not student_dict or not has_named_program:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
-                "A dossier needs both a student and a programme. Supply student_data or a "
-                "resolvable student_id, and program_data or a resolvable program_id."
+                "A dossier needs both a student and a named programme. Supply student_data "
+                "or a resolvable student_id, and program_data with university_name and "
+                "program_name (or a resolvable program_id)."
             ),
         )
 
