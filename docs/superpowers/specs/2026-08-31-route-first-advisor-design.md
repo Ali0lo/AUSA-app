@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-31
 **Status:** approved — implementation plan next
-**Supersedes in part:** [ADR-0007](../../adr/0007-three-number-model-and-honesty-tiers.md) §3, §4; [ADR-0008](../../adr/0008-selectivity-replaces-cutoff-prediction.md) §4 (country and level scope)
+**Supersedes in part:** [ADR-0007](../../adr/0007-three-number-model-and-honesty-tiers.md) §3, §4; [ADR-0008](../../adr/0008-selectivity-replaces-cutoff-prediction.md) §1 (the ML target returns to cutoff prediction, for Azerbaijan only) and §4 (country and level scope)
 **Carries forward:** ADR-0007 §2 (the two modes) — see §6; `architecture-decisions.md` §3 (freshness) — see §5.4
 **Deadline:** 15 September 2026
 
@@ -13,7 +13,8 @@
 The product was built on an assumption that turned out to be false: that an Azerbaijani
 student is measured against a published admission cutoff. In every destination they are
 not — published thresholds describe the *domestic* route, and our student enters through an
-international one. ADR-0008 recorded that and re-aimed the model at selectivity.
+international one. ADR-0008 recorded that and re-aimed the model at selectivity — a target
+this document narrows again in §4.2, to Azerbaijani DİM cutoffs alone.
 
 Two days of research since then found something better than a correction. The Azerbaijani
 state publishes, as open machine-readable data, **the exact list of universities and
@@ -201,12 +202,13 @@ scraped.
 | Number | Mechanism | Applies to |
 |---|---|---|
 | **Eligibility** | Deterministic rules | everything |
-| **Admission chance / selectivity** | **ML** | see below |
+| **Admission chance** | **ML — Azerbaijan only** | the DİM prep-year route, and nothing else |
 | **Total cost to degree** | Arithmetic: tuition + living + prep-year − scholarship | everything |
 
-**The ML has two homes, and the primary one is the prep-year route.**
+**The ML has exactly one home: the DİM prep-year route.** *(Narrowed 31 Aug 2026, replacing
+the earlier two-model design — see the note at the end of this section.)*
 
-*Primary — DİM cutoff prediction for the prep year.* Germany and the UK are blocked to a
+*DİM cutoff prediction for the prep year.* Germany and the UK are blocked to a
 school-leaver, and both unlock through **one year at an Azerbaijani university**. So the
 question "which Azerbaijani programme can I get into next year?" is not a domestic
 side-feature — it is **step one of two blocked routes**, and answering it is what makes those
@@ -228,14 +230,31 @@ skipped in the earlier evaluation for exactly this reason. The model therefore s
 uncertainty band, validated on the single held-out year available, and labelled as such. It
 does not ship as a point estimate.
 
-*Secondary — selectivity from College Scorecard.* 1,853 US institutions over nine years with
-real admit-rate labels. Its product reach is narrow (US bachelor, where DP funds nothing), so
-its role is to demonstrate the method **generalises to a second country** rather than to carry
-the product.
+**Every other country gets no ML number at all** — no selectivity index, no percentile, no
+band. Eligibility and cost only, following the "requirements only" pattern of ADR-0007 §3.
+That is a deliberate, labelled absence, and it is never filled by estimation.
 
-Everywhere else — master's programmes, and non-US countries without published rates — gets
-eligibility and cost with **no ML number at all**, following the "requirements only" pattern
-of ADR-0007 §3. That is a deliberate, labelled absence, never filled by estimation.
+*Why the US model was dropped (31 Aug 2026).* An earlier version of this section kept a
+second model — selectivity over 1,853 US institutions from College Scorecard, whose
+`admission_rate` is a real published label. Its stated job was to show the method
+**generalises to a second country**, not to serve students, and it was cut on that basis:
+it earns no answer a student acts on. Three reasons it goes rather than stays:
+
+- Its product reach was already nil. It covered **US bachelor**, where the state programme
+  funds **zero** places (§2.2), so the one segment with authoritative data could never see it.
+- `admission_rate` is an **institution-wide** figure that Scorecard does not break out for
+  international applicants, who are admitted at lower rates at selective institutions. Every
+  number it produced would have shipped under a caveat that made it unusable for a decision.
+- A second model is a second thing to label, defend and keep honest, in a project whose
+  recurring defect is exactly a number that looks measured and is not.
+
+The cost of dropping it is real and is stated rather than hidden: **the ML case now rests
+entirely on one country and three intake years.** That is a thinner story than two countries
+would be. It is also the only story in this project where the number means what it says, and
+one defensible model beats two where the second exists to be counted rather than used.
+
+`usa_cutoff_history.csv` stays in the repository as collected data. It trains nothing and
+ships nothing.
 
 ---
 
@@ -245,7 +264,7 @@ of ADR-0007 §3. That is a deliberate, labelled absence, never filled by estimat
 |---|---|---|
 | `dp-bakalavr-2026.csv`, `dp-master-2026.csv` | **verified, downloadable** | catalogue spine, funded-route eligibility |
 | `dp.edu.az` rules | **verified** | DP eligibility thresholds |
-| College Scorecard (`usa_cutoff_history.csv`) | **in repo** — 1,853 institutions × 9 years, admit rate on every row | selectivity model |
+| College Scorecard (`usa_cutoff_history.csv`) | **in repo, no longer used** — 1,853 institutions × 9 years | — trains nothing since §4.2 narrowed the ML to Azerbaijan |
 | DİM open-data API (`ws.dim.gov.az/wa_open_data/api/json/…`) | **found, unprofiled** | DİM scores; official, and *not* the forbidden qebulai.az |
 | `ixtisas-istiqamətləri` (field taxonomy) | **found** | field labelling (ADR-0007 §9) |
 | **DAAD International Programmes JSON API** | **verified 31 Aug** — 2,306 programmes | Germany: catalogue, tuition, deadlines |
@@ -460,7 +479,7 @@ goes to institutions outside the DP list, chosen in three deliberate buckets:
 2. **What they aspire to** — Boğaziçi, METU, Bilkent, Koç, Sabancı, TUM, LMU, UCL, Warsaw.
 3. **What agencies push** — commission-heavy privates (Istanbul Aydın, Bahçeşehir, Okan,
    Vistula). **Including these is the point**: showing them beside Boğaziçi with honest cost
-   and selectivity is the anti-steering value an agency cannot offer.
+   and requirements is the anti-steering value an agency cannot offer.
 
 The DP list supplies buckets 1 and 2 for free and authoritatively.
 
@@ -552,7 +571,7 @@ hide that.
 | 3 | **Route definitions + engine** — ~15 hand-written, cited | 3 | Attestat-only profile returns Germany and UK **BLOCKED** with both unlocks named, and Turkey/Poland/China **OPEN**; two-hop composition produces the prep-year path |
 | 4 | **DP eligibility as a route** | 2 | DİM 520 + IELTS 7.0 returns the funded programme set filtered by country and level, with the band that decided it shown |
 | 5 | **DAAD import** — 2,306 programmes via the JSON API | 2 | Tuition and deadline populated for ≥95% of imported rows; `Crawl-delay: 2` honoured; terms read and recorded |
-| 6 | **DİM cutoff model** — the primary ML | 2 | Beats the department-mean baseline on a held-out year (baseline 57.37); ships quantile bands, not a point estimate; refuses to predict where history < 2 years |
+| 6 | **DİM cutoff model** — the project's only ML | 2 | Beats the department-mean baseline on a held-out year (baseline 57.37); ships quantile bands, not a point estimate; refuses to predict where history < 2 years |
 | 7 | **Manual curation** — 50 programmes for Turkey, UK, Poland, USA | 3 | 50 rows human-verified with sources; the schema survives contact with all four countries unchanged |
 | 8 | **Scholarship layer** — DP, Türkiye Bursları, CSC, SOCAR, Chevening, DAAD, NAWA | 2 | Every scholarship carries its gate; an under-21 check and an employment check both demonstrably exclude |
 | 9 | **Results UI + roadmap view** — Discovery and Target (§6) | 5 | The §6 walkthrough completes end to end for the profile named there |

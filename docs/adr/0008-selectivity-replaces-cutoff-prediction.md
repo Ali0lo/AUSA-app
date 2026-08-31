@@ -1,8 +1,34 @@
 # ADR-0008 — The model predicts selectivity for the international route, not domestic cutoffs
 
-**Status:** **Accepted** (31 August 2026)
+**Status:** **Accepted, then narrowed the same day** — see the amendment below
 **Date:** 2026-08-31
 **Amends:** [ADR-0001](0001-cutoff-prediction-replaces-weighted-scoring.md), [ADR-0002](0002-per-country-models-and-normalization.md), [ADR-0007](0007-three-number-model-and-honesty-tiers.md)
+**Amended by:** [the route-first design](../superpowers/specs/2026-08-31-route-first-advisor-design.md) §4.2, same day
+
+---
+
+## Amendment — 31 August 2026: the model is Azerbaijan-only
+
+§1 below makes selectivity the ML target, trained on College Scorecard. **That model is
+cut.** The project trains exactly one model: **next year's DİM cutoff for Azerbaijani
+university programmes**, and no other country carries a learned number of any kind.
+
+The context section below is still correct and is the reason this ADR exists — published
+cutoffs describe the domestic route, and our student enters by an international one, so a
+cutoff model aimed at a *destination* country would answer the wrong question. What that
+argument does not reach is **Azerbaijan itself**, where our student *is* the domestic
+applicant. DİM admission is mechanical: clearing the cutoff **is** admission, so
+`P(next year's cutoff ≤ your score)` is the success rate and not a proxy for it. That is
+the one place the honest claim survives — and it is load-bearing rather than domestic
+trivia, because a year at an Azerbaijani university is the unlock for both Germany and the
+UK, and the state programme's own gate is a DİM band.
+
+So cutoff prediction is not retired after all; it is **relocated**, from five destinations
+where it was invalid to the one country where it holds.
+
+Selectivity is withdrawn as a user-facing number everywhere. The cost is stated in the
+spec: the ML case now rests on one country and three intake years, which is a thinner
+story than two countries. It is the only story where the number means what it says.
 
 ---
 
@@ -56,6 +82,10 @@ application admitted. How many universities publish this, and how far back, is u
 ## Decision
 
 ### 1. The ML target becomes selectivity, not next year's cutoff
+
+> **Superseded the same day by the amendment above.** The target is next year's **DİM
+> cutoff**, for Azerbaijan only; the Scorecard model is cut. The paragraph below is kept as
+> the record of what was decided and why it changed, not as current guidance.
 
 Trained on the College Scorecard panel, where `admission_rate` is a real label, and
 generalised to institutions and countries that publish no rate — a cold-start problem, which
