@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
 from app.models.dp_catalogue import DPCatalogueEntry
-from scripts.load_dp_catalogue import load_csv, rows_from_csv
+from scripts.load_dp_catalogue import _clean_name, load_csv, rows_from_csv
 
 SOURCE_URL = "https://admin.opendata.az/dataset/example/resource/example/download/dp-test.csv"
 
@@ -107,3 +107,40 @@ async def test_every_row_carries_its_source(session, csv_path):
     assert all(r.source_url == SOURCE_URL for r in rows)
     assert all(r.retrieved_at is not None for r in rows)
     assert all(r.verified_by is None for r in rows)
+
+
+def test_curly_quote_wrapper_is_stripped_from_real_row(tmp_path):
+    """Pinned to the real row that motivated this fix, not a synthetic string.
+
+    dp-bakalavr-2026.csv row (Nömrə 94) wraps Təhsil proqramı in curly quotes
+    (U+201C ... U+201D) instead of the ASCII '"..."' every other row in the files uses.
+    Confirmed by scanning all 4121 rows on 31 Aug 2026: this is the only row that does.
+    A wrapper character surviving here produces a silent, empty join in Task 10, which
+    joins programmes by exact name match -- the failure mode this whole branch exists to
+    eliminate.
+    """
+    path = tmp_path / "dp-bakalavr-2026.csv"
+    path.write_text(
+        "﻿Nömrə,Təhsil səviyyəsi,Ölkə,Universitet,Təhsil proqramı\n"
+        '94,bakalavriat,Çin Xalq Respublikası,'
+        '"Nanjing University of Aeronautics and Astronautics",'
+        '“Aircraft Design and Engineering”\n',
+        encoding="utf-8",
+    )
+    rows = rows_from_csv(path, SOURCE_URL)
+    assert rows[0]["university_name"] == "Nanjing University of Aeronautics and Astronautics"
+    assert rows[0]["program_name"] == "Aircraft Design and Engineering"
+    assert "“" not in rows[0]["program_name"]
+    assert "”" not in rows[0]["program_name"]
+
+
+def test_clean_name_preserves_interior_and_unmatched_quotes():
+    """The fix strips a matched wrapper pair only -- it is not a blanket quote stripper.
+
+    "King's College London" is a real Universitet value (dp-bakalavr-2026.csv, e.g.
+    Nömrə 78): the interior character is U+2019 (a real apostrophe), not the ASCII
+    wrapper quote, and must survive. An unmatched leading quote with no matching
+    trailing quote is not a wrapper either and must also survive untouched.
+    """
+    assert _clean_name('"King’s College London"') == "King’s College London"
+    assert _clean_name('"Unmatched Wrapper University') == '"Unmatched Wrapper University'

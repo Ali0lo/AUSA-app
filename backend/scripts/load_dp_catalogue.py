@@ -51,15 +51,40 @@ COUNTRY_CODE_BY_SOURCE_NAME = {
 }
 
 
-def _clean_name(value: Any) -> str:
-    """Strip the literal double quotes the source wraps every name in.
+# Wrapper characters the source uses to quote every name. Scanned across all 4121 rows
+# (8242 name values) on 31 Aug 2026: 8241 are wrapped in matched ASCII double quotes
+# ('"..."'), and exactly one -- Təhsil proqramı "Aircraft Design and Engineering",
+# dp-bakalavr-2026.csv row 94 -- is wrapped in matched curly quotes (U+201C ... U+201D)
+# instead. No row has an unmatched or mismatched wrapper pair, and no other wrapper
+# character occurs. Both pairs are handled; nothing else is.
+_MATCHED_NAME_WRAPPERS = (
+    ('"', '"'),
+    ("“", "”"),  # “ ... ”
+)
 
-    In dp-bakalavr-2026.csv and dp-master-2026.csv the Universitet field contains
-    `"Technical University of Munich"` -- quote characters inside the value, present on
-    4121 of 4121 university rows. Left in place they become part of the stored name and
+
+def _clean_name(value: Any) -> str:
+    """Strip a matched leading/trailing quote wrapper the source puts around every name.
+
+    In dp-bakalavr-2026.csv and dp-master-2026.csv the Universitet and Təhsil proqramı
+    fields contain `"Technical University of Munich"` -- quote characters inside the
+    value, not CSV quoting. Left in place they become part of the stored name and
     nothing joins to it.
+
+    Only a *matched* leading/trailing pair is stripped. An unmatched quote, or a quote
+    in the interior of a name -- e.g. "King's College London", "Xi'an Jiaotong
+    University", both real values in these files, which contain U+2019 apostrophes, not
+    wrapper quotes -- is data and must survive untouched. This is deliberately not a
+    blanket "remove every quote character": that would damage a name that legitimately
+    contains one.
     """
-    return str(value).strip().strip('"').strip()
+    cleaned = str(value).strip()
+    if len(cleaned) >= 2:
+        for open_ch, close_ch in _MATCHED_NAME_WRAPPERS:
+            if cleaned[0] == open_ch and cleaned[-1] == close_ch:
+                cleaned = cleaned[1:-1].strip()
+                break
+    return cleaned
 
 
 def rows_from_csv(path: Path, source_url: str) -> list[dict]:
