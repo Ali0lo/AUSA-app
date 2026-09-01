@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.services.agent.graph import application_agent
 from app.services.agent.state import AgentState
-from app.services.agent.tools import DEMO_STUDENT_STORE, draft_motivation_letter, extract_and_update_profile
+from app.services.agent.tools import STUDENT_PROFILE_STORE, draft_motivation_letter, extract_and_update_profile
 from app.services.embeddings import EmbeddingUnavailableError
 from app.services.rag.generator import answer_student_question
 from app.services.rag.retriever import retrieve_relevant_chunks
@@ -183,7 +183,7 @@ async def get_agent_state(
 ) -> AgentStateResponse:
     """Retrieve agent workflow state."""
     letter = draft_motivation_letter.invoke({"student_id": student_id, "program_id": target_program_id or "prog_101"})
-    profile = DEMO_STUDENT_STORE.get(student_id, {})
+    profile = STUDENT_PROFILE_STORE.get(student_id, {})
     
     return AgentStateResponse(
         student_id=student_id,
@@ -239,7 +239,7 @@ async def chat_with_application_agent(
         if letter or "draft" in payload.message.lower():
             stage = "drafting_documents"
 
-        profile = DEMO_STUDENT_STORE.get(payload.student_id, {})
+        profile = STUDENT_PROFILE_STORE.get(payload.student_id, {})
 
         return AgentChatResponse(
             response=str(agent_reply),
@@ -312,7 +312,7 @@ async def upload_document_and_update_profile(
         except Exception:
             reply = f"I have processed your document '{file.filename}'. {summary}"
 
-        profile = DEMO_STUDENT_STORE.get(student_id, {})
+        profile = STUDENT_PROFILE_STORE.get(student_id, {})
 
         return AgentChatResponse(
             response=str(reply),
