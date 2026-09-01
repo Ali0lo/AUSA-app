@@ -65,8 +65,14 @@ class CreateApplicationPayload(BaseModel):
     program_id: Optional[int] = Field(None, description="Target program ID")
     university_name: str = Field(..., description="University name")
     program_name: str = Field(..., description="Program name")
-    degree_level: Optional[str] = Field("master", description="Degree level")
-    country: Optional[str] = Field("International", description="Destination country")
+    # None, not a plausible value. These are persisted onto the student's own tracker
+    # entry, so a default here is indistinguishable from something they typed -- the same
+    # defect fixed in RegisterRequest, and "International" is the literal removed from
+    # pdf_export.py for inventing a country nobody stated (ADR-0004). `stage` below keeps
+    # its default because a starting stage is a workflow fact we do decide, not a claim
+    # about the student.
+    degree_level: Optional[str] = Field(None, description="Degree level")
+    country: Optional[str] = Field(None, description="Destination country")
     deadline: Optional[str] = Field(None, description="Application deadline YYYY-MM-DD")
     stage: Optional[str] = Field("shortlisted", description="Initial stage")
     notes: Optional[str] = Field(None, description="Personal application notes")
