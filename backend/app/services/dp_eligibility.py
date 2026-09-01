@@ -29,13 +29,17 @@ DIM_BAND_LOW = 400.0
 DIM_BAND_HIGH = 550.0
 BAND_DESCRIPTION = f"DİM {DIM_BAND_LOW:.0f}-{DIM_BAND_HIGH:.0f}, the exact bar depending on field"
 
-# spec §2.2's eligibility table names one row "Bachelor" for the DİM/SAT/Olympiad academic
-# gate, separate from "Language", "Age", "Covers" and "Levels" -- and no equivalent
-# academic-gate row exists for master's (or PhD) anywhere in this project's sources. That
-# is UNKNOWN, not "no gate applies" -- per ADR-0004 an unknown must never read as
-# permission, so a non-bachelor level is reported as an unconfirmed gate, never skipped as
-# though clearing it were optional and never answered with the bachelor band it did not
-# check.
+# spec §2.2's eligibility table -- the block marked "verified on dp.edu.az" -- names the
+# DİM/SAT/Olympiad academic gate on a row labelled "Bachelor", separate from its "Language",
+# "Age", "Covers" and "Levels" rows. §5.2's Tier-1 summary table puts the same gate against
+# "bachelor · master · PhD" without qualification, so THE SPEC CONTRADICTS ITSELF here; §11
+# records it as an open question for a person to settle against dp.edu.az. §2.2 most likely
+# governs (verified, and more granular -- §5.2 appears to have merged the "Levels" row, what
+# the DP covers, with the "Bachelor" row, what the gate requires), but that is a reading and
+# not a check. So above bachelor the gate is UNKNOWN, which is not "no gate applies": per
+# ADR-0004 an unknown must never read as permission, and it is reported as an unconfirmed
+# gate -- never skipped as though clearing it were optional, and never answered with the
+# bachelor band it did not check. That is safe under either reading of the conflict.
 NO_ACADEMIC_GATE_PUBLISHED = (
     "no academic band is published for this level here -- only the bachelor row of the "
     "DP's eligibility table names DİM/SAT/Olympiad thresholds; only the language "

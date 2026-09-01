@@ -309,12 +309,18 @@ Funding is not one list. It has three distinct tiers with different owners and, 
 
 | Programme | Level | Gate |
 |---|---|---|
-| **Dövlət Proqramı** — financed by SOFAZ, run by the Ministry | bachelor · master · PhD | C1 + DİM 400–550 (or SAT/ACT p75, or Olympiad medal); **only the 223 listed universities** |
+| **Dövlət Proqramı** — financed by SOFAZ, run by the Ministry | bachelor · master · PhD | C1 + DİM 400–550 (or SAT/ACT p75, or Olympiad medal) [^dp-level]; **only the 223 listed universities** |
 | **SOCAR Xarici Təqaüd Proqramı** | master's | **employment-gated — SOCAR group employees only**; age ≤40 (45 for MBA); IELTS 6.0 / TOEFL 80 / B2 |
 | **Prezident Təqaüdü** | — | 600–700 AZN/month, ~100–150 places/year, **domestic study only — not for abroad** |
 
 The Presidential scholarship is listed precisely so the product does *not* offer it as a
 study-abroad option. It is the most prestigious domestic award and students will ask about it.
+
+[^dp-level]: The `Level` column here says what the DP **covers**, which is not the same as the
+    levels its academic gate is **verified** for. §2.2 names the DİM/SAT/Olympiad gate on a row
+    labelled `Bachelor` only. The two readings conflict; §11 records it as an open question and
+    the code treats the gate above bachelor as unconfirmed until a person checks `dp.edu.az`.
+    Do not read this row as authority that a master's applicant must clear DİM 400–550.
 
 **Tier 2 — Destination-country government**
 
@@ -597,6 +603,20 @@ authoritative, and it is the clearest differentiator against every agency in the
 
 ## 11. Open questions
 
+- **This spec contradicts itself on whether the DP's DİM band applies above bachelor, and a
+  person must settle it against `dp.edu.az`.** §2.2 — the block explicitly marked *verified on
+  dp.edu.az* — names the DİM 400–550 / SAT / Olympiad gate on a row labelled **`Bachelor`**,
+  separate from its `Language`, `Age`, `Covers` and `Levels` rows. §5.2's Tier-1 summary table
+  puts the same gate against **`bachelor · master · PhD`** without qualification. The most
+  likely explanation is that §5.2 is a lossy summary which merged §2.2's `Levels` row (what the
+  DP *covers*) with its `Bachelor` row (what the academic gate *requires*) into one cell — so
+  §2.2 governs, being both verified and more granular. But that is a reading, not a check.
+  Until someone confirms it, `assess_dp_eligibility` treats the academic gate above bachelor as
+  **unconfirmed**: it always lands in `gates_missing`, so an unknown can never read as
+  permission (ADR-0004). That is safe under either reading — if §5.2 is right the applicant
+  does need the band and we have not told them otherwise; if §2.2 is right we have flagged an
+  unconfirmed gate rather than demanded a score they do not need. It is still an unknown
+  wearing the shape of an answer, and it should be closed by a human, not by a re-reading.
 - The DİM open-data API is found but unprofiled. What does it actually expose, and does it
   cover cutoffs or only aggregate statistics?
 - Do the DP CSVs exist for earlier years? Multi-year history would allow showing whether a
