@@ -14,65 +14,17 @@ from app.models.application import StudentApplication as ApplicationModel
 
 router = APIRouter(prefix="/applications", tags=["Application Tracker & Deadlines"])
 
-# -------------------------------------------------------------
-# Demo / Fallback Tracker Fixtures
-# -------------------------------------------------------------
-DEMO_APPLICATIONS: List[Dict[str, Any]] = [
-    {
-        "id": 1,
-        "student_id": "std_demo",
-        "program_id": 105,
-        "university_name": "Technical University of Munich (TUM)",
-        "program_name": "M.Sc. Informatics",
-        "degree_level": "master",
-        "country": "Germany",
-        "deadline": "2026-07-15",
-        "stage": "preparing_documents",
-        "notes": "Blocked account required; motivation letter draft ready.",
-    },
-    {
-        "id": 2,
-        "student_id": "std_demo",
-        "program_id": 101,
-        "university_name": "ADA University",
-        "program_name": "B.Sc. Computer Science",
-        "degree_level": "bachelor",
-        "country": "Azerbaijan",
-        "deadline": "2026-06-01",
-        "stage": "shortlisted",
-        "notes": "DIM score requirement 600+ points.",
-    },
-    {
-        "id": 3,
-        "student_id": "std_demo",
-        "program_id": 104,
-        "university_name": "Baku Higher Oil School (BANM / BHOS)",
-        "program_name": "B.Sc. Software Engineering",
-        "degree_level": "bachelor",
-        "country": "Azerbaijan",
-        "deadline": "2026-06-15",
-        "stage": "submitted",
-        "notes": "Application submitted via state portal.",
-    },
-    {
-        "id": 4,
-        "student_id": "std_demo",
-        "program_id": 106,
-        "university_name": "RWTH Aachen University",
-        "program_name": "M.Sc. Mechanical Engineering",
-        "degree_level": "master",
-        "country": "Germany",
-        "deadline": "2026-03-01",
-        "stage": "preparing_documents",
-        "notes": "Studienkolleg certificate uploaded.",
-    },
-]
 
+def calculate_days_remaining(deadline_val: Any) -> Tuple[Optional[int], Optional[bool]]:
+    """Calculate days remaining until deadline and return (days_remaining, is_urgent).
 
-def calculate_days_remaining(deadline_val: Any) -> Tuple[int, bool]:
-    """Calculate days remaining until deadline and return (days_remaining, is_urgent)."""
+    Returns (None, None) when the deadline is unknown or unparseable. This previously
+    returned (90, False) for an unknown deadline and (30, False) for an unparseable one --
+    a made-up countdown *and* a claim of "not urgent" for a deadline nobody has verified,
+    on the exact field spec 5.4 calls the most damaging one to get wrong (ADR-0004).
+    """
     if not deadline_val:
-        return 90, False
+        return None, None
     try:
         if isinstance(deadline_val, date):
             dl_date = deadline_val
@@ -84,7 +36,8 @@ def calculate_days_remaining(deadline_val: Any) -> Tuple[int, bool]:
         is_urgent = days <= 14
         return days, is_urgent
     except Exception:
-        return 30, False
+        # An unparseable value is unknown, not "30 days away and not urgent".
+        return None, None
 
 
 # -------------------------------------------------------------
@@ -100,8 +53,10 @@ class ApplicationResponse(BaseModel):
     country: Optional[str] = None
     deadline: Optional[str] = None
     stage: str
-    days_remaining: int
-    is_urgent: bool
+    # Null when the deadline is unknown -- never a guessed countdown (see
+    # calculate_days_remaining).
+    days_remaining: Optional[int] = None
+    is_urgent: Optional[bool] = None
     notes: Optional[str] = None
 
 
@@ -122,6 +77,24 @@ class UpdateStagePayload(BaseModel):
     notes: Optional[str] = Field(None, description="Updated notes")
 
 
+def _to_response(app: ApplicationModel) -> ApplicationResponse:
+    days, is_urgent = calculate_days_remaining(app.deadline)
+    return ApplicationResponse(
+        id=app.id,
+        student_id=app.student_id,
+        program_id=app.program_id,
+        university_name=app.university_name,
+        program_name=app.program_name,
+        degree_level=app.degree_level,
+        country=app.country,
+        deadline=str(app.deadline) if app.deadline else None,
+        stage=app.stage,
+        days_remaining=days,
+        is_urgent=is_urgent,
+        notes=app.notes,
+    )
+
+
 # -------------------------------------------------------------
 # Endpoints
 # -------------------------------------------------------------
@@ -135,58 +108,26 @@ async def get_my_applications(
     student_id: str = Query("std_demo", description="Student account identifier"),
     db: AsyncSession = Depends(get_db)
 ) -> List[ApplicationResponse]:
-    """Retrieve active student applications with calculated deadline countdowns."""
+    """Retrieve active student applications with calculated deadline countdowns.
+
+    An empty result is a real answer -- a student who has tracked nothing gets an
+    empty list, never four applications that are not theirs. This previously fell
+    through to DEMO_APPLICATIONS (TUM, ADA, BHOS, RWTH Aachen) whenever the query
+    returned zero rows, which is indistinguishable from "the database is fine and
+    you have no applications". A database that cannot be read is reported as an
+    outage (503), not silently answered with the same invented rows.
+    """
     try:
         stmt = select(ApplicationModel).where(ApplicationModel.student_id == student_id)
         res = await db.execute(stmt)
         db_apps = list(res.scalars().all())
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cannot read the applications store; it is currently unavailable.",
+        ) from exc
 
-        if db_apps:
-            out = []
-            for app in db_apps:
-                days, is_urgent = calculate_days_remaining(app.deadline)
-                out.append(
-                    ApplicationResponse(
-                        id=app.id,
-                        student_id=app.student_id,
-                        program_id=app.program_id,
-                        university_name=app.university_name,
-                        program_name=app.program_name,
-                        degree_level=app.degree_level,
-                        country=app.country,
-                        deadline=str(app.deadline) if app.deadline else None,
-                        stage=app.stage,
-                        days_remaining=days,
-                        is_urgent=is_urgent,
-                        notes=app.notes,
-                    )
-                )
-            return out
-    except Exception:
-        pass
-
-    # Fallback to demo items
-    out = []
-    for app_data in DEMO_APPLICATIONS:
-        if app_data["student_id"] == student_id or student_id == "std_demo":
-            days, is_urgent = calculate_days_remaining(app_data.get("deadline"))
-            out.append(
-                ApplicationResponse(
-                    id=app_data["id"],
-                    student_id=app_data["student_id"],
-                    program_id=app_data["program_id"],
-                    university_name=app_data["university_name"],
-                    program_name=app_data["program_name"],
-                    degree_level=app_data["degree_level"],
-                    country=app_data["country"],
-                    deadline=app_data["deadline"],
-                    stage=app_data["stage"],
-                    days_remaining=days,
-                    is_urgent=is_urgent,
-                    notes=app_data["notes"],
-                )
-            )
-    return out
+    return [_to_response(app) for app in db_apps]
 
 
 @router.post(
@@ -199,8 +140,14 @@ async def create_application(
     payload: CreateApplicationPayload,
     db: AsyncSession = Depends(get_db)
 ) -> ApplicationResponse:
-    """Add a new target program to the student application tracker."""
-    days, is_urgent = calculate_days_remaining(payload.deadline)
+    """Add a new target program to the student application tracker.
+
+    A write that did not happen is not a 201. This previously caught any exception
+    from the insert, invented an id from `len(DEMO_APPLICATIONS) + 101`, appended to
+    an in-memory list nothing else ever reads back from the database, defaulted a
+    missing deadline to "2026-07-01", and returned 201 Created for a row that was
+    never persisted.
+    """
     sid = payload.student_id or "std_demo"
 
     try:
@@ -220,50 +167,14 @@ async def create_application(
         db.add(new_app)
         await db.commit()
         await db.refresh(new_app)
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The application could not be saved.",
+        ) from exc
 
-        return ApplicationResponse(
-            id=new_app.id,
-            student_id=new_app.student_id,
-            program_id=new_app.program_id,
-            university_name=new_app.university_name,
-            program_name=new_app.program_name,
-            degree_level=new_app.degree_level,
-            country=new_app.country,
-            deadline=str(new_app.deadline) if new_app.deadline else None,
-            stage=new_app.stage,
-            days_remaining=days,
-            is_urgent=is_urgent,
-            notes=new_app.notes,
-        )
-    except Exception:
-        new_id = len(DEMO_APPLICATIONS) + 101
-        demo_obj = {
-            "id": new_id,
-            "student_id": sid,
-            "program_id": payload.program_id,
-            "university_name": payload.university_name,
-            "program_name": payload.program_name,
-            "degree_level": payload.degree_level,
-            "country": payload.country,
-            "deadline": payload.deadline or "2026-07-01",
-            "stage": payload.stage or "shortlisted",
-            "notes": payload.notes,
-        }
-        DEMO_APPLICATIONS.append(demo_obj)
-        return ApplicationResponse(
-            id=new_id,
-            student_id=sid,
-            program_id=payload.program_id,
-            university_name=payload.university_name,
-            program_name=payload.program_name,
-            degree_level=payload.degree_level,
-            country=payload.country,
-            deadline=payload.deadline,
-            stage=payload.stage or "shortlisted",
-            days_remaining=days,
-            is_urgent=is_urgent,
-            notes=payload.notes,
-        )
+    return _to_response(new_app)
 
 
 @router.patch(
@@ -277,66 +188,40 @@ async def update_application_stage(
     payload: UpdateStagePayload,
     db: AsyncSession = Depends(get_db)
 ) -> ApplicationResponse:
-    """Update the application lifecycle stage and notes."""
+    """Update the application lifecycle stage and notes.
+
+    An application we do not hold cannot be updated. This previously answered an
+    unknown id with HTTP 200 and the literals "Target Institution" / "Degree Program"
+    -- the same fabricated strings Ruling 6 removed from pdf_export.py, one file over.
+    """
     try:
         stmt = select(ApplicationModel).where(ApplicationModel.id == application_id)
         res = await db.execute(stmt)
         app = res.scalar_one_or_none()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cannot reach the applications store; nothing was updated.",
+        ) from exc
 
-        if app is not None:
-            app.stage = payload.stage
-            if payload.notes is not None:
-                app.notes = payload.notes
-            await db.commit()
-            await db.refresh(app)
-            days, is_urgent = calculate_days_remaining(app.deadline)
-            return ApplicationResponse(
-                id=app.id,
-                student_id=app.student_id,
-                program_id=app.program_id,
-                university_name=app.university_name,
-                program_name=app.program_name,
-                degree_level=app.degree_level,
-                country=app.country,
-                deadline=str(app.deadline) if app.deadline else None,
-                stage=app.stage,
-                days_remaining=days,
-                is_urgent=is_urgent,
-                notes=app.notes,
-            )
-    except Exception:
-        pass
-
-    demo_item = next((a for a in DEMO_APPLICATIONS if a["id"] == application_id), None)
-    if demo_item is not None:
-        demo_item["stage"] = payload.stage
-        if payload.notes is not None:
-            demo_item["notes"] = payload.notes
-        days, is_urgent = calculate_days_remaining(demo_item.get("deadline"))
-        return ApplicationResponse(
-            id=demo_item["id"],
-            student_id=demo_item["student_id"],
-            program_id=demo_item["program_id"],
-            university_name=demo_item["university_name"],
-            program_name=demo_item["program_name"],
-            degree_level=demo_item["degree_level"],
-            country=demo_item["country"],
-            deadline=demo_item["deadline"],
-            stage=demo_item["stage"],
-            days_remaining=days,
-            is_urgent=is_urgent,
-            notes=demo_item["notes"],
+    if app is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No application with id {application_id}.",
         )
 
-    days, is_urgent = calculate_days_remaining("2026-07-01")
-    return ApplicationResponse(
-        id=application_id,
-        student_id="std_demo",
-        university_name="Target Institution",
-        program_name="Degree Program",
-        stage=payload.stage,
-        days_remaining=days,
-        is_urgent=is_urgent,
-        notes=payload.notes
-    )
+    app.stage = payload.stage
+    if payload.notes is not None:
+        app.notes = payload.notes
 
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The stage update could not be saved.",
+        ) from exc
+
+    await db.refresh(app)
+    return _to_response(app)
