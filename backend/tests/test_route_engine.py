@@ -10,7 +10,7 @@ from app.models.qualifications import (
     QUALIFICATION_BACHELOR_DEGREE,
     QUALIFICATION_ONE_YEAR_UNIVERSITY,
 )
-from app.services.route_engine import assess_routes, classify_route
+from app.services.route_engine import assess_routes, classify_route, compose_two_hop
 
 SCHOOL_LEAVER = StudentRouteProfile(
     level_sought="bachelor",
@@ -122,3 +122,60 @@ def test_classify_route_names_what_is_missing_and_why():
     assert assessment.missing
     assert any(QUALIFICATION_ATTESTAT in m or "qualification" in m.lower()
                for m in assessment.missing)
+
+
+def test_composition_produces_the_prep_year_path_to_germany():
+    """The sentence the product exists to say: Germany is blocked, and one year at an
+    Azerbaijani university opens it."""
+    plans = compose_two_hop(SCHOOL_LEAVER)
+    german = [p for p in plans if p.hops[-1].country_code == "DE"]
+    assert german, "no two-hop plan reaches Germany"
+
+    via_prep = [p for p in german if p.hops[0].key == "az-prep-year"]
+    assert via_prep, "the prep-year unlock was not found"
+    assert via_prep[0].hops[-1].key == "de-bachelor-direct"
+    assert via_prep[0].total_months == 12
+
+
+def test_both_german_unlocks_are_offered():
+    """Studienkolleg and the prep year are different trades -- 12 months either way, but
+    one costs 6,000-14,000 AZN and the other keeps Turkey and Poland open."""
+    plans = compose_two_hop(SCHOOL_LEAVER)
+    first_hops = {p.hops[0].key for p in plans if p.hops[-1].country_code == "DE"}
+    assert {"az-prep-year", "de-bachelor-studienkolleg"} <= first_hops
+
+
+def test_the_prep_year_also_opens_the_uk():
+    """One unlock, two countries. This is why it is the mechanic the design is built on."""
+    plans = compose_two_hop(SCHOOL_LEAVER)
+    uk_via_prep = [
+        p for p in plans
+        if p.hops[-1].country_code == "GB" and p.hops[0].key == "az-prep-year"
+    ]
+    assert uk_via_prep
+
+
+def test_composition_costs_are_the_sum_of_both_hops():
+    plans = compose_two_hop(SCHOOL_LEAVER)
+    plan = next(p for p in plans if p.hops[0].key == "az-prep-year"
+                and p.hops[-1].key == "de-bachelor-direct")
+    assert plan.total_months == plan.hops[0].time_cost_months + plan.hops[1].time_cost_months
+    assert plan.total_cost_azn[0] == plan.hops[0].money_cost_azn[0] + plan.hops[1].money_cost_azn[0]
+
+
+def test_no_plan_is_longer_than_two_hops():
+    """Deeper chains exist but do not help a 17-year-old, and uncapped graph search turns
+    a product into a research project."""
+    assert all(len(p.hops) <= 2 for p in compose_two_hop(SCHOOL_LEAVER))
+
+
+def test_a_student_who_is_already_open_gets_no_detour():
+    """Composition answers a blockage. It must not propose a prep year to someone who can
+    already go directly."""
+    after_prep = StudentRouteProfile(
+        level_sought="bachelor",
+        qualification_held=QUALIFICATION_ONE_YEAR_UNIVERSITY,
+        ielts=7.0,
+    )
+    plans = compose_two_hop(after_prep)
+    assert all(p.hops[-1].country_code != "DE" for p in plans if len(p.hops) == 2)
