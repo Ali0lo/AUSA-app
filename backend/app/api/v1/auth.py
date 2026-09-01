@@ -26,16 +26,26 @@ class TokenResponse(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    """Payload for student registration."""
+    """Payload for student registration.
+
+    Every academic/profile field is optional and defaults to None, not a plausible
+    number. A student who registers with only an email and a password has not told us
+    their GPA, budget, IELTS/TOEFL, degree level, field of study, or country -- and
+    those values are persisted, so an invented default here would be indistinguishable
+    from data the student entered, forever (unlike a read-time substitution, which
+    disappears when removed). Previously defaulted to gpa=3.5, budget=15000,
+    ielts=7.0, toefl=95, degree_level="master", field_of_study="Computer Science",
+    country="Azerbaijan", and wrote every one of those into the database (ADR-0004).
+    """
     email: str = Field(..., description="Student email address")
     password: str = Field(..., description="Password (min 6 characters)")
-    gpa: float = Field(default=3.5, ge=0.0, le=4.0)
-    budget: float = Field(default=15000.0, ge=0.0)
-    ielts: Optional[float] = Field(default=7.0)
-    toefl: Optional[int] = Field(default=95)
-    degree_level: DegreeLevel = Field(default="master")
-    field_of_study: Optional[str] = Field(default="Computer Science")
-    country: Optional[str] = Field(default="Azerbaijan")
+    gpa: Optional[float] = Field(default=None, ge=0.0, le=4.0)
+    budget: Optional[float] = Field(default=None, ge=0.0)
+    ielts: Optional[float] = Field(default=None, ge=0.0, le=9.0)
+    toefl: Optional[int] = Field(default=None, ge=0, le=120)
+    degree_level: Optional[DegreeLevel] = Field(default=None)
+    field_of_study: Optional[str] = Field(default=None)
+    country: Optional[str] = Field(default=None)
 
 
 class StudentUserResponse(BaseModel):
@@ -129,7 +139,7 @@ async def register(
             email=payload.email,
             hashed_password=hashed_pwd,
             gpa=payload.gpa,
-            budget=str(payload.budget),
+            budget=str(payload.budget) if payload.budget is not None else None,
             ielts=payload.ielts,
             toefl=payload.toefl,
             degree_level=payload.degree_level,

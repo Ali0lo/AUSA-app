@@ -99,6 +99,39 @@ async def test_auth_register_and_login_flow(db_session):
 
 
 @pytest.mark.asyncio
+async def test_register_without_academic_fields_stores_null_not_invented_defaults(db_session):
+    """A student who registers with only email/password has no GPA, budget, etc.
+
+    This previously persisted gpa=3.5, budget=15000, ielts=7.0, toefl=95,
+    degree_level="master", field_of_study="Computer Science", country="Azerbaijan"
+    for every such registration -- a fabricated profile, indistinguishable from data
+    the student actually entered, that then drove every eligibility check made for
+    them (evaluate_match's hard filters).
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        reg_res = await client.post(
+            "/api/v1/auth/register",
+            json={"email": "bare_register@ausa.edu.az", "password": "password123"},
+        )
+        assert reg_res.status_code == 201
+        token = reg_res.json()["access_token"]
+
+        me_res = await client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert me_res.status_code == 200
+        profile = me_res.json()
+        assert profile["gpa"] is None
+        assert profile["budget"] is None
+        assert profile["ielts"] is None
+        assert profile["toefl"] is None
+        assert profile["degree_level"] is None
+        assert profile["field_of_study"] is None
+        assert profile["country"] is None
+
+
+@pytest.mark.asyncio
 async def test_login_rejects_wrong_password(db_session):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         await client.post(
