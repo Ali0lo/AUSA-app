@@ -96,6 +96,16 @@ class AssessRoutesResponse(BaseModel):
     dp: DPEligibilityResponse
 
 
+def _reachable_countries(plans: List[RoutePlanResponse]) -> tuple[str, ...]:
+    """Every country code touched by any hop of any plan -- including a two-hop plan's
+    destination, not just its intermediate first hop. This is the wiring the product's
+    central finding depends on (the prep year unlocking a blocked country's funded
+    programmes): a country reached only via a second hop must still contribute here, or
+    its DP-funded programmes silently vanish from the response with no error and no test
+    noticing (see the review report's mutation M3, and test_routes_reachable.py)."""
+    return tuple({hop.country_code for plan in plans for hop in plan.hops})
+
+
 @router.post(
     "/assess",
     response_model=AssessRoutesResponse,
@@ -145,7 +155,7 @@ async def assess(
     # the 6 in-scope countries are excluded here too, whenever no plan reaches that country
     # for this student. Either way, the endpoint never claims a programme is or isn't
     # available in a country it has not actually checked for this profile.
-    reachable = tuple({hop.country_code for plan in plans for hop in plan.hops})
+    reachable = _reachable_countries(plans)
     funded = await funded_programmes(db, level=profile.level_sought, country_codes=reachable)
 
     # Only run the existence check when it can actually change the answer: not when
