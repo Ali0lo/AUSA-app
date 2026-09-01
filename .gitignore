@@ -37,6 +37,11 @@ data/**/*.csv
 data/**/*.json
 data/**/*.zip
 data/**/*.pdf
+
+# Curated requirement rows are the exception: hand-written by a person from an official
+# page, small, and not reproducible by any script. Losing one means someone reads a
+# university's admissions page again. These belong in git.
+!data/curation/*.csv
 data/**/*.xlsx
 data/raw/turkey/
 data/raw/usa/
