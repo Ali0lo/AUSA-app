@@ -34,6 +34,53 @@ def test_calculate_academic_score_shortfall():
     assert "below" in exp
 
 
+def test_calculate_academic_score_null_required_gpa_is_not_a_passing_score():
+    """A NULL min_gpa means the requirement is unknown, never 'not required' (Ruling 15).
+    An unconfirmed requirement must never be scored as met -- ADR-0004's sharpest form: an
+    unknown must never read as permission (Critical 6)."""
+    score, exp, passed = calculate_academic_score(student_gpa=2.0, required_gpa=None)
+    assert score < 100.0
+    assert passed is False
+    assert "no minimum gpa specified" not in exp.lower()
+
+
+def test_calculate_language_score_null_requirements_is_not_a_passing_score():
+    """A NULL min_ielts and min_toefl means unknown, never 'not required' -- must not
+    grant 100% + a passed hard filter to a student with no language score at all
+    (Critical 6)."""
+    score, exp, passed = calculate_language_score(
+        student_ielts=None, student_toefl=None, min_ielts=None, min_toefl=None
+    )
+    assert score < 100.0
+    assert passed is False
+    assert "not required for this program" not in exp.lower()
+
+
+def test_evaluate_match_with_all_null_requirements_is_not_100_percent_eligible():
+    """Reproduces the live defect from the review report exactly: GPA 2.0, no IELTS, no
+    TOEFL, against a programme whose min_gpa/min_ielts/min_toefl are all NULL used to come
+    back is_eligible=True, overall_match_percentage=100.0. A programme whose requirements
+    we do not hold cannot be scored as a match (Critical 6)."""
+    student = StudentProfile(
+        gpa=2.0,
+        budget=20000.0,
+        degree_level="bachelor",
+    )
+    program = ProgramRequirements(
+        university_name="Unknown Requirements University",
+        program_name="B.Sc. Undeclared",
+        degree_level="bachelor",
+        tuition_fee=5000.0,
+    )
+    result = evaluate_match(student, program)
+    assert result.is_eligible is False
+    assert result.overall_match_percentage < 100.0
+    assert result.breakdown.academic.passed_hard_filter is False
+    assert result.breakdown.language.passed_hard_filter is False
+    assert result.breakdown.academic.score < 100.0
+    assert result.breakdown.language.score < 100.0
+
+
 def test_calculate_budget_score():
     score, exp, passed = calculate_budget_score(student_budget=12000.0, program_tuition=15000.0, currency="USD")
     assert score == 80.0
