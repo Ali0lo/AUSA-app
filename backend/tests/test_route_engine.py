@@ -4,7 +4,7 @@ Germany and the UK must come back BLOCKED, with both unlocks named."""
 import pytest
 
 from app.domain.route_definitions import ALL_ROUTES
-from app.domain.routes import RouteStatus, StudentRouteProfile
+from app.domain.routes import Route, RouteStatus, StudentRouteProfile
 from app.models.qualifications import (
     QUALIFICATION_ATTESTAT,
     QUALIFICATION_BACHELOR_DEGREE,
@@ -17,6 +17,17 @@ SCHOOL_LEAVER = StudentRouteProfile(
     qualification_held=QUALIFICATION_ATTESTAT,
     dim_score=520.0,
     ielts=7.0,
+)
+
+# Same as SCHOOL_LEAVER, plus a TestAS score -- the one field that turns the Studienkolleg
+# hop fully OPEN instead of UNLOCKABLE, needed to exercise the all-hops-OPEN branch of a
+# composed plan's status.
+SCHOOL_LEAVER_WITH_TESTAS = StudentRouteProfile(
+    level_sought="bachelor",
+    qualification_held=QUALIFICATION_ATTESTAT,
+    dim_score=520.0,
+    ielts=7.0,
+    test_as=1.0,
 )
 
 
@@ -170,12 +181,141 @@ def test_no_plan_is_longer_than_two_hops():
 
 
 def test_a_student_who_is_already_open_gets_no_detour():
-    """Composition answers a blockage. It must not propose a prep year to someone who can
-    already go directly."""
-    after_prep = StudentRouteProfile(
-        level_sought="bachelor",
-        qualification_held=QUALIFICATION_ONE_YEAR_UNIVERSITY,
+    """Composition answers a blockage. It must not propose a detour to a destination the
+    student can already reach directly.
+
+    ALL_ROUTES cannot exercise this guard: every producer route (az-prep-year,
+    de-bachelor-studienkolleg, uk-bachelor-foundation) requires QUALIFICATION_ATTESTAT
+    alone, and no consumer route accepts both an unlock-eligible original qualification and
+    any of the three produced qualifications. So whenever a first hop is reachable, every
+    already-open destination becomes BLOCKED again after the first hop's qualification is
+    applied, and the (harmless, redundant) second-hop BLOCKED-skip guard hides whether the
+    "already open" guard fired at all -- this is exactly how the original version of this
+    test, built on real routes, passed 16/16 with the guard deleted outright.
+
+    A synthetic route pair isolates it: an already-open destination that accepts BOTH the
+    original qualification and the one the first hop produces, so it would still classify
+    as reachable after the swap if the guard were gone.
+    """
+    unlock = Route(
+        key="test-unlocker", country_code="ZZ", level="bachelor",
+        mechanism="test fixture", requires_qualification=(QUALIFICATION_ATTESTAT,),
+        produces_qualification="test-qualification-x", exams=(),
+        time_cost_months=6, money_cost_azn=(100, 200), citation="test fixture",
+    )
+    already_open = Route(
+        key="test-already-open", country_code="YY", level="bachelor",
+        mechanism="test fixture",
+        # Accepts the qualification the student already holds AND the one `unlock`
+        # produces -- the one shape of route that can tell the "already open" guard apart
+        # from the ordinary second-hop BLOCKED-skip guard.
+        requires_qualification=(QUALIFICATION_ATTESTAT, "test-qualification-x"),
+        produces_qualification=None, exams=(),
+        time_cost_months=0, money_cost_azn=(0, 0), citation="test fixture",
+    )
+    profile = StudentRouteProfile(level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT)
+
+    plans = compose_two_hop(profile, routes=(unlock, already_open))
+
+    assert any(len(p.hops) == 1 and p.hops[0].key == "test-already-open" for p in plans), (
+        "fixture bug: the destination is supposed to be reachable directly"
+    )
+    assert not any(p.hops[-1].key == "test-already-open" for p in plans if len(p.hops) == 2), (
+        "a two-hop detour was proposed to a destination the student can already reach directly"
+    )
+
+
+def test_second_hop_never_composes_a_route_still_blocked_after_the_first():
+    """Deleting the second-hop BLOCKED-skip produces a plan reporting OPEN while its own
+    `missing` field still names an unmet qualification -- a plan that contradicts itself on
+    its face, and precisely the ADR-0004 defect this branch exists to remove.
+
+    de-bachelor-studienkolleg (fully OPEN, given a TestAS score) does not unlock
+    uk-bachelor-direct: it produces QUALIFICATION_FESTSTELLUNGSPRUEFUNG, which
+    uk-bachelor-direct does not accept, so that route stays BLOCKED after the swap.
+    """
+    plans = compose_two_hop(SCHOOL_LEAVER_WITH_TESTAS)
+    assert not any(
+        p.hops[0].key == "de-bachelor-studienkolleg" and p.hops[-1].key == "uk-bachelor-direct"
+        for p in plans
+    )
+
+
+def test_no_composed_plan_reports_open_while_missing_a_requirement():
+    """The general invariant the two guards above exist to hold: OPEN must mean OPEN. A
+    plan can never claim full eligibility while its own `missing` field still names an
+    unmet requirement, across every profile the engine is asked about."""
+    profiles = [
+        SCHOOL_LEAVER,
+        SCHOOL_LEAVER_WITH_TESTAS,
+        StudentRouteProfile(
+            level_sought="bachelor",
+            qualification_held=QUALIFICATION_ONE_YEAR_UNIVERSITY,
+            ielts=7.0,
+        ),
+        StudentRouteProfile(
+            level_sought="master",
+            qualification_held=QUALIFICATION_BACHELOR_DEGREE,
+            ielts=7.0,
+        ),
+    ]
+    for profile in profiles:
+        for plan in compose_two_hop(profile):
+            if plan.status is RouteStatus.OPEN:
+                assert plan.missing == (), (
+                    f"{[h.key for h in plan.hops]} reports OPEN but missing={plan.missing}"
+                )
+
+
+def test_plan_status_reflects_the_weakest_hop():
+    """OPEN only when every hop is OPEN; any UNLOCKABLE hop pulls the whole plan down.
+    This is the branch _plan_from_hops's status computation depends on, and the default
+    arm (UNLOCKABLE, not OPEN) that a route with no UNLOCKABLE hop should never reach by
+    accident."""
+    plans = compose_two_hop(SCHOOL_LEAVER)
+
+    fully_open = next(
+        p for p in plans
+        if p.hops[0].key == "az-prep-year" and p.hops[-1].key == "de-bachelor-direct"
+    )
+    assert fully_open.status is RouteStatus.OPEN
+
+    partially_unlockable = next(
+        p for p in plans
+        if p.hops[0].key == "de-bachelor-studienkolleg" and p.hops[-1].key == "de-bachelor-direct"
+    )
+    assert partially_unlockable.status is RouteStatus.UNLOCKABLE
+
+
+def test_compose_two_hop_returns_nothing_for_an_attestat_at_master_level():
+    """Level is part of the key, not a filter: an attestat cannot compose its way into a
+    master's route, because none of the bachelor-level unlock routes are even considered
+    once the level is master."""
+    profile = StudentRouteProfile(
+        level_sought="master",
+        qualification_held=QUALIFICATION_ATTESTAT,
         ielts=7.0,
     )
-    plans = compose_two_hop(after_prep)
-    assert all(p.hops[-1].country_code != "DE" for p in plans if len(p.hops) == 2)
+    assert compose_two_hop(profile) == []
+
+
+def test_a_mutually_blocked_cycle_produces_no_plan():
+    """If route A requires what only route B produces and route B requires what only
+    route A produces, and the student starts holding neither, composition must not
+    manufacture a plan by treating a BLOCKED route as a usable first hop. There is no
+    bootstrap into a closed two-node cycle, and the engine must say so by returning
+    nothing -- not by hallucinating a hop out of a route it never should have started
+    from."""
+    route_a = Route(
+        key="test-cycle-a", country_code="ZZ", level="bachelor", mechanism="test fixture",
+        requires_qualification=("test-qualification-b",), produces_qualification="test-qualification-a",
+        exams=(), time_cost_months=1, money_cost_azn=(0, 0), citation="test fixture",
+    )
+    route_b = Route(
+        key="test-cycle-b", country_code="ZZ", level="bachelor", mechanism="test fixture",
+        requires_qualification=("test-qualification-a",), produces_qualification="test-qualification-b",
+        exams=(), time_cost_months=1, money_cost_azn=(0, 0), citation="test fixture",
+    )
+    profile = StudentRouteProfile(level_sought="bachelor", qualification_held="test-qualification-unrelated")
+
+    assert compose_two_hop(profile, routes=(route_a, route_b)) == []

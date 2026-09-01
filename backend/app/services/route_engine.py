@@ -94,11 +94,15 @@ def _plan_from_hops(hops: tuple[Route, ...], assessments: tuple[RouteAssessment,
             sum(hop.money_cost_azn[0] for hop in hops),
             sum(hop.money_cost_azn[1] for hop in hops),
         ),
-        # A plan is only as open as its weakest hop.
+        # A plan is only as open as its weakest hop. Eligibility defaults are asymmetric:
+        # this is OPEN only when every hop is confirmed OPEN, never as a fallback branch --
+        # a stray BLOCKED assessment that ever reached this function (it should not; both
+        # call sites filter BLOCKED out first) would land on UNLOCKABLE, not be laundered
+        # into OPEN.
         status=(
-            RouteStatus.UNLOCKABLE
-            if any(a.status is RouteStatus.UNLOCKABLE for a in assessments)
-            else RouteStatus.OPEN
+            RouteStatus.OPEN
+            if all(a.status is RouteStatus.OPEN for a in assessments)
+            else RouteStatus.UNLOCKABLE
         ),
         missing=tuple(gap for a in assessments for gap in a.missing),
     )
@@ -142,6 +146,13 @@ def compose_two_hop(
         # dropping every score the profile carries.
         after = replace(profile, qualification_held=first.produces_qualification)
         for second in at_level:
+            # A route must never compose with itself. Note: given `blocked_keys` and
+            # `first_assessment` are both computed from the same `classify_route(route,
+            # profile)` call on the ORIGINAL profile, `first.key` can never be a member of
+            # `blocked_keys` here -- so `second.key not in blocked_keys` alone already
+            # rejects `second.key == first.key` on every path we've found. The explicit
+            # check is kept anyway as a named invariant, in case that computation ever
+            # changes (e.g. blocked_keys computed from a different profile per hop).
             if second.key == first.key or second.key not in blocked_keys:
                 continue
             second_assessment = classify_route(second, after)
