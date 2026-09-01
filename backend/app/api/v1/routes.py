@@ -16,7 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.domain.routes import StudentRouteProfile
-from app.services.dp_eligibility import assess_dp_eligibility, funded_programmes
+from app.services.dp_eligibility import (
+    any_funded_programmes_at_level,
+    assess_dp_eligibility,
+    describe_funded_programmes,
+    funded_programmes,
+)
 from app.services.route_engine import assess_routes, compose_two_hop
 
 router = APIRouter(prefix="/routes", tags=["Route Planning"])
@@ -77,6 +82,12 @@ class DPEligibilityResponse(BaseModel):
         "It is not an award: selection is competitive and is decided by a committee."
     )
     funded_programmes: List[FundedProgrammeResponse]
+    # Distinguishes why the list above might be empty -- "listed", "no DP programmes exist
+    # at this level at all", "programmes exist but not in a country you can reach", or "your
+    # profile does not reach any country at this level" -- so an empty list is never read as
+    # a blanket "DP funds nothing for you" (see dp_eligibility.describe_funded_programmes).
+    funded_programmes_status: str
+    funded_programmes_explanation: str
 
 
 class AssessRoutesResponse(BaseModel):
@@ -137,6 +148,17 @@ async def assess(
     reachable = tuple({hop.country_code for plan in plans for hop in plan.hops})
     funded = await funded_programmes(db, level=profile.level_sought, country_codes=reachable)
 
+    # Only run the existence check when it can actually change the answer: not when
+    # `funded` already has rows (case "listed"), and not when `reachable` is empty (case
+    # (c) is already decided without needing it). Keeps this a cheap LIMIT-1 query, not an
+    # unconditional extra fetch.
+    any_at_level = (
+        await any_funded_programmes_at_level(db, level=profile.level_sought)
+        if not funded and reachable
+        else False
+    )
+    funded_status, funded_explanation = describe_funded_programmes(funded, reachable, any_at_level)
+
     return AssessRoutesResponse(
         blocked=blocked,
         plans=plans,
@@ -154,5 +176,7 @@ async def assess(
                 )
                 for row in funded
             ],
+            funded_programmes_status=funded_status,
+            funded_programmes_explanation=funded_explanation,
         ),
     )

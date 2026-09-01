@@ -29,7 +29,27 @@ DIM_BAND_LOW = 400.0
 DIM_BAND_HIGH = 550.0
 BAND_DESCRIPTION = f"DİM {DIM_BAND_LOW:.0f}-{DIM_BAND_HIGH:.0f}, the exact bar depending on field"
 
+# spec §2.2's eligibility table names one row "Bachelor" for the DİM/SAT/Olympiad academic
+# gate, separate from "Language", "Age", "Covers" and "Levels" -- and no equivalent
+# academic-gate row exists for master's (or PhD) anywhere in this project's sources. That
+# is UNKNOWN, not "no gate applies" -- per ADR-0004 an unknown must never read as
+# permission, so a non-bachelor level is reported as an unconfirmed gate, never skipped as
+# though clearing it were optional and never answered with the bachelor band it did not
+# check.
+NO_ACADEMIC_GATE_PUBLISHED = (
+    "no academic band is published for this level here -- only the bachelor row of the "
+    "DP's eligibility table names DİM/SAT/Olympiad thresholds; only the language "
+    "requirement above is checked"
+)
+
 ACCEPTED_LANGUAGE_LEVELS = ("C1", "C2")
+
+# The three distinct facts an empty `funded_programmes` result can represent. A student must
+# never be left to guess which one applies (see `describe_funded_programmes`).
+FUNDED_STATUS_LISTED = "listed"
+FUNDED_STATUS_NONE_AT_LEVEL = "no_dp_programmes_at_this_level"
+FUNDED_STATUS_UNREACHABLE = "dp_programmes_exist_but_not_in_a_reachable_country"
+FUNDED_STATUS_NO_ROUTES_REACHABLE = "no_route_reaches_any_country_at_this_level"
 
 
 @dataclass(frozen=True)
@@ -46,6 +66,13 @@ def assess_dp_eligibility(profile: StudentRouteProfile) -> DPEligibility:
     The DP funds roughly 400 places a year against a much larger pool. What is checkable
     is whether the student clears the stated gates; the selection that follows is a
     committee decision no dataset in this project models.
+
+    Level is part of the key here, not a filter: the DİM/SAT/Olympiad academic gate is
+    published for bachelor level only (spec §2.2). At any other level (master's today;
+    PhD is out of product scope entirely) that gate is UNKNOWN, so it is reported as an
+    unconfirmed requirement rather than either invented or silently skipped -- a master's
+    applicant is never told they are missing a DİM score they have no reason to hold, and
+    is never read as eligible on the strength of an academic gate nobody checked.
     """
     met: list[str] = []
     missing: list[str] = []
@@ -55,29 +82,37 @@ def assess_dp_eligibility(profile: StudentRouteProfile) -> DPEligibility:
     else:
         missing.append("A language certificate at C1 or above is required")
 
-    # Three alternative academic gates. Any one of them satisfies this half.
-    if profile.has_international_olympiad_medal:
-        met.append("International Olympiad medal")
-    elif profile.dim_score is not None and profile.dim_score >= DIM_BAND_HIGH:
-        met.append(f"DİM {profile.dim_score:.0f} clears the whole {BAND_DESCRIPTION}")
-    elif profile.dim_score is not None and profile.dim_score >= DIM_BAND_LOW:
-        met.append(f"DİM {profile.dim_score:.0f} is inside the band")
+    if profile.level_sought != "bachelor":
         missing.append(
-            f"DİM {profile.dim_score:.0f} clears some fields but not all: the requirement is "
-            f"{BAND_DESCRIPTION}, and the bar for your field has not been confirmed here"
+            f"The Dövlət Proqramı's academic gate for {profile.level_sought} level is not "
+            "established in our data; only the language requirement above is checked here"
         )
-    elif profile.sat is not None:
-        met.append(f"SAT {profile.sat} offered against the 75th-percentile alternative")
+        band_checked = NO_ACADEMIC_GATE_PUBLISHED
     else:
-        missing.append(
-            f"One of: {BAND_DESCRIPTION}; SAT/ACT at the 75th percentile; "
-            "or an international Olympiad medal"
-        )
+        band_checked = BAND_DESCRIPTION
+        # Three alternative academic gates. Any one of them satisfies this half.
+        if profile.has_international_olympiad_medal:
+            met.append("International Olympiad medal")
+        elif profile.dim_score is not None and profile.dim_score >= DIM_BAND_HIGH:
+            met.append(f"DİM {profile.dim_score:.0f} clears the whole {BAND_DESCRIPTION}")
+        elif profile.dim_score is not None and profile.dim_score >= DIM_BAND_LOW:
+            met.append(f"DİM {profile.dim_score:.0f} is inside the band")
+            missing.append(
+                f"DİM {profile.dim_score:.0f} clears some fields but not all: the requirement is "
+                f"{BAND_DESCRIPTION}, and the bar for your field has not been confirmed here"
+            )
+        elif profile.sat is not None:
+            met.append(f"SAT {profile.sat} offered against the 75th-percentile alternative")
+        else:
+            missing.append(
+                f"One of: {BAND_DESCRIPTION}; SAT/ACT at the 75th percentile; "
+                "or an international Olympiad medal"
+            )
 
     status = RouteStatus.OPEN if not missing else RouteStatus.UNLOCKABLE
     return DPEligibility(
         status=status,
-        band_checked=BAND_DESCRIPTION,
+        band_checked=band_checked,
         gates_met=tuple(met),
         gates_missing=tuple(missing),
     )
@@ -108,3 +143,62 @@ async def funded_programmes(
         .order_by(DPCatalogueEntry.country_code, DPCatalogueEntry.university_name)
     )
     return list((await session.execute(stmt)).scalars().all())
+
+
+async def any_funded_programmes_at_level(session: AsyncSession, level: str) -> bool:
+    """Does the DP fund ANYTHING at this level, in any country (including the 27
+    out-of-scope ones with `country_code IS NULL`)?
+
+    An existence check only -- `LIMIT 1`, no `country_codes` filter, never a full fetch --
+    used solely to tell "the DP funds zero programmes at this level" (a real answer) apart
+    from "it funds some, just not anywhere this profile's routes currently reach" (a
+    different answer) when `funded_programmes()` comes back empty. See
+    `describe_funded_programmes`.
+    """
+    stmt = select(DPCatalogueEntry.id).where(DPCatalogueEntry.level == level).limit(1)
+    return (await session.execute(stmt)).first() is not None
+
+
+def describe_funded_programmes(
+    programmes: list[DPCatalogueEntry],
+    reachable: tuple[str, ...],
+    any_at_level: bool,
+) -> tuple[str, str]:
+    """Explain what `funded_programmes()`'s result actually means. Returns (status, text).
+
+    An empty list conflates three different facts if left unexplained, and a student must
+    never be left to guess which one applies:
+
+    (a) the DP funds zero programmes at this level at all -- a real answer, e.g. the USA's
+        zero DP bachelor places;
+    (b) the DP funds programmes at this level, but none of them are in a country this
+        profile's routes can currently reach;
+    (c) this profile's routes do not reach any country at all at this level, so no country
+        was ever queried.
+
+    Showing programmes from a country the student cannot enter would be the wrong fix in
+    the other direction -- it would suggest an entry path they do not have -- so this names
+    the reason instead of widening the list. `any_at_level` is only consulted when
+    `programmes` is empty and `reachable` is non-empty (case (a) vs (b)); pass anything for
+    it otherwise, it is not read.
+    """
+    if programmes:
+        return FUNDED_STATUS_LISTED, ""
+    if not reachable:
+        return FUNDED_STATUS_NO_ROUTES_REACHABLE, (
+            "Your profile does not currently reach any country in our route list at this "
+            "level, so no funded programmes could be checked. This is not a statement "
+            "that the Dövlət Proqramı funds nothing at this level -- only that none of "
+            "your open or unlockable routes lead to a country it funds."
+        )
+    if not any_at_level:
+        return FUNDED_STATUS_NONE_AT_LEVEL, (
+            "The Dövlət Proqramı funds zero programmes at this level. That is a real "
+            "answer, not a gap in our data."
+        )
+    return FUNDED_STATUS_UNREACHABLE, (
+        "The Dövlət Proqramı funds programmes at this level, but not in a country your "
+        "current profile can reach. This is not a statement that you are ineligible for "
+        "the programme overall -- only that none of its funded placements fall within the "
+        "countries your qualifications currently open."
+    )
