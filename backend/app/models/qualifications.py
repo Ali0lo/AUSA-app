@@ -64,6 +64,16 @@ class ProgramRequirement(Base):
 
     The schema is spec §5.1 and is fixed before collection rather than discovered during
     it. Every row carries where it came from and when it was read.
+
+    **A NULL means the requirement is unknown. It never means "not required."** Nothing
+    may read a NULL here as permission: an unknown requirement must never let a route
+    read OPEN, because "we could not find out" and "there is no such requirement" are
+    different facts and conflating them produces confidently wrong advice (ADR-0004).
+    The boolean columns can already carry the distinction -- NULL unknown, False known
+    to be absent -- but the string and numeric columns cannot, and today nothing writes
+    a confirmed absence into them. When curation needs to record one, it gets its own
+    representation then, added by someone holding a real row to put in it; it must not
+    be written as a NULL.
     """
     __tablename__ = "program_requirements"
 
@@ -106,7 +116,13 @@ class ProgramRequirement(Base):
     documents_required = Column(Text, nullable=True)
 
     # 'seed' | 'claude-extracted' | 'human-verified' (ADR-0007 §5).
-    provenance = Column(String(30), nullable=False, default="claude-extracted")
+    # server_default as well as default: the ORM fills this before the row reaches the
+    # database, so a model-only default leaves a raw-SQL insert with no value at all
+    # while the SQLite suite still passes. The migration declares the same server_default.
+    provenance = Column(
+        String(30), nullable=False, default="claude-extracted",
+        server_default="claude-extracted",
+    )
     source_url = Column(Text, nullable=False)
     retrieved_at = Column(DateTime(timezone=True), nullable=False)
     # Shown to the student. Honesty beats false confidence (spec §5.4).

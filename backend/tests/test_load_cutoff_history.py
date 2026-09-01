@@ -100,6 +100,47 @@ async def test_numeric_source_program_code_is_idempotent(session, tmp_path):
     assert total == 1
 
 
+# --- Ruling 14: the 3-column natural key must not silently collapse two rows that ---
+# --- disagree on variant_index -- that combination means a collector emitted two ----
+# --- distinct competitions under one code and year without suffixing the code. -------
+
+CONFLICTING_VARIANT_CSV = """country,source_program_code,variant_index,intake_year,cutoff_value,cutoff_unit,lower_is_better,university_name,department_name,source_url,verified_by
+AZ,x--not-suffixed,1,2025,600.0,dim_score_700,False,ADA,Dept,,
+AZ,x--not-suffixed,2,2025,580.0,dim_score_700,False,ADA,Dept,,
+"""
+
+
+@pytest.mark.asyncio
+async def test_conflicting_variant_index_on_the_same_key_raises_rather_than_collapsing(session, tmp_path):
+    path = tmp_path / "conflict.csv"
+    path.write_text(CONFLICTING_VARIANT_CSV, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="variant_index"):
+        await load_csv(session, path)
+
+
+@pytest.mark.asyncio
+async def test_conflicting_variant_index_against_an_already_loaded_row_raises(session, tmp_path):
+    first = tmp_path / "first.csv"
+    first.write_text(
+        "country,source_program_code,variant_index,intake_year,cutoff_value,cutoff_unit,"
+        "lower_is_better,university_name,department_name,source_url,verified_by\n"
+        "AZ,x--not-suffixed,1,2025,600.0,dim_score_700,False,ADA,Dept,,\n",
+        encoding="utf-8",
+    )
+    await load_csv(session, first)
+
+    second = tmp_path / "second.csv"
+    second.write_text(
+        "country,source_program_code,variant_index,intake_year,cutoff_value,cutoff_unit,"
+        "lower_is_better,university_name,department_name,source_url,verified_by\n"
+        "AZ,x--not-suffixed,2,2025,580.0,dim_score_700,False,ADA,Dept,,\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="variant_index"):
+        await load_csv(session, second)
+
+
 @pytest.mark.asyncio
 async def test_source_program_code_is_stored_as_str(session, tmp_path):
     path = tmp_path / "numeric_code.csv"

@@ -1,7 +1,14 @@
 """Load collected cutoff-history CSVs into program_cutoff_history.
 
-Idempotent: a row is identified by (country, source_program_code, variant_index,
-intake_year), so re-running after a fresh collection inserts only what is new.
+Idempotent: a row is identified by (country, source_program_code, intake_year) --
+the same three NOT NULL columns program_cutoff_history's uq_cutoff_history_natural_key
+index enforces -- so re-running after a fresh collection inserts only what is new.
+
+If two rows share that key but disagree on variant_index, the loader raises rather
+than silently keeping one and dropping the other: that combination means a collector
+emitted two distinct competitions under one code and year without suffixing the code
+(the guarantee collect_azerbaijan.py makes), which is a data question for a person,
+not something to collapse quietly (ADR-0004).
 
 Nothing here fills a gap. A CSV missing a required column raises rather than
 loading a partial table, and verified_by is never written -- only a person who
@@ -110,9 +117,18 @@ def _parse_bool_or_none(value: Any) -> bool | None:
 
 
 def _natural_key(
-    country: Any, source_program_code: Any, variant_index: Any, intake_year: Any
-) -> tuple[str | None, str | None, int | None, int | None]:
-    """Build the (country, source_program_code, variant_index, intake_year) natural key.
+    country: Any, source_program_code: Any, intake_year: Any
+) -> tuple[str | None, str | None, int | None]:
+    """Build the (country, source_program_code, intake_year) natural key.
+
+    Matches program_cutoff_history's uq_cutoff_history_natural_key index exactly --
+    those three NOT NULL columns, deliberately not four. variant_index is excluded on
+    purpose: it is NULL on the large majority of rows, and NULL is distinct from NULL
+    in a unique index on both SQLite and Postgres, so a 4-column key would protect
+    almost none of those rows while reading as full protection (2026-08-30 run,
+    Ruling 6). Two rows that collide on this 3-column key but disagree on
+    variant_index are handled separately, in load_csv, by raising rather than by
+    silently treating them as distinct the way a 4-column key would.
 
     This is the ONLY place allowed to construct this key -- for rows freshly parsed
     from a CSV, and for rows read back from the database, alike. The bug this exists
@@ -129,7 +145,6 @@ def _natural_key(
     return (
         None if country is None else str(country),
         None if source_program_code is None else str(source_program_code),
-        None if variant_index is None else int(variant_index),
         None if intake_year is None else int(intake_year),
     )
 
@@ -176,18 +191,24 @@ def rows_from_csv(path: Path) -> list[dict]:
 
 
 async def load_csv(session: AsyncSession, path: Path) -> int:
-    """Insert rows not already present. Returns the number inserted."""
+    """Insert rows not already present. Returns the number inserted.
+
+    Raises ValueError if a row's natural key matches one already known (from the
+    database, or from an earlier row in this same file) but the two disagree on
+    variant_index. Silently keeping only one in that case would lose a real cutoff
+    row without telling anyone -- see the module docstring and ADR-0004.
+    """
     rows = rows_from_csv(path)
 
-    existing = {
-        _natural_key(*db_row)
-        for db_row in (
+    known_variant: dict[tuple, Any] = {
+        _natural_key(country, source_program_code, intake_year): variant_index
+        for country, source_program_code, intake_year, variant_index in (
             await session.execute(
                 select(
                     ProgramCutoffHistory.country,
                     ProgramCutoffHistory.source_program_code,
-                    ProgramCutoffHistory.variant_index,
                     ProgramCutoffHistory.intake_year,
+                    ProgramCutoffHistory.variant_index,
                 )
             )
         ).all()
@@ -195,11 +216,20 @@ async def load_csv(session: AsyncSession, path: Path) -> int:
 
     inserted = 0
     for row in rows:
-        key = _natural_key(row["country"], row["source_program_code"], row["variant_index"], row["intake_year"])
-        if key in existing:
+        key = _natural_key(row["country"], row["source_program_code"], row["intake_year"])
+        if key in known_variant:
+            if known_variant[key] != row["variant_index"]:
+                raise ValueError(
+                    f"{key} already carries variant_index={known_variant[key]!r}, but "
+                    f"a row in {path.name} carries variant_index={row['variant_index']!r} "
+                    "for the same (country, source_program_code, intake_year). Two "
+                    "distinct competitions were emitted under one code and year without "
+                    "suffixing the code -- this is a data question for a person, not "
+                    "something to silently collapse (ADR-0004)."
+                )
             continue
         session.add(ProgramCutoffHistory(**row))
-        existing.add(key)
+        known_variant[key] = row["variant_index"]
         inserted += 1
 
     await session.commit()
