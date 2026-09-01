@@ -46,6 +46,21 @@ NO_ACADEMIC_GATE_PUBLISHED = (
     "requirement above is checked"
 )
 
+# spec §2.2's alternative academic gate is "SAT/ACT at the 75th percentile". A percentile
+# is per-institution and per-year; we have not collected it for any of the six countries in
+# scope, and there is no percentile constant anywhere in this repository. So a SAT/ACT score
+# is never read as clearing this gate -- only its presence is checkable, not whether it
+# clears an unknown bar. It is reported as an unconfirmed alternative, always in
+# `gates_missing`, exactly like NO_ACADEMIC_GATE_PUBLISHED above: an unknown must never read
+# as permission (ADR-0004).
+def _unconfirmed_sat_act_gate(exam_name: str, score: object) -> str:
+    return (
+        f"{exam_name} {score} was offered against the SAT/ACT 75th-percentile alternative, "
+        "but that percentile is per-institution and per-year and has not been confirmed "
+        "here, so it cannot clear this gate on its own"
+    )
+
+
 ACCEPTED_LANGUAGE_LEVELS = ("C1", "C2")
 
 # The three distinct facts an empty `funded_programmes` result can represent. A student must
@@ -94,24 +109,32 @@ def assess_dp_eligibility(profile: StudentRouteProfile) -> DPEligibility:
         band_checked = NO_ACADEMIC_GATE_PUBLISHED
     else:
         band_checked = BAND_DESCRIPTION
-        # Three alternative academic gates. Any one of them satisfies this half.
+        # Three alternative academic gates. Any one of them satisfies this half. The SAT/ACT
+        # alternative can never fully satisfy it by itself -- see `_unconfirmed_sat_act_gate`
+        # -- so it is evaluated alongside the DİM band rather than short-circuiting it: a
+        # student who offers both a sub-band DİM score and a SAT/ACT score must have both
+        # considered, not have the DİM evaluation skipped because a SAT field was present.
         if profile.has_international_olympiad_medal:
             met.append("International Olympiad medal")
         elif profile.dim_score is not None and profile.dim_score >= DIM_BAND_HIGH:
             met.append(f"DİM {profile.dim_score:.0f} clears the whole {BAND_DESCRIPTION}")
-        elif profile.dim_score is not None and profile.dim_score >= DIM_BAND_LOW:
-            met.append(f"DİM {profile.dim_score:.0f} is inside the band")
-            missing.append(
-                f"DİM {profile.dim_score:.0f} clears some fields but not all: the requirement is "
-                f"{BAND_DESCRIPTION}, and the bar for your field has not been confirmed here"
-            )
-        elif profile.sat is not None:
-            met.append(f"SAT {profile.sat} offered against the 75th-percentile alternative")
         else:
-            missing.append(
-                f"One of: {BAND_DESCRIPTION}; SAT/ACT at the 75th percentile; "
-                "or an international Olympiad medal"
-            )
+            dim_in_band = profile.dim_score is not None and profile.dim_score >= DIM_BAND_LOW
+            if dim_in_band:
+                met.append(f"DİM {profile.dim_score:.0f} is inside the band")
+                missing.append(
+                    f"DİM {profile.dim_score:.0f} clears some fields but not all: the requirement is "
+                    f"{BAND_DESCRIPTION}, and the bar for your field has not been confirmed here"
+                )
+            if profile.sat is not None:
+                missing.append(_unconfirmed_sat_act_gate("SAT", profile.sat))
+            if profile.act is not None:
+                missing.append(_unconfirmed_sat_act_gate("ACT", profile.act))
+            if not dim_in_band and profile.sat is None and profile.act is None:
+                missing.append(
+                    f"One of: {BAND_DESCRIPTION}; SAT/ACT at the 75th percentile; "
+                    "or an international Olympiad medal"
+                )
 
     status = RouteStatus.OPEN if not missing else RouteStatus.UNLOCKABLE
     return DPEligibility(

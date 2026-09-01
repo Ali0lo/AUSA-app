@@ -135,6 +135,68 @@ def test_master_level_academic_gate_is_reported_unknown_not_open():
     assert any("master" in gate.lower() for gate in result.gates_missing)
 
 
+def test_a_sat_score_alone_does_not_clear_the_gate():
+    """The 75th-percentile SAT/ACT alternative (spec §2.2) is per-institution and
+    per-year, and we have not collected it. The presence of a SAT number must never be
+    read as clearing an unchecked threshold -- it must stay in `gates_missing`, and
+    `status` must never come back OPEN on it alone (Critical 5)."""
+    profile = StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+        sat=1550, language_certificate_level="C1",
+    )
+    result = assess_dp_eligibility(profile)
+    assert result.status is RouteStatus.UNLOCKABLE
+    assert not any("clears" in gate.lower() and "SAT" in gate for gate in result.gates_met)
+    assert any("SAT" in gate for gate in result.gates_missing)
+    assert any("not been confirmed" in gate or "not confirmed" in gate for gate in result.gates_missing)
+
+
+def test_a_low_sat_score_does_not_clear_the_gate_either():
+    """Reproduces the live defect exactly: SAT 200 (an implausibly low score) must not be
+    treated any differently from a high one -- the field is never checked against a
+    threshold at all, so no score, however small, may satisfy it."""
+    profile = StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+        sat=200, dim_score=300.0, language_certificate_level="C1",
+    )
+    result = assess_dp_eligibility(profile)
+    assert result.status is RouteStatus.UNLOCKABLE
+    assert result.gates_missing
+
+
+def test_sat_does_not_bypass_a_sub_band_dim_evaluation():
+    """Because the academic-gate chain used to be a single elif chain, a SAT value
+    skipped the DİM band checks entirely. A student who offers both a sub-band DİM score
+    and a SAT score must have both considered -- and clearing neither must not read as
+    OPEN (Critical 5)."""
+    profile = StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+        dim_score=470.0, sat=1550, language_certificate_level="C1",
+    )
+    result = assess_dp_eligibility(profile)
+    assert result.status is RouteStatus.UNLOCKABLE
+    # The DİM-in-band gate is still reported, exactly as it is without a SAT score.
+    assert any("field" in gate.lower() for gate in result.gates_missing)
+    # And the SAT alternative is separately reported as unconfirmed, not silently dropped.
+    assert any("SAT" in gate for gate in result.gates_missing)
+
+
+def test_an_act_score_is_read_and_reported_as_unconfirmed_not_ignored():
+    """`act` is a StudentRouteProfile field but was never read anywhere in this module --
+    an ACT-only candidate fell through to the generic 'One of: ...' missing message,
+    which mentions 'ACT' regardless of whether the field was ever inspected. Asserting
+    the offered score itself (35) appears in the explanation proves the value was
+    actually read, not that a fixed string happened to contain the letters."""
+    profile = StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+        act=35, language_certificate_level="C1",
+    )
+    result = assess_dp_eligibility(profile)
+    assert result.status is RouteStatus.UNLOCKABLE
+    assert any("35" in gate for gate in result.gates_missing)
+    assert not any("clears" in gate.lower() and "ACT" in gate for gate in result.gates_met)
+
+
 def test_the_gate_never_promises_an_award():
     """Prohibited output, in generated text and UI labels alike (spec §5.2)."""
     profile = StudentRouteProfile(
