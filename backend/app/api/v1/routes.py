@@ -23,6 +23,13 @@ from app.services.dp_eligibility import (
     funded_programmes,
 )
 from app.services.route_engine import assess_routes, compose_two_hop
+from app.services.university_requirements import (
+    any_requirements_curated,
+    describe_universities,
+    missing_requirement_note,
+    qualification_delivered,
+    universities_accepting,
+)
 
 router = APIRouter(prefix="/routes", tags=["Route Planning"])
 
@@ -55,6 +62,40 @@ class RouteHop(BaseModel):
     provenance: str
 
 
+class UniversityResponse(BaseModel):
+    """One university that documents accepting the qualification this plan produces.
+
+    Every requirement field is Optional and stays Optional. `unknown_fields` names the ones
+    that came back NULL and `not_stated` says it in a sentence, because a blank tuition
+    rendered in a list reads as free and a blank language test reads as none required
+    (ADR-0004: an unknown must never read as permission).
+    """
+    university_name: str
+    program_name: str
+    country_code: str
+    intake_year: int
+    entry_qualification_accepted: Optional[str]
+    foundation_required: Optional[bool]
+    foundation_providers: Optional[str]
+    language_test: Optional[str]
+    language_minimum_score: Optional[float]
+    entrance_exam: Optional[str]
+    entrance_exam_minimum: Optional[float]
+    gpa_minimum: Optional[float]
+    gpa_scale: Optional[str]
+    tuition_per_year: Optional[float]
+    currency: Optional[str]
+    application_fee: Optional[float]
+    application_deadline: Optional[str]
+    application_portal: Optional[str]
+    notes: Optional[str]
+    unknown_fields: List[str]
+    not_stated: Optional[str]
+    provenance: str
+    source_url: str
+    last_checked: Optional[str]
+
+
 class RoutePlanResponse(BaseModel):
     hops: List[RouteHop]
     total_months: int
@@ -62,6 +103,17 @@ class RoutePlanResponse(BaseModel):
     total_cost_azn_high: int
     status: str
     missing: List[str]
+    # Where this plan ends, and holding what. `qualification_delivered` is the join key into
+    # the universities below: it is the qualification the student will actually be applying
+    # with, which for a two-hop plan is what the FIRST hop produced, not what they hold today.
+    destination_country: str
+    qualification_delivered: str
+    universities: List[UniversityResponse]
+    # Never let an empty `universities` list stand unexplained: "we have not collected that
+    # country" and "we collected it and none of them accept this qualification" are
+    # different answers and only one of them is about the student.
+    universities_status: str
+    universities_explanation: str
 
 
 class FundedProgrammeResponse(BaseModel):
@@ -96,6 +148,45 @@ class AssessRoutesResponse(BaseModel):
     dp: DPEligibilityResponse
 
 
+def _university_response(match) -> UniversityResponse:
+    """Map one curated row to its response shape.
+
+    Dates and timestamps go out as ISO strings rather than as `date`/`datetime`, so a
+    consumer never has to guess a timezone from a bare date. A NULL stays None all the way
+    to the wire; `unknown_fields` and `not_stated` are what turn that None into something a
+    reader can see, rather than an empty cell they will fill in with an assumption.
+    """
+    row = match.requirement
+    return UniversityResponse(
+        university_name=row.university_name,
+        program_name=row.program_name,
+        country_code=row.country_code,
+        intake_year=row.intake_year,
+        entry_qualification_accepted=row.entry_qualification_accepted,
+        foundation_required=row.foundation_required,
+        foundation_providers=row.foundation_providers,
+        language_test=row.language_test,
+        language_minimum_score=row.language_minimum_score,
+        entrance_exam=row.entrance_exam,
+        entrance_exam_minimum=row.entrance_exam_minimum,
+        gpa_minimum=row.gpa_minimum,
+        gpa_scale=row.gpa_scale,
+        tuition_per_year=row.tuition_per_year,
+        currency=row.currency,
+        application_fee=row.application_fee,
+        application_deadline=(
+            row.application_deadline.isoformat() if row.application_deadline else None
+        ),
+        application_portal=row.application_portal,
+        notes=row.documents_required,
+        unknown_fields=list(match.unknown_fields),
+        not_stated=missing_requirement_note(match.unknown_fields),
+        provenance=row.provenance,
+        source_url=row.source_url,
+        last_checked=row.last_checked.isoformat() if row.last_checked else None,
+    )
+
+
 def _reachable_countries(plans: List[RoutePlanResponse]) -> tuple[str, ...]:
     """Every country code touched by any hop of any plan -- including a two-hop plan's
     destination, not just its intermediate first hop. This is the wiring the product's
@@ -124,29 +215,69 @@ async def assess(
         if a.status.value == "blocked"
     ]
 
-    plans = [
-        RoutePlanResponse(
-            hops=[
-                RouteHop(
-                    key=hop.key,
-                    country_code=hop.country_code,
-                    mechanism=hop.mechanism,
-                    time_cost_months=hop.time_cost_months,
-                    money_cost_azn_low=hop.money_cost_azn[0],
-                    money_cost_azn_high=hop.money_cost_azn[1],
-                    citation=hop.citation,
-                    provenance=hop.provenance,
+    # One lookup per distinct (country, qualification) pair rather than one per plan.
+    # Several plans routinely end in the same place -- the direct UK route and the prep-year
+    # UK route both finish in GB -- and they would each issue the same two queries.
+    seen_destinations: dict[tuple[str, str], tuple[list, str, str]] = {}
+    plans: List[RoutePlanResponse] = []
+
+    for plan in compose_two_hop(profile):
+        destination = plan.hops[-1].country_code
+        delivered = qualification_delivered(plan, profile)
+        cache_key = (destination, delivered)
+
+        if cache_key not in seen_destinations:
+            matches = await universities_accepting(
+                db,
+                country_code=destination,
+                level=profile.level_sought,
+                qualification=delivered,
+            )
+            # Only ask the existence question when it can change the answer.
+            any_curated = (
+                await any_requirements_curated(
+                    db, country_code=destination, level=profile.level_sought
                 )
-                for hop in plan.hops
-            ],
-            total_months=plan.total_months,
-            total_cost_azn_low=plan.total_cost_azn[0],
-            total_cost_azn_high=plan.total_cost_azn[1],
-            status=plan.status.value,
-            missing=list(plan.missing),
+                if not matches
+                else False
+            )
+            uni_status, uni_explanation = describe_universities(
+                matches,
+                country_code=destination,
+                qualification=delivered,
+                any_curated=any_curated,
+            )
+            seen_destinations[cache_key] = (matches, uni_status, uni_explanation)
+
+        matches, uni_status, uni_explanation = seen_destinations[cache_key]
+
+        plans.append(
+            RoutePlanResponse(
+                hops=[
+                    RouteHop(
+                        key=hop.key,
+                        country_code=hop.country_code,
+                        mechanism=hop.mechanism,
+                        time_cost_months=hop.time_cost_months,
+                        money_cost_azn_low=hop.money_cost_azn[0],
+                        money_cost_azn_high=hop.money_cost_azn[1],
+                        citation=hop.citation,
+                        provenance=hop.provenance,
+                    )
+                    for hop in plan.hops
+                ],
+                total_months=plan.total_months,
+                total_cost_azn_low=plan.total_cost_azn[0],
+                total_cost_azn_high=plan.total_cost_azn[1],
+                status=plan.status.value,
+                missing=list(plan.missing),
+                destination_country=destination,
+                qualification_delivered=delivered,
+                universities=[_university_response(match) for match in matches],
+                universities_status=uni_status,
+                universities_explanation=uni_explanation,
+            )
         )
-        for plan in compose_two_hop(profile)
-    ]
 
     dp = assess_dp_eligibility(profile)
     # Only the countries this student's own plans actually reach -- never every country in

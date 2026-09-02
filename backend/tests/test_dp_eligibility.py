@@ -14,7 +14,11 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base
 from app.domain.routes import RouteStatus, StudentRouteProfile
 from app.models.dp_catalogue import DPCatalogueEntry
-from app.models.qualifications import QUALIFICATION_ATTESTAT, QUALIFICATION_BACHELOR_DEGREE
+from app.models.qualifications import (
+    QUALIFICATION_ATTESTAT,
+    QUALIFICATION_BACHELOR_DEGREE,
+    ProgramRequirement,
+)
 from app.services.dp_eligibility import (
     FUNDED_STATUS_LISTED,
     FUNDED_STATUS_NONE_AT_LEVEL,
@@ -37,7 +41,14 @@ async def session():
         poolclass=StaticPool,
     )
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all, tables=[DPCatalogueEntry.__table__])
+        # `program_requirements` is created but left EMPTY on purpose. The endpoint now
+        # reads it as well, and this test's subject is the DP funded-programmes answer --
+        # so the empty table also pins that an uncollected country degrades to a named
+        # "we have not collected this" rather than to a 500 or a silent empty list.
+        await conn.run_sync(
+            Base.metadata.create_all,
+            tables=[DPCatalogueEntry.__table__, ProgramRequirement.__table__],
+        )
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with factory() as s:
         now = datetime.now(timezone.utc)

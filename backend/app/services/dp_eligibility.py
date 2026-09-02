@@ -6,12 +6,13 @@ gates a fixed list of universities. That is the Route shape, which is why it com
 the others: the prep year at an Azerbaijani university opens Germany AND preserves DP
 eligibility, and only one engine can say both.
 
-Neither function here reads `program_requirements`. That table is empty today -- nothing
-populates it yet -- and its NULL columns mean "unknown", never "not required" (ADR-0004).
-The DP's published gates below are hard-coded from dp.edu.az, not derived from that table,
-so this module has nothing to get wrong by reading it; when a future task wires
-program-level requirements into DP eligibility, it must treat "no row found" as unknown,
-never as "no requirements", exactly as that table's docstring requires.
+Neither function here reads `program_requirements`. That table is populated now (by
+`scripts/load_program_requirements.py`) and read by `services/university_requirements.py`,
+but its NULL columns mean "unknown", never "not required" (ADR-0004). The DP's published
+gates below are hard-coded from dp.edu.az, not derived from that table, so this module has
+nothing to get wrong by reading it; if DP eligibility is ever made to consult it, "no row
+found" must stay unknown and never become "no requirements", exactly as that table's
+docstring requires.
 """
 
 from dataclasses import dataclass
