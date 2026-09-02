@@ -31,21 +31,27 @@ local_pgdata/
 .idea/
 *.swp
 
-# Collected datasets -- reproduce with backend/scripts/collect_*.py, see data/README.md.
-# Scoped to data/** so these patterns never swallow source files elsewhere.
+# Collected datasets (~700 MB). Reproduce with backend/scripts/collect_*.py, see
+# data/README.md. Scoped to data/** so these patterns never swallow source files
+# elsewhere, and without them `git add -A` after a collection run commits the raw
+# College Scorecard archive.
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
 data/**/*.csv
 data/**/*.json
 data/**/*.zip
 data/**/*.pdf
+data/**/*.xlsx
+data/raw/turkey/
+data/raw/usa/
+!data/**/.gitkeep
 
 # Curated requirement rows are the exception: hand-written by a person from an official
 # page, small, and not reproducible by any script. Losing one means someone reads a
 # university's admissions page again. These belong in git.
 !data/curation/*.csv
-data/**/*.xlsx
-data/raw/turkey/
-data/raw/usa/
-!data/**/.gitkeep
 
 # Trained model artifacts -- regenerate with train_cutoff_models.py.
 # models/metrics.json IS committed: ADR-0004 requires every predicted_cutoff to be
@@ -53,11 +59,23 @@ data/raw/usa/
 models/*.joblib
 !models/metrics.json
 
+# Model artifacts & vector stores
+*.pkl
+*.faiss
+*.chroma
+
 # CatBoost training logs
 catboost_info/
 
 # Playwright MCP page snapshots, written when inspecting a site's network calls.
 .playwright-mcp/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Next.js generated files
+next-env.d.ts
+*.tsbuildinfo
 
 # Subagent-driven-development scratch: ledgers, briefs, reports, review packages.
 # Git history is the durable record; this is the coordination trail while a plan runs.

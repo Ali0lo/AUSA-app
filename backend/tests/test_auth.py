@@ -1,16 +1,24 @@
 """
 Authentication tests.
 
-These run against a real in-memory SQLite database. The previous version ran against
-no database at all: every request hit an `except Exception` fallback that issued a
-token for student 101 and returned a synthetic profile whose email and GPA were copied
-from this file. The flow it asserted was therefore never executed -- the test certified
-an authentication bypass rather than catching it.
+These run against a real in-memory SQLite database, exactly like test_admin.py and
+test_applications.py. The previous version ran against no database at all: every
+request hit an `except Exception` fallback that issued a token for student 101 and
+returned a synthetic profile whose email and GPA were copied from this file. The flow
+it asserted was therefore never executed -- the test certified an authentication
+bypass rather than catching it. `test_auth_register_and_login_flow` used to also pass
+with no database for the same reason: login fell back to minting a token for subject
+101 and get_current_user fabricated a Student with email
+"test_student_auth@ausa.edu.az" and gpa 3.7 -- the exact values this test asserts.
+The register/login flow below is a real integration test against the SQLite fixture
+rather than one skipped without a live Postgres, and the bypasses additionally have
+regression coverage that needs no database at all.
 """
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -18,6 +26,29 @@ from app.core.database import Base, get_db
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.main import app
 from app.models.student import Student
+
+
+def _database_is_reachable() -> bool:
+    async def _check() -> bool:
+        from sqlalchemy import text
+
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            return True
+        except Exception:
+            return False
+
+    try:
+        return asyncio.run(_check())
+    except Exception:
+        return False
+
+
+requires_db = pytest.mark.skipif(
+    not _database_is_reachable(),
+    reason="needs a live PostgreSQL; run docker-compose up first",
+)
 
 
 def test_password_hashing():
@@ -31,6 +62,7 @@ def test_jwt_creation_and_decoding():
     token = create_access_token(subject=42)
     assert token != ""
     from app.core.security import decode_access_token
+
     sub = decode_access_token(token)
     assert sub == "42"
 
@@ -61,6 +93,65 @@ async def db_session():
         app.dependency_overrides.clear()
 
     await engine.dispose()
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the auth bypasses. These must hold with or without a DB.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_login_never_mints_a_token_for_unknown_credentials():
+    """Login must not return 200 for credentials it could not verify.
+
+    With a database up this is a 401; with it down it is a 503. It was previously
+    a 200 with a valid signed token whenever the database was unreachable, turning
+    any outage into a complete authentication bypass.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(
+            "/api/v1/auth/login",
+            json={"email": "nobody-at-all@example.invalid", "password": "wrong-password"},
+        )
+
+    assert res.status_code != 200, "login returned a token for unverifiable credentials"
+    assert res.status_code in (401, 503)
+    assert "access_token" not in res.json()
+
+
+@pytest.mark.asyncio
+async def test_me_rejects_missing_and_invalid_credentials():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        anonymous = await client.get("/api/v1/auth/me")
+        assert anonymous.status_code == 401
+
+        malformed = await client.get(
+            "/api/v1/auth/me", headers={"Authorization": "Bearer not-a-real-token"}
+        )
+        assert malformed.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_signed_token_for_nonexistent_account_is_rejected():
+    """A validly signed token whose subject has no account must not authenticate.
+
+    This is the core of the deps.py bypass: a deleted user's token stayed valid for
+    its full 7-day TTL because a missing row produced a fabricated Student.
+    """
+    token = create_access_token(subject=99999999)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get(
+            "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
+        )
+
+    assert res.status_code != 200, "a token for a nonexistent account authenticated"
+    assert res.status_code in (401, 503)
+
+
+# ---------------------------------------------------------------------------
+# Integration: runs against the in-memory SQLite fixture above (no live DB needed).
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
@@ -180,7 +271,7 @@ async def test_database_failure_never_issues_a_token():
     """
     class FailingSession:
         async def execute(self, *args, **kwargs):
-            raise RuntimeError("connection refused")
+            raise SQLAlchemyError("connection refused")
 
     async def _get_failing_db():
         yield FailingSession()

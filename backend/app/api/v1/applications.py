@@ -7,10 +7,13 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.application import StudentApplication as ApplicationModel
+from app.models.student import Student
 
 router = APIRouter(prefix="/applications", tags=["Application Tracker & Deadlines"])
 
@@ -83,7 +86,21 @@ class UpdateStagePayload(BaseModel):
     notes: Optional[str] = Field(None, description="Updated notes")
 
 
-def _to_response(app: ApplicationModel) -> ApplicationResponse:
+# -------------------------------------------------------------
+# Ownership helpers
+# -------------------------------------------------------------
+def _owner_key(student: Student) -> str:
+    """The tracker's owner key for an authenticated student.
+
+    StudentApplication.student_id is a string column, so the numeric account id
+    is stringified. This is the ONLY source of ownership -- never a request
+    parameter, or one student can read and mutate another's records.
+    """
+    return str(student.id)
+
+
+def _to_response(app: ApplicationModel) -> "ApplicationResponse":
+    """Serialize a tracker row, computing its deadline countdown."""
     days, is_urgent = calculate_days_remaining(app.deadline)
     return ApplicationResponse(
         id=app.id,
@@ -111,10 +128,14 @@ def _to_response(app: ApplicationModel) -> ApplicationResponse:
     summary="Get Student Applications & Deadline Countdowns"
 )
 async def get_my_applications(
-    student_id: str = Query("std_demo", description="Student account identifier"),
+    current_student: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> List[ApplicationResponse]:
-    """Retrieve active student applications with calculated deadline countdowns.
+    """Retrieve the authenticated student's applications with deadline countdowns.
+
+    The owner is taken from the bearer token. It was previously a `student_id`
+    query parameter with a default, so any caller could read any student's
+    applications by passing their id.
 
     An empty result is a real answer -- a student who has tracked nothing gets an
     empty list, never four applications that are not theirs. This previously fell
@@ -123,14 +144,18 @@ async def get_my_applications(
     you have no applications". A database that cannot be read is reported as an
     outage (503), not silently answered with the same invented rows.
     """
+    owner_id = _owner_key(current_student)
+
     try:
-        stmt = select(ApplicationModel).where(ApplicationModel.student_id == student_id)
+        stmt = select(ApplicationModel).where(ApplicationModel.student_id == owner_id)
         res = await db.execute(stmt)
         db_apps = list(res.scalars().all())
-    except Exception as exc:
+    except SQLAlchemyError as exc:
+        # Do not fall back to demo records -- that silently showed one student
+        # another student's data and hid a broken schema. See docs/adr/0004.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Cannot read the applications store; it is currently unavailable.",
+            detail="The application tracker is temporarily unavailable.",
         ) from exc
 
     return [_to_response(app) for app in db_apps]
@@ -144,9 +169,13 @@ async def get_my_applications(
 )
 async def create_application(
     payload: CreateApplicationPayload,
+    current_student: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> ApplicationResponse:
-    """Add a new target program to the student application tracker.
+    """Add a new target program to the authenticated student's tracker.
+
+    `payload.student_id` is deliberately ignored: the owner comes from the token,
+    so a caller cannot create records under another student's account.
 
     A write that did not happen is not a 201. This previously caught any exception
     from the insert, invented an id from `len(DEMO_APPLICATIONS) + 101`, appended to
@@ -154,7 +183,7 @@ async def create_application(
     missing deadline to "2026-07-01", and returned 201 Created for a row that was
     never persisted.
     """
-    sid = payload.student_id or "std_demo"
+    sid = _owner_key(current_student)
 
     try:
         new_app = ApplicationModel(
@@ -173,7 +202,9 @@ async def create_application(
         db.add(new_app)
         await db.commit()
         await db.refresh(new_app)
-    except Exception as exc:
+    except SQLAlchemyError as exc:
+        # Previously this appended to an in-memory demo list and reported success,
+        # so the student believed the program was saved when nothing was written.
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -192,25 +223,36 @@ async def create_application(
 async def update_application_stage(
     application_id: int,
     payload: UpdateStagePayload,
+    current_student: Student = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> ApplicationResponse:
-    """Update the application lifecycle stage and notes.
+    """Update the stage and notes of one of the authenticated student's applications.
+
+    The record is looked up by id **and** owner. Looking up by primary key alone
+    let any caller mutate any student's application.
 
     An application we do not hold cannot be updated. This previously answered an
     unknown id with HTTP 200 and the literals "Target Institution" / "Degree Program"
     -- the same fabricated strings Ruling 6 removed from pdf_export.py, one file over.
     """
+    owner_id = _owner_key(current_student)
+
     try:
-        stmt = select(ApplicationModel).where(ApplicationModel.id == application_id)
+        stmt = select(ApplicationModel).where(
+            ApplicationModel.id == application_id,
+            ApplicationModel.student_id == owner_id,
+        )
         res = await db.execute(stmt)
         app = res.scalar_one_or_none()
-    except Exception as exc:
+    except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cannot reach the applications store; nothing was updated.",
         ) from exc
 
     if app is None:
+        # 404 rather than 403 so the response does not reveal that an application
+        # with this id exists under another account.
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No application with id {application_id}.",
@@ -222,7 +264,7 @@ async def update_application_stage(
 
     try:
         await db.commit()
-    except Exception as exc:
+    except SQLAlchemyError as exc:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

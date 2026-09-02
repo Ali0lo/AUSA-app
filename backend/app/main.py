@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.api.v1.router import api_router
@@ -32,20 +33,34 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Set up robust CORS middleware
+# CORS: exact origins from settings only.
+#
+# There was an allow_origin_regex=r"https?://.*" here, which matched every origin
+# and made the allowlist decorative. Combined with allow_credentials=True that lets
+# any site a logged-in user visits issue credentialed requests and read the replies.
+# Add deployed frontend origins to BACKEND_CORS_ORIGINS instead.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ],
-    allow_origin_regex=r"https?://.*",
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(ConnectionError)
+async def _database_unreachable_handler(request: Request, exc: ConnectionError) -> JSONResponse:
+    """Report a lost database connection as an outage.
+
+    asyncpg raises a bare ConnectionRefusedError (an OSError) when Postgres is
+    unreachable, so SQLAlchemy never wraps it and endpoint-level SQLAlchemyError
+    handlers do not see it. Without this it surfaces as an opaque 500 -- and the
+    code this replaced answered it by fabricating data instead.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "A required service is temporarily unavailable."},
+    )
+
 
 # Mount API v1 router
 app.include_router(api_router, prefix=settings.API_V1_STR)

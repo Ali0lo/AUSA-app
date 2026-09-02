@@ -2,6 +2,7 @@ from typing import AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -41,22 +42,23 @@ async def get_current_user(
     else:
         stmt = stmt.where(Student.email == subject)
 
+    # A database failure must surface as an outage, never as a successful login.
+    # See docs/adr/0004 -- no silent fallbacks. This previously fell through to a
+    # synthetic Student (gpa 3.7, budget 20000) copied from test_auth.py, so any
+    # database error authenticated any well-formed token and handed the caller an
+    # invented profile that then drove matching.
     try:
         result = await db.execute(stmt)
-        student = result.scalars().first()
-    except Exception as exc:
-        # The database is the only authority on who exists. If it cannot be reached,
-        # nobody is authenticated. This previously fell through to a synthetic Student
-        # (gpa 3.7, budget 20000) copied from test_auth.py, so any database error
-        # authenticated any well-formed token and handed the caller an invented profile
-        # that then drove matching.
+    except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Authentication is temporarily unavailable.",
         ) from exc
 
+    student = result.scalars().first()
     if student is None:
-        # A correctly signed token for a student who no longer exists is not valid.
+        # A correctly signed token for a student who no longer exists is not valid
+        # (e.g. deleted user).
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired authentication token.",

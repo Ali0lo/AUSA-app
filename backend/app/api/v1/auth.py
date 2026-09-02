@@ -2,6 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -101,10 +102,11 @@ async def login(
         return TokenResponse(access_token=token, token_type="bearer")
     except HTTPException:
         raise
-    except Exception as exc:
+    except SQLAlchemyError as exc:
         # Never issue a token when credentials could not be checked. This previously
         # returned a valid token for student 101 on any database error -- an
         # authentication bypass triggered by an outage, not a dev convenience.
+        # See docs/adr/0004 -- no silent fallbacks.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Login is temporarily unavailable.",
@@ -154,9 +156,10 @@ async def register(
         return TokenResponse(access_token=token, token_type="bearer")
     except HTTPException:
         raise
-    except Exception as exc:
+    except SQLAlchemyError as exc:
         # No account was created, so no token is owed. This previously returned a valid
-        # token for student 101 whenever the write failed.
+        # token for student 101 whenever the write failed. See docs/adr/0004 -- no
+        # silent fallbacks.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Registration is temporarily unavailable.",

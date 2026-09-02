@@ -29,10 +29,15 @@ async def require_admin_user(
 ) -> Student:
     """Admit only an authenticated student whose email is on the allowlist.
 
+    Authentication is delegated to get_current_user (raises 401 on a bad or unknown
+    token). Authorisation is an explicit allowlist in settings.ADMIN_EMAILS.
+
     This previously returned {"is_admin": True} for every caller, so the entire admin
     surface -- including the endpoint that publishes unverified programme data to
-    students -- was open to anyone who could reach the API. An empty allowlist denies
-    everyone: a deployment that forgot to configure this is closed, not open.
+    students -- was open to anyone who could reach the API. Fail-closed: an empty or
+    misconfigured allowlist denies everyone rather than opening the curation endpoints
+    -- which mark scraped programs as human-verified, the guardrail data-sourcing.md
+    requires before data reaches a student -- to the world.
     """
     allowed = {email.strip().lower() for email in settings.ADMIN_EMAILS if email.strip()}
     if not current_user.email or current_user.email.strip().lower() not in allowed:

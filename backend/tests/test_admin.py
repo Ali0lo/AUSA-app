@@ -1,5 +1,21 @@
+"""Security boundary tests for the admin curation endpoints.
+
+These routes can mark scraped programs as human-verified, and that verification is
+the guardrail data-sourcing.md requires before data is shown to a student. They were
+previously reachable by anyone: require_admin_user took no request and returned
+{"is_admin": True} unconditionally.
+
+Most assertions run against a real in-memory SQLite database via the `admin_env`
+fixture below, exactly like test_auth.py and test_applications.py, so the
+authenticated non-admin (403) and successful-admin paths are exercised for real
+rather than skipped without a live Postgres. The route-level parametrized tests
+further down need no database at all -- an unauthenticated or malformed-token
+request is rejected by the dependency before any query runs.
+"""
+
 import pytest
 import pytest_asyncio
+from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -10,6 +26,8 @@ from app.core.security import create_access_token
 from app.main import app
 from app.models.program import Program as ProgramModel
 from app.models.student import Student
+
+client = TestClient(app)
 
 ADMIN_EMAIL = "curator@ausa.edu.az"
 STUDENT_EMAIL = "ordinary_student@ausa.edu.az"
@@ -245,3 +263,52 @@ async def test_seed_endpoint_reports_failure_as_failure(admin_env, monkeypatch):
 
     assert res.status_code == 503
     assert "success" not in res.text.lower()
+
+
+# ---------------------------------------------------------------------------
+# Route-level boundary sweep: no database needed, rejected before any query runs.
+# ---------------------------------------------------------------------------
+
+ADMIN_ROUTES = [
+    ("get", "/api/v1/admin/programs/flagged", None),
+    (
+        "put",
+        "/api/v1/admin/programs/1001/verify",
+        {
+            "university_name": "Heidelberg University",
+            "program_name": "B.Sc. Computer Science",
+            "tuition_fee": 3000.0,
+            "min_gpa": 3.0,
+            "min_ielts": 6.5,
+            "verified_by": "admin@ausa.edu.az",
+        },
+    ),
+    ("post", "/api/v1/admin/seed", None),
+]
+
+
+@pytest.mark.parametrize("method,path,payload", ADMIN_ROUTES)
+def test_admin_routes_reject_anonymous_callers(method, path, payload):
+    """No credentials must never reach a curation endpoint."""
+    response = getattr(client, method)(path, **({"json": payload} if payload else {}))
+    assert response.status_code == 401, (
+        f"{method.upper()} {path} returned {response.status_code} without credentials"
+    )
+
+
+@pytest.mark.parametrize("method,path,payload", ADMIN_ROUTES)
+def test_admin_routes_reject_invalid_tokens(method, path, payload):
+    """A malformed bearer token must not authenticate."""
+    kwargs = {"headers": {"Authorization": "Bearer not-a-real-token"}}
+    if payload:
+        kwargs["json"] = payload
+    response = getattr(client, method)(path, **kwargs)
+    assert response.status_code == 401
+
+
+def test_admin_allowlist_is_empty_by_default():
+    """Fail-closed: a deployment that configures no admins grants nobody access."""
+    assert settings.ADMIN_EMAILS == [], (
+        "ADMIN_EMAILS must default to empty so a misconfigured deployment locks "
+        "the curation endpoints rather than opening them"
+    )
