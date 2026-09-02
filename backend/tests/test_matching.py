@@ -1,7 +1,6 @@
 import pytest
 from app.schemas.matching import ProgramRequirements, ScholarshipSchema, StudentProfile
 from app.services.matching.engine import evaluate_match
-from app.services.matching.prediction import admission_predictor
 from app.services.matching.scoring import (
     calculate_academic_score,
     calculate_budget_score,
@@ -33,6 +32,53 @@ def test_calculate_academic_score_shortfall():
     assert score < 100.0
     assert passed is False
     assert "below" in exp
+
+
+def test_calculate_academic_score_null_required_gpa_is_not_a_passing_score():
+    """A NULL min_gpa means the requirement is unknown, never 'not required' (Ruling 15).
+    An unconfirmed requirement must never be scored as met -- ADR-0004's sharpest form: an
+    unknown must never read as permission (Critical 6)."""
+    score, exp, passed = calculate_academic_score(student_gpa=2.0, required_gpa=None)
+    assert score < 100.0
+    assert passed is False
+    assert "no minimum gpa specified" not in exp.lower()
+
+
+def test_calculate_language_score_null_requirements_is_not_a_passing_score():
+    """A NULL min_ielts and min_toefl means unknown, never 'not required' -- must not
+    grant 100% + a passed hard filter to a student with no language score at all
+    (Critical 6)."""
+    score, exp, passed = calculate_language_score(
+        student_ielts=None, student_toefl=None, min_ielts=None, min_toefl=None
+    )
+    assert score < 100.0
+    assert passed is False
+    assert "not required for this program" not in exp.lower()
+
+
+def test_evaluate_match_with_all_null_requirements_is_not_100_percent_eligible():
+    """Reproduces the live defect from the review report exactly: GPA 2.0, no IELTS, no
+    TOEFL, against a programme whose min_gpa/min_ielts/min_toefl are all NULL used to come
+    back is_eligible=True, overall_match_percentage=100.0. A programme whose requirements
+    we do not hold cannot be scored as a match (Critical 6)."""
+    student = StudentProfile(
+        gpa=2.0,
+        budget=20000.0,
+        degree_level="bachelor",
+    )
+    program = ProgramRequirements(
+        university_name="Unknown Requirements University",
+        program_name="B.Sc. Undeclared",
+        degree_level="bachelor",
+        tuition_fee=5000.0,
+    )
+    result = evaluate_match(student, program)
+    assert result.is_eligible is False
+    assert result.overall_match_percentage < 100.0
+    assert result.breakdown.academic.passed_hard_filter is False
+    assert result.breakdown.language.passed_hard_filter is False
+    assert result.breakdown.academic.score < 100.0
+    assert result.breakdown.language.score < 100.0
 
 
 def test_calculate_budget_score():
@@ -69,8 +115,7 @@ def test_evaluate_match_perfect_match():
     assert result.breakdown.academic.score == 100.0
     assert result.breakdown.budget.score == 100.0
     assert result.breakdown.language.score == 100.0
-    assert result.admission_probability is not None
-    assert 0.0 <= result.admission_probability <= 1.0
+    assert result.admission_probability is None
     assert result.admission_prediction_rationale is not None
 
 
@@ -176,9 +221,16 @@ def test_scholarship_first_net_cost_evaluation():
 
 
 # -------------------------------------------------------------
-# Tests for ADR-0001 & ADR-0002 Predictive ML Cutoff Inference
+# Tests for ADR-0008: admission probability is withdrawn, not estimated
 # -------------------------------------------------------------
-def test_admission_predictor_turkey_and_usa():
+def test_no_admission_probability_is_published():
+    """ADR-0008 withdrew this number. Its absence is deliberate and must stay absent.
+
+    This previously asserted `admission_probability is not None`, which certified a
+    fabrication: with the model artifacts absent -- and they are gitignored, so absent on
+    every fresh clone -- the number came from a hardcoded arithmetic formula, computed over
+    an IELTS of 6.0 invented for students who never sat the exam.
+    """
     student = StudentProfile(
         gpa=3.8,
         budget=25000.0,
@@ -204,16 +256,45 @@ def test_admission_predictor_turkey_and_usa():
         min_ielts=7.0
     )
 
-    prob_tr = admission_predictor.calculate_admission_probability(student, program_turkey)
-    prob_us = admission_predictor.calculate_admission_probability(student, program_usa)
+    result_tr = evaluate_match(student, program_turkey)
+    result_us = evaluate_match(student, program_usa)
 
-    assert 0.0 <= prob_tr <= 1.0
-    assert 0.0 <= prob_us <= 1.0
+    assert result_tr.admission_probability is None
+    assert result_us.admission_probability is None
+
+
+def test_the_rationale_promises_no_percentage_and_cites_no_dataset():
+    """The withdrawn strings cited '2019-2024' and 'US College Scorecard data' for a number
+    that was frequently a formula. Neither claim may return."""
+    student = StudentProfile(
+        gpa=3.8,
+        budget=25000.0,
+        ielts=7.5,
+        degree_level="master"
+    )
+    program_turkey = ProgramRequirements(
+        university_name="Bilkent University",
+        program_name="M.Sc. Computer Engineering",
+        degree_level="master",
+        country="Turkey",
+        min_gpa=3.2,
+        tuition_fee=15000.0,
+        min_ielts=6.5
+    )
+    program_usa = ProgramRequirements(
+        university_name="MIT",
+        program_name="M.Sc. Artificial Intelligence",
+        degree_level="master",
+        country="USA",
+        min_gpa=3.5,
+        tuition_fee=50000.0,
+        min_ielts=7.0
+    )
 
     result_tr = evaluate_match(student, program_turkey)
     result_us = evaluate_match(student, program_usa)
 
-    assert result_tr.admission_probability == prob_tr
-    assert "2019-2024" in result_tr.admission_prediction_rationale
-    assert result_us.admission_probability == prob_us
-    assert "Scorecard" in result_us.admission_prediction_rationale
+    for rationale in (result_tr.admission_prediction_rationale, result_us.admission_prediction_rationale):
+        assert "%" not in rationale
+        assert "Scorecard" not in rationale
+        assert "2019-2024" not in rationale

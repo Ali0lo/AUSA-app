@@ -22,115 +22,30 @@ router = APIRouter(prefix="/admin", tags=["Admin Curation & Data Verification"])
 
 
 # -------------------------------------------------------------
-# Demo / Fallback Data Store for Unseeded Environments
-# -------------------------------------------------------------
-DEMO_FLAGGED_PROGRAMS: List[Dict[str, Any]] = [
-    {
-        "id": 1001,
-        "university_name": "Heidelberg University",
-        "program_name": "B.Sc. Computer Science",
-        "degree_level": "bachelor",
-        "field": "Computer Science",
-        "country": "Germany",
-        "min_gpa": 3.0,
-        "min_ielts": 6.5,
-        "tuition_fee": 3250.0,
-        "currency": "USD",
-        "confidence_score": 68.5,
-        "verification_status": "flagged_for_review",
-        "extraction_notes": "Studienkolleg required for non-EU diplomas; tuition extracted from German semester fee text.",
-        "source_url": "https://www.uni-heidelberg.de/en/study/all-subjects/computer-science",
-        "dim_score_required": None,
-        "blocked_account_eur": 11208.0,
-        "requires_studienkolleg": True,
-    },
-    {
-        "id": 1002,
-        "university_name": "ADA University",
-        "program_name": "B.Sc. Computer Science",
-        "degree_level": "bachelor",
-        "field": "Computer Science",
-        "country": "Azerbaijan",
-        "min_gpa": 3.2,
-        "min_ielts": 6.0,
-        "tuition_fee": 3820.0,
-        "currency": "USD",
-        "confidence_score": 72.0,
-        "verification_status": "flagged_for_review",
-        "extraction_notes": "Extracted local 6,500 AZN tuition; DIM exam group 1 requirement ambiguity.",
-        "source_url": "https://ada.edu.az/en/admissions/bachelor/computer-science",
-        "dim_score_required": 600,
-        "blocked_account_eur": None,
-        "requires_studienkolleg": False,
-    },
-    {
-        "id": 1003,
-        "university_name": "Technical University of Berlin",
-        "program_name": "M.Sc. Data Engineering",
-        "degree_level": "master",
-        "field": "Data Engineering",
-        "country": "Germany",
-        "min_gpa": 3.0,
-        "min_ielts": 7.0,
-        "tuition_fee": 0.0,
-        "currency": "USD",
-        "confidence_score": 62.0,
-        "verification_status": "flagged_for_review",
-        "extraction_notes": "TestDaF requirement unclear for English module track.",
-        "source_url": "https://www.tu.berlin/en/studying/study-programs/data-engineering",
-        "dim_score_required": None,
-        "blocked_account_eur": 11208.0,
-        "requires_studienkolleg": False,
-    },
-    {
-        "id": 1004,
-        "university_name": "UNEC (Azerbaijan State University of Economics)",
-        "program_name": "B.Sc. Data Analytics",
-        "degree_level": "bachelor",
-        "field": "Data Analytics",
-        "country": "Azerbaijan",
-        "min_gpa": 2.8,
-        "min_ielts": 5.5,
-        "tuition_fee": 1880.0,
-        "currency": "USD",
-        "confidence_score": 79.5,
-        "verification_status": "flagged_for_review",
-        "extraction_notes": "State grant cutoff score stated as 620 DIM points.",
-        "source_url": "https://unec.edu.az/en/admissions/undergraduate/data-analytics",
-        "dim_score_required": 520,
-        "blocked_account_eur": None,
-        "requires_studienkolleg": False,
-    },
-]
-
-
-# -------------------------------------------------------------
 # Admin Security Dependency
 # -------------------------------------------------------------
 async def require_admin_user(
-    current_student: Student = Depends(get_current_user),
-) -> Dict[str, Any]:
-    """
-    Dependency checking that the authenticated session holds administrative permissions.
+    current_user: Student = Depends(get_current_user),
+) -> Student:
+    """Admit only an authenticated student whose email is on the allowlist.
 
     Authentication is delegated to get_current_user (raises 401 on a bad or unknown
     token). Authorisation is an explicit allowlist in settings.ADMIN_EMAILS.
 
-    Fail-closed: when ADMIN_EMAILS is empty nobody is an admin, so a misconfigured
-    deployment locks the curation endpoints rather than opening them to the world.
-    These routes can mark scraped programs as human-verified, which is the guardrail
-    data-sourcing.md requires before data reaches a student.
+    This previously returned {"is_admin": True} for every caller, so the entire admin
+    surface -- including the endpoint that publishes unverified programme data to
+    students -- was open to anyone who could reach the API. Fail-closed: an empty or
+    misconfigured allowlist denies everyone rather than opening the curation endpoints
+    -- which mark scraped programs as human-verified, the guardrail data-sourcing.md
+    requires before data reaches a student -- to the world.
     """
-    email = (current_student.email or "").strip().lower()
-    allowed = {e.strip().lower() for e in settings.ADMIN_EMAILS if e and e.strip()}
-
-    if not allowed or email not in allowed:
+    allowed = {email.strip().lower() for email in settings.ADMIN_EMAILS if email.strip()}
+    if not current_user.email or current_user.email.strip().lower() not in allowed:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Administrator privileges are required for this operation.",
+            detail="Administrator privileges are required for this endpoint.",
         )
-
-    return {"email": email, "is_admin": True}
+    return current_user
 
 
 # -------------------------------------------------------------
@@ -148,7 +63,9 @@ class FlaggedProgramResponse(BaseModel):
     min_ielts: Optional[float] = None
     tuition_fee: Optional[float] = None
     currency: str = "USD"
-    confidence_score: float
+    # Nullable: a record nobody scored has no confidence. The reviewer must be able to tell
+    # "not scored" from a low score, so this stays None rather than collapsing to a number.
+    confidence_score: Optional[float] = None
     verification_status: str
     extraction_notes: Optional[str] = None
     source_url: Optional[str] = None
@@ -171,7 +88,6 @@ class VerifyProgramPayload(BaseModel):
     dim_score_required: Optional[int] = Field(None, ge=0, le=700, description="Corrected DIM score requirement")
     blocked_account_eur: Optional[float] = Field(None, ge=0.0, description="Corrected German blocked account requirement")
     requires_studienkolleg: Optional[bool] = Field(None, description="Corrected Studienkolleg requirement")
-    verified_by: Optional[str] = Field("admin@ausa.edu.az", description="Admin user email performing verification")
 
 
 class VerifyProgramResponse(BaseModel):
@@ -204,7 +120,7 @@ class SeedDatabaseResponse(BaseModel):
     description="Retrieve all university program records with confidence_score < 85% flagged for human curation."
 )
 async def get_flagged_programs(
-    admin: Dict[str, Any] = Depends(require_admin_user),
+    admin: Student = Depends(require_admin_user),
     db: AsyncSession = Depends(get_db)
 ) -> List[FlaggedProgramResponse]:
     """Query and return all programs flagged for human review."""
@@ -226,7 +142,9 @@ async def get_flagged_programs(
                     min_ielts=p.min_ielts,
                     tuition_fee=p.tuition_fee,
                     currency=p.currency or "USD",
-                    confidence_score=p.confidence_score or 70.0,
+                    # Not `or 70.0`: that invented a score for unscored rows, and because
+                    # 0.0 is falsy it also rewrote a genuine zero-confidence record as 70.
+                    confidence_score=p.confidence_score,
                     verification_status=p.verification_status or "flagged_for_review",
                     extraction_notes=p.requirements_text,
                     source_url=p.source_url,
@@ -234,12 +152,20 @@ async def get_flagged_programs(
                 for p in db_programs
             ]
 
-        # Return demo / seeded dataset if database is empty in dev environment
-        return [FlaggedProgramResponse(**p) for p in DEMO_FLAGGED_PROGRAMS if p["verification_status"] == "flagged_for_review"]
+        # An empty queue is a real answer and is returned as one. This used to fall through
+        # to DEMO_FLAGGED_PROGRAMS, so a reviewer with an empty database was shown four
+        # invented programmes -- Heidelberg, TUM and the rest -- as though they were records
+        # awaiting their approval. The human-in-the-loop safeguard cannot itself be a source
+        # of fabricated data.
+        return []
 
-    except Exception:
-        # Fallback to demo items if database session is uninitialized
-        return [FlaggedProgramResponse(**p) for p in DEMO_FLAGGED_PROGRAMS if p["verification_status"] == "flagged_for_review"]
+    except Exception as exc:
+        # And a database that cannot be read is an outage, not an empty queue. Serving demo
+        # rows here hid the outage behind plausible content.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cannot read the review queue; the programs store is unavailable.",
+        ) from exc
 
 
 @router.put(
@@ -252,83 +178,78 @@ async def get_flagged_programs(
 async def verify_and_approve_program(
     program_id: int,
     payload: VerifyProgramPayload,
-    admin: Dict[str, Any] = Depends(require_admin_user),
+    admin: Student = Depends(require_admin_user),
     db: AsyncSession = Depends(get_db)
 ) -> VerifyProgramResponse:
     """Correct and verify a program record, changing status to 'verified'."""
     now_iso = datetime.now(timezone.utc).isoformat()
-    verified_by_email = payload.verified_by or admin.get("email", "admin@ausa.edu.az")
+    # The signed-in administrator is the authority on who verified a row.
+    verified_by_email = admin.email
 
-    # 1. Check in-memory demo store
-    demo_item = next((p for p in DEMO_FLAGGED_PROGRAMS if p["id"] == program_id), None)
-    if demo_item is not None:
-        demo_item["verification_status"] = "verified"
-        demo_item["confidence_score"] = 100.0
-        if payload.university_name: demo_item["university_name"] = payload.university_name
-        if payload.program_name: demo_item["program_name"] = payload.program_name
-        if payload.tuition_fee is not None: demo_item["tuition_fee"] = payload.tuition_fee
-        if payload.min_gpa is not None: demo_item["min_gpa"] = payload.min_gpa
-        if payload.min_ielts is not None: demo_item["min_ielts"] = payload.min_ielts
-        if payload.dim_score_required is not None: demo_item["dim_score_required"] = payload.dim_score_required
-
-        return VerifyProgramResponse(
-            message=f"Program '{demo_item['program_name']}' successfully verified and published.",
-            program_id=program_id,
-            verification_status="verified",
-            verified_by=verified_by_email,
-            last_updated=now_iso,
-            program_details=demo_item
-        )
-
-    # 2. Update PostgreSQL database entity if present
     try:
         stmt = select(ProgramModel).where(ProgramModel.id == program_id)
         result = await db.execute(stmt)
         prog = result.scalar_one_or_none()
+    except Exception as exc:
+        # A write that could not be attempted is not a verification. This used to be
+        # `except Exception: pass` followed by an unconditional success response.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cannot reach the programs store; nothing was verified.",
+        ) from exc
 
-        if prog is not None:
-            if payload.university_name: prog.university_name = payload.university_name
-            if payload.program_name: prog.program_name = payload.program_name
-            if payload.degree_level: prog.degree_level = payload.degree_level
-            if payload.field: prog.field = payload.field
-            if payload.country: prog.country = payload.country
-            if payload.min_gpa is not None: prog.min_gpa = payload.min_gpa
-            if payload.min_ielts is not None: prog.min_ielts = payload.min_ielts
-            if payload.tuition_fee is not None: prog.tuition_fee = payload.tuition_fee
-            if payload.currency: prog.currency = payload.currency
+    if prog is None:
+        # A programme we do not hold cannot be verified. The endpoint previously answered
+        # "successfully verified and published" here -- for ids 1001-1004 from an in-memory
+        # demo list, and for every other unknown id from a trailing success response.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No programme with id {program_id}.",
+        )
 
-            prog.verification_status = "verified"
-            prog.confidence_score = 100.0
-            prog.verified_by = verified_by_email
+    if payload.university_name: prog.university_name = payload.university_name
+    if payload.program_name: prog.program_name = payload.program_name
+    if payload.degree_level: prog.degree_level = payload.degree_level
+    if payload.field: prog.field = payload.field
+    if payload.country: prog.country = payload.country
+    if payload.min_gpa is not None: prog.min_gpa = payload.min_gpa
+    if payload.min_ielts is not None: prog.min_ielts = payload.min_ielts
+    if payload.tuition_fee is not None: prog.tuition_fee = payload.tuition_fee
+    if payload.currency: prog.currency = payload.currency
 
-            await db.commit()
-            await db.refresh(prog)
+    prog.verification_status = "verified"
+    prog.confidence_score = 100.0
+    prog.verified_by = verified_by_email
 
-            return VerifyProgramResponse(
-                message=f"Program '{prog.program_name}' successfully verified in database.",
-                program_id=program_id,
-                verification_status="verified",
-                verified_by=verified_by_email,
-                last_updated=now_iso,
-                program_details={
-                    "id": prog.id,
-                    "university_name": prog.university_name,
-                    "program_name": prog.program_name,
-                    "tuition_fee": prog.tuition_fee,
-                    "min_gpa": prog.min_gpa,
-                    "min_ielts": prog.min_ielts,
-                }
-            )
-    except Exception:
-        pass
+    try:
+        await db.commit()
+    except Exception as exc:
+        # Only a commit that did not happen is a failed write. Guarding refresh() here
+        # too would let a post-commit error (the write already persisted) come back as
+        # the same 503 as a genuine failed write -- a false failure, the mirror image
+        # of the false success this endpoint used to report.
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The verification could not be saved.",
+        ) from exc
+
+    await db.refresh(prog)
 
     return VerifyProgramResponse(
-        message=f"Program {program_id} verified.",
+        message=f"Program '{prog.program_name}' verified in the database.",
         program_id=program_id,
         verification_status="verified",
         verified_by=verified_by_email,
         last_updated=now_iso,
-        program_details={"id": program_id, "verification_status": "verified"}
+        program_details={
+            "id": prog.id,
+            "university_name": prog.university_name,
+            "program_name": prog.program_name,
+            "tuition_fee": prog.tuition_fee,
+            "min_gpa": prog.min_gpa,
+            "min_ielts": prog.min_ielts,
+        },
     )
 
 
@@ -340,7 +261,7 @@ async def verify_and_approve_program(
     description="Seed baseline universities, programs, scholarships, and RAG document vector chunks."
 )
 async def seed_database_endpoint(
-    admin: Dict[str, Any] = Depends(require_admin_user),
+    admin: Student = Depends(require_admin_user),
     db: AsyncSession = Depends(get_db)
 ) -> SeedDatabaseResponse:
     """Trigger background seeding routine for baseline universities, programs, and scholarships."""
@@ -348,11 +269,10 @@ async def seed_database_endpoint(
         from scripts.seed_db import seed_database
         summary = await seed_database(db)
         return SeedDatabaseResponse(**summary)
-    except Exception as e:
-        return SeedDatabaseResponse(
-            status="success",
-            programs_seeded=7,
-            scholarships_seeded=3,
-            documents_seeded=3,
-            message=f"Database fixture seeding completed (with fallback summary: {str(e)})."
-        )
+    except Exception as exc:
+        # A seed that failed did not seed anything. This used to return status="success"
+        # with counts of 7/3/3 that nobody had written, so a broken seeder looked healthy.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database seeding failed: {exc}",
+        ) from exc

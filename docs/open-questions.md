@@ -1,45 +1,41 @@
 # AUSA — Open Questions
 
-**Deadline: 15 September 2026.** Updated 23 August — **23 days left**.
+**Deadline: 15 September 2026.** Updated 29 August — **17 days left**.
 
-**4 of 18 answered.** Fill in the `**Answer:**` line under each remaining question.
+**13 of 22 answered.** Fill in the `**Answer:**` line under each remaining question.
 Every question carries a recommendation — accept it, override it, or write something
 better. Decisions already settled are recorded in [`adr/`](adr/) and are not repeated here.
+Current status of the whole project is in [`PROJECT-STATE.md`](PROJECT-STATE.md).
 
 Legend: 🔴 blocks implementation · 🟡 blocks a specific country or feature · 🟢 can be deferred
 
 ## Still required — read this first
 
-Answered so far: **B1** (country order), **B3** (coverage check), **B5** (deadline),
-**C1** (deterministic hard filters are acceptable — the ADR-0001 design stands).
+Answered so far: **A4**, **B1**, **B2**, **B3**, **B4**, **B5**, **C1**, **C2**, **C3**,
+**C4**, **F1** (process, owner still unnamed), and the scope/positioning decisions from
+the 28 August grilling session.
 
-Given 23 days, the remaining questions are no longer equally urgent. These are the ones
-that actually block work now:
+Given 17 days, these are the ones that actually block work now:
 
 | Answer today | Why it blocks |
 |---|---|
-| **B2** — which degree levels? | Decides what gets curated starting tomorrow. Curation is the critical path and cannot start without it |
-| **B4** — who does what? | Four tracks, four people, 23 days. Nobody can start until this is assigned |
-| **A4** — who collects Azerbaijan DIM data? | Only the team can do this one. Nothing else unblocks it |
-| **C4** — is "the persistence baseline won" acceptable? | If it would be graded as failure, the ML plan needs a second component designed in *now*, not in week three |
+| **G1, G2, G3, G4** — admission routes | Blocks ADR-0006 acceptance and the schema key. Determines whether the Turkish data we already have serves the product or only the model |
+| **F1 owner** — the *name* is still missing | The Q4 decision to scrape sec.az / uniaz.info makes this a hard prerequisite, not background work. No DIM collection code runs until it is named |
 
 | Answer within 3 days | Why |
 |---|---|
-| **A1** — Germany aggregator or direct? | Gates all German collection, and Germany is the top market |
-| **F1** — who signs off on scraping legality? | Gates A1. Must happen before any German collection code runs |
-| **C2, C3** — algorithms and deliverables | Shapes the training pipeline and where the code lives |
+| **A1** — Germany aggregator or direct? | Only if the **5 September** Germany go/no-go passes. Otherwise moot |
 
 | Can wait | |
 |---|---|
-| **A2, A3** (Poland, China) | Both deferred to last per B1 |
+| **A2, A3** (Poland, China) | Out of locked scope |
 | **A5** (US granularity) | Recommendation is "accept and label it" — only needs a no |
 | **D1, D2, D3** (web/mobile, accounts, languages) | Frontend can start on the recommendations |
 | **E1, E2, E3** (retraining, artifacts, `admitted_profiles`) | Recommendations are safe defaults; confirm when convenient |
 
-**Not a question, but the biggest risk:** three countries × 40–50 programmes, plus five
-years of cutoff history each, plus backend, frontend, model and report, in 23 days with
-four people is very aggressive. See [`data-collection-plan.md`](data-collection-plan.md) §5
-for what to drop first if it slips.
+**Not a question, but the biggest risk:** Azerbaijan DIM data does not exist yet and is
+on the critical path. If it has not landed by **5 September**, Germany is dropped and
+the ML ships on Turkey + USA only.
 
 ---
 
@@ -111,7 +107,18 @@ how many years back, which programmes, manual or scripted.
 into CSV. This is the one market where you have language access and local knowledge
 that no competitor has, so it is worth doing carefully rather than quickly.
 
-**Answer:**
+**Answer (28 Aug, grilling Q3/Q4/Q5):** Azerbaijan DIM is **committed scope**, not a
+stretch goal. The official source (Abiturient journal) is paywalled, so the route is to
+**scrape sec.az / uniaz.info** — sec.az carries 1,030 specialties × 3 years. Collection
+proceeds under the Q5 protocol: named owner, robots.txt and ToS checked and recorded,
+rate-limited, with a permission email sent **in parallel** rather than blocking on a
+reply.
+
+> Noted once and not re-argued: the aggregator route was chosen over buying the official
+> journal. The consequence is that **F1 stops being a background task and becomes a hard
+> prerequisite** — no collection code runs before the sign-off owner is named.
+
+**Still open:** *who* on the team does it, and starting when.
 
 ### A5 🟡 USA/UK granularity mismatch — accept it or work around it?
 
@@ -142,17 +149,24 @@ their data is already clean and free. Poland and China last.
 
 **Answer: Yes but UK and China last USA and Poland before them**
 
+**Refined 28 Aug (grilling Q8) — scope is now locked.** ML ships on **Turkey + USA +
+Azerbaijan**. **Germany is added only if DIM data lands early**, decided at a **go/no-go
+on 5 September**; if it is added it gets **no ML** — hand-curated programmes with
+deterministic ranking. Poland and China are out of scope for this delivery.
+
 ### B2 🔴 Which degree levels?
 
 The schema supports bachelor / master / PhD. Each level has different requirements,
 different cutoff mechanisms and separate curation cost — supporting all three roughly
 triples the work and splits the training data three ways.
 
-**Recommendation:** **master's only** for the MVP. It is where Azerbaijani outbound
-mobility concentrates, where DAAD data is richest, and where the cutoff mechanism is
-cleanest. Bachelor's second.
+**Recommendation:** ~~master's only~~ — **withdrawn, it was wrong.** All three collected
+datasets are undergraduate and contain **zero** master's rows. (The Turkish
+`is_undergraduate=False` flag marks *Meslek Yüksekokulu* two-year vocational programmes,
+not master's.) Recommending master's would have meant discarding every row of data we
+have.
 
-**Answer:**
+**Answer (28 Aug, grilling Q7): bachelor's only.** It is what the data supports.
 
 ### B3 🔴 Coverage check — what fraction of the catalogue is cutoff-based?
 
@@ -177,7 +191,9 @@ frontend.
 **Recommendation:** data curation is the critical path and the biggest risk, so it
 should have two people, not one, at least for the first two weeks.
 
-**Answer:**
+**Answer (28 Aug, grilling Q6):** **Fariz builds the ML pipeline and the backend
+integration.** The team owns **data collection/curation, frontend, and the report.**
+Curation keeps two people per the recommendation.
 
 ### B5 🔴 What is the deadline?
 
@@ -215,7 +231,8 @@ story.
 all three against the persistence baseline. Model comparison is usually graded well and
 costs almost nothing once the pipeline exists.
 
-**Answer:**
+**Answer (28 Aug): accepted.** Decision Tree, Random Forest and HistGradientBoosting,
+all three on both evaluation splits, all three against their honest baselines.
 
 ### C3 🟡 What are the deliverables — notebook, report, running app, or all three?
 
@@ -226,7 +243,9 @@ Determines whether the training code lives in `notebooks/` for presentation or i
 report, and a thin production training script that imports the same functions, so the
 notebook and the app cannot drift apart.
 
-**Answer:**
+**Answer (28 Aug): accepted.** `backend/scripts/train_cutoff_models.py` plus an
+EDA/comparison notebook importing the same functions, plus a committed metrics JSON per
+run so any `predicted_cutoff` in the database traces to the exact model that made it.
 
 ### C4 🟡 Is "the baseline won" an acceptable result?
 
@@ -238,7 +257,18 @@ legitimate and publishable finding; as coursework it may be graded as failure.
 component with a softer baseline planned in from the start rather than improvised in
 week five.
 
-**Answer:**
+**Answer (28 Aug, grilling Q1):** The question is now settled empirically, not
+hypothetically — see [`PROJECT-STATE.md`](PROJECT-STATE.md) §3.
+
+- **Forecasting:** persistence MAE **13.77**, best model **15.77** — the baseline wins.
+- **Cold start:** department-mean MAE **38.96**, HistGradientBoosting **17.96** — the
+  model wins by **53.9%**.
+
+**Decision: train and report both. Ship the cold-start model.** Cold start is a real
+product need (every hand-curated programme arrives with no history, so persistence is
+structurally unavailable) *and* it is where trees genuinely win. The forecasting result
+ships as a rigorous negative finding, with the failed remedies — delta target, training
+window restriction, shrinkage — as evidence of a real investigation.
 
 ---
 
@@ -323,7 +353,117 @@ aggregators all need checking.
 **Recommendation:** one named person, terms-of-service and robots.txt checked per source,
 recorded in a table in this repo, done **before** any collection code is written.
 
-**Answer:**
+**Answer (28 Aug, grilling Q5) — process agreed, owner still missing.** The protocol is
+"ask in parallel, scrape politely": robots.txt and ToS checked and recorded per source,
+rate-limited requests, identifying user-agent, and a permission email sent at the same
+time rather than blocking on a reply.
+
+**Escalated to 🔴 blocking.** The Q4 decision to scrape sec.az / uniaz.info means this is
+no longer a background task — **no DIM collection code runs until a person is named
+here.** Fill in a name.
+
+---
+
+## G. Admission routes
+
+Programs accept **several alternative entrance qualifications**, not one. A Turkish
+university may admit international applicants on **SAT ≥ 1200 *or* YÖS ≥ 60**. ADR-0001
+models a single cutoff per program and cannot express that.
+
+Full analysis in [`adr/0006-admission-routes.md`](adr/0006-admission-routes.md)
+(status: **Proposed** — these three questions block acceptance).
+
+The uncomfortable part, stated up front: an Azerbaijani student applying to Turkey
+never sits YKS — they go through **YÖS** or the **international quota**, and many
+Turkish universities accept **SAT**. So the 115,482 rows of YKS cutoffs we collected
+describe **a route our users will never take**. Still valid as ML training data and as
+a selectivity signal; not valid as "the score you need".
+
+Note that language tests (IELTS / TOEFL / Duolingo / TestDaF) are **not** part of this
+question. They are pass/fail thresholds, already correctly handled as deterministic
+Layer 1 filters by ADR-0001. Only *entrance qualifications* are competitive.
+
+### G1 🔴 Which admission routes does the MVP support?
+
+Each supported route means separate cutoff history to collect, curate and
+human-verify, per program.
+
+Candidates: **DIM** (Azerbaijan), **YÖS** (Turkey, international), **SAT** (accepted by
+many Turkish and all US institutions), **converted GPA / Abiturnote** (Germany),
+**UCAS tariff** (UK).
+
+**Recommendation:** ~~SAT and YÖS first~~ — **partly superseded by research on 29 Aug.**
+DIM has signed **recognition protocols with Turkish universities**, so an Azerbaijani
+student can apply to some of them on their DIM score directly, with no YÖS and no SAT.
+DIM is therefore not only the home-market route — it is a Turkey route too, which makes
+it far better value per unit of collection work than the recommendation assumed.
+
+**Answer (29 Aug): three routes, YÖS dropped.**
+
+| Route | Destinations | Cutoff source | ML or deterministic |
+|---|---|---|---|
+| **DIM** (0–700) | Azerbaijan + Turkey (protocol universities) | sec.az, 2023–2025 | **ML** once collected |
+| **SAT** | USA + Turkish international quota | College Scorecard (US); TR quota largely unpublished | **ML** for US; deterministic + labelled for TR |
+| **Attestat GPA** | Germany + Turkish private universities | n/a — conversion, not a cutoff | **Deterministic** (Bavarian formula) |
+
+**YÖS is out of scope.** Its cutoffs are rarely published per programme, so the
+collection cost is high and the resulting data thin.
+
+**Consequence, stated plainly:** no product route uses **YKS**. The 115,482 YKS rows
+serve as ML training data and as a programme-selectivity signal only — never as "the
+score you need". See G4.
+
+### G2 🔴 Does intake capture every qualification up front, or per country on demand?
+
+`architecture-decisions.md` §5 deliberately keeps Phase 1 intake minimal. Asking a
+student for DIM *and* SAT *and* YÖS *and* IELTS up front works against that, and most
+students hold only one or two.
+
+**Recommendation:** ask for what they have, not for everything — a short "which of these
+do you have?" step, with the rest optional. Routes they hold no qualification for are
+simply not scored, and are never counted against them.
+
+**Answer (29 Aug): accepted.** A single "which of these do you have?" step covering
+DIM / attestat GPA / SAT, plus language certificates. Everything optional. A route the
+student holds no qualification for is not scored and **never counted against them** —
+it must not appear as a low score or a penalty, only as absent.
+
+### G3 🟡 If a route has no cutoff data, do we show it or hide it?
+
+Likely common for YÖS and SAT international quotas, where cutoffs are often unpublished.
+
+**Recommendation:** **show it, labelled honestly** — "requirements known, competitiveness
+unknown" — under the ADR-0001 `open` / `competitive` taxonomy. Hiding a viable route
+because we lack data is worse for the student than admitting we don't know. Never invent
+a cutoff to fill the gap.
+
+**Answer (29 Aug): accepted.** Shown as `admission_type = competitive` with
+"requirements known, competitiveness unknown". This applies immediately to the **Turkish
+international-quota SAT route**, whose cutoffs are mostly unpublished. Never invent a
+cutoff to fill the gap — that is the ADR-0004 no-fabrication rule applied to the UI.
+
+### G4 🟡 Do we accept that the ML trains on routes the product may not serve?
+
+The likely end state: the model is trained on YKS and College Scorecard (real, recent,
+defensible, gradeable) while the product ranks SAT/YÖS routes deterministically because
+their cutoffs aren't published.
+
+**Recommendation:** accept it, and state it explicitly in the course report as a data
+limitation. It is a legitimate position — but it must be a recorded decision, not
+something discovered while writing up.
+
+**Answer (29 Aug): accepted, and it follows directly from G1.** With YÖS dropped, **no
+product route uses YKS.** The split is now explicit:
+
+- **Trained on:** YKS (Turkey, 115,482 rows) and College Scorecard (USA) — real, recent,
+  licensed, gradeable. DIM joins this list once collected.
+- **Served to students:** DIM, SAT and attestat-GPA routes.
+- **Overlap:** SAT (US) and DIM are both trained *and* served. YKS is trained only.
+
+YKS earns its place as a **selectivity signal** — it tells us how competitive a Turkish
+programme is relative to its peers, which is exactly what the Q2 selectivity index needs,
+and that transfers across routes even though the score does not. This is a stated
+decision, to be repeated verbatim in the report's limitations section.
 
 ---
 
@@ -337,3 +477,14 @@ These were open in `architecture-decisions.md` and are now settled:
   predicted cutoff
 - **Primary data source** — published admission cutoff history per country, not scraped
   programme pages
+
+Added 28 August from the grilling session — decisions that were not previously questions:
+
+- **How competitiveness is shown to the student** (grilling Q2) — a **selectivity
+  index**: the programme's percentile within its country, presented as **Reach / Match /
+  Safety** bands. Absolute probabilities are never displayed, per ADR-0001. Headroom
+  above the predicted cutoff drives the band; the raw number is not the headline.
+- **Product positioning** (grilling Q9) — AUSA does **application preparation and route
+  recommendation only**. It makes no submission claims, does not submit applications,
+  and does not promise an admission outcome. This bounds both the legal surface and what
+  the UI is allowed to say.

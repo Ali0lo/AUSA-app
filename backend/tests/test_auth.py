@@ -1,22 +1,31 @@
-"""Authentication unit tests plus regression tests for the auth-bypass fixes.
+"""
+Authentication tests.
 
-Historical note: `test_auth_register_and_login_flow` used to pass with no database,
-because login fell back to minting a token for subject 101 and get_current_user
-fabricated a Student with email "test_student_auth@ausa.edu.az" and gpa 3.7 -- the
-exact values this test asserts. The fallback existed to satisfy the test, and it made
-any signed token authenticate and any credentials succeed during a database outage.
-That flow is now a real integration test, and the bypasses have regression coverage
-that needs no database.
+These run against a real in-memory SQLite database, exactly like test_admin.py and
+test_applications.py. The previous version ran against no database at all: every
+request hit an `except Exception` fallback that issued a token for student 101 and
+returned a synthetic profile whose email and GPA were copied from this file. The flow
+it asserted was therefore never executed -- the test certified an authentication
+bypass rather than catching it. `test_auth_register_and_login_flow` used to also pass
+with no database for the same reason: login fell back to minting a token for subject
+101 and get_current_user fabricated a Student with email
+"test_student_auth@ausa.edu.az" and gpa 3.7 -- the exact values this test asserts.
+The register/login flow below is a real integration test against the SQLite fixture
+rather than one skipped without a live Postgres, and the bypasses additionally have
+regression coverage that needs no database at all.
 """
 
-import asyncio
-
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
-from app.core.database import engine
+from app.core.database import Base, get_db
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.main import app
+from app.models.student import Student
 
 
 def _database_is_reachable() -> bool:
@@ -56,6 +65,34 @@ def test_jwt_creation_and_decoding():
 
     sub = decode_access_token(token)
     assert sub == "42"
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    """A real SQLite database holding only `students`.
+
+    Base.metadata as a whole cannot be created here: university_documents uses
+    pgvector's Vector type, which SQLite has no equivalent for. Auth touches only
+    students, so only that table is built.
+    """
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all, tables=[Student.__table__])
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        async def _get_test_db():
+            yield session
+
+        app.dependency_overrides[get_db] = _get_test_db
+        yield session
+        app.dependency_overrides.clear()
+
+    await engine.dispose()
 
 
 # ---------------------------------------------------------------------------
@@ -113,13 +150,12 @@ async def test_signed_token_for_nonexistent_account_is_rejected():
 
 
 # ---------------------------------------------------------------------------
-# Integration: needs a live database.
+# Integration: runs against the in-memory SQLite fixture above (no live DB needed).
 # ---------------------------------------------------------------------------
 
 
-@requires_db
 @pytest.mark.asyncio
-async def test_auth_register_and_login_flow():
+async def test_auth_register_and_login_flow(db_session):
     test_email = "test_student_auth@ausa.edu.az"
     test_password = "password123"
 
@@ -134,7 +170,7 @@ async def test_auth_register_and_login_flow():
                 "degree_level": "master",
             },
         )
-        assert reg_res.status_code in [201, 400]  # Created or already exists
+        assert reg_res.status_code == 201
 
         login_res = await client.post(
             "/api/v1/auth/login",
@@ -144,9 +180,116 @@ async def test_auth_register_and_login_flow():
         token = login_res.json()["access_token"]
 
         me_res = await client.get(
-            "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
         )
         assert me_res.status_code == 200
         profile = me_res.json()
         assert profile["email"] == test_email
         assert profile["gpa"] == 3.7
+
+
+@pytest.mark.asyncio
+async def test_register_without_academic_fields_stores_null_not_invented_defaults(db_session):
+    """A student who registers with only email/password has no GPA, budget, etc.
+
+    This previously persisted gpa=3.5, budget=15000, ielts=7.0, toefl=95,
+    degree_level="master", field_of_study="Computer Science", country="Azerbaijan"
+    for every such registration -- a fabricated profile, indistinguishable from data
+    the student actually entered, that then drove every eligibility check made for
+    them (evaluate_match's hard filters).
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        reg_res = await client.post(
+            "/api/v1/auth/register",
+            json={"email": "bare_register@ausa.edu.az", "password": "password123"},
+        )
+        assert reg_res.status_code == 201
+        token = reg_res.json()["access_token"]
+
+        me_res = await client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert me_res.status_code == 200
+        profile = me_res.json()
+        assert profile["gpa"] is None
+        assert profile["budget"] is None
+        assert profile["ielts"] is None
+        assert profile["toefl"] is None
+        assert profile["degree_level"] is None
+        assert profile["field_of_study"] is None
+        assert profile["country"] is None
+
+
+@pytest.mark.asyncio
+async def test_login_rejects_wrong_password(db_session):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post(
+            "/api/v1/auth/register",
+            json={"email": "someone@ausa.edu.az", "password": "correct-password"},
+        )
+        res = await client.post(
+            "/api/v1/auth/login",
+            json={"email": "someone@ausa.edu.az", "password": "wrong-password"},
+        )
+        assert res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_login_rejects_unknown_email(db_session):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(
+            "/api/v1/auth/login",
+            json={"email": "nobody@ausa.edu.az", "password": "password123"},
+        )
+        assert res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_valid_token_for_nonexistent_student_is_rejected(db_session):
+    """A correctly signed token for a student who is not in the database is not valid.
+
+    This is the case that previously returned a synthetic Student with gpa 3.7.
+    """
+    token = create_access_token(subject=999999)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_database_failure_never_issues_a_token():
+    """A database outage must not authenticate anyone.
+
+    Previously any exception here produced a valid token for student 101, so an
+    outage -- or anything that could provoke one -- granted access to a real account.
+    """
+    class FailingSession:
+        async def execute(self, *args, **kwargs):
+            raise SQLAlchemyError("connection refused")
+
+    async def _get_failing_db():
+        yield FailingSession()
+
+    app.dependency_overrides[get_db] = _get_failing_db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            login_res = await client.post(
+                "/api/v1/auth/login",
+                json={"email": "test_student_auth@ausa.edu.az", "password": "password123"},
+            )
+            assert login_res.status_code == 503
+            assert "access_token" not in login_res.json()
+
+            me_res = await client.get(
+                "/api/v1/auth/me",
+                headers={"Authorization": f"Bearer {create_access_token(subject=101)}"},
+            )
+            assert me_res.status_code == 503
+    finally:
+        app.dependency_overrides.clear()

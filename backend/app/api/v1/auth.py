@@ -27,27 +27,42 @@ class TokenResponse(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    """Payload for student registration."""
+    """Payload for student registration.
+
+    Every academic/profile field is optional and defaults to None, not a plausible
+    number. A student who registers with only an email and a password has not told us
+    their GPA, budget, IELTS/TOEFL, degree level, field of study, or country -- and
+    those values are persisted, so an invented default here would be indistinguishable
+    from data the student entered, forever (unlike a read-time substitution, which
+    disappears when removed). Previously defaulted to gpa=3.5, budget=15000,
+    ielts=7.0, toefl=95, degree_level="master", field_of_study="Computer Science",
+    country="Azerbaijan", and wrote every one of those into the database (ADR-0004).
+    """
     email: str = Field(..., description="Student email address")
     password: str = Field(..., description="Password (min 6 characters)")
-    gpa: float = Field(default=3.5, ge=0.0, le=4.0)
-    budget: float = Field(default=15000.0, ge=0.0)
-    ielts: Optional[float] = Field(default=7.0)
-    toefl: Optional[int] = Field(default=95)
-    degree_level: DegreeLevel = Field(default="master")
-    field_of_study: Optional[str] = Field(default="Computer Science")
-    country: Optional[str] = Field(default="Azerbaijan")
+    gpa: Optional[float] = Field(default=None, ge=0.0, le=4.0)
+    budget: Optional[float] = Field(default=None, ge=0.0)
+    ielts: Optional[float] = Field(default=None, ge=0.0, le=9.0)
+    toefl: Optional[int] = Field(default=None, ge=0, le=120)
+    degree_level: Optional[DegreeLevel] = Field(default=None)
+    field_of_study: Optional[str] = Field(default=None)
+    country: Optional[str] = Field(default=None)
 
 
 class StudentUserResponse(BaseModel):
-    """User response model returned by GET /auth/me."""
+    """User response model returned by GET /auth/me.
+
+    Every profile field is optional because every corresponding column is nullable.
+    A student who has not entered a GPA has no GPA -- returning a stand-in 3.5 would
+    put a number the student never gave us into their eligibility checks.
+    """
     id: int
-    email: str
-    gpa: float
-    budget: float
+    email: Optional[str] = None
+    gpa: Optional[float] = None
+    budget: Optional[float] = None
     ielts: Optional[float] = None
     toefl: Optional[int] = None
-    degree_level: DegreeLevel
+    degree_level: Optional[DegreeLevel] = None
     field_of_study: Optional[str] = None
     country: Optional[str] = None
 
@@ -88,12 +103,13 @@ async def login(
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        # A database outage must surface as an outage. Minting a token here would
-        # authenticate any credentials whenever the database is unreachable.
+        # Never issue a token when credentials could not be checked. This previously
+        # returned a valid token for student 101 on any database error -- an
+        # authentication bypass triggered by an outage, not a dev convenience.
         # See docs/adr/0004 -- no silent fallbacks.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication is temporarily unavailable. Please try again shortly.",
+            detail="Login is temporarily unavailable.",
         ) from exc
 
 
@@ -125,7 +141,7 @@ async def register(
             email=payload.email,
             hashed_password=hashed_pwd,
             gpa=payload.gpa,
-            budget=str(payload.budget),
+            budget=str(payload.budget) if payload.budget is not None else None,
             ielts=payload.ielts,
             toefl=payload.toefl,
             degree_level=payload.degree_level,
@@ -141,12 +157,12 @@ async def register(
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        # A database outage must surface as an outage. Minting a token here would
-        # authenticate any credentials whenever the database is unreachable.
-        # See docs/adr/0004 -- no silent fallbacks.
+        # No account was created, so no token is owed. This previously returned a valid
+        # token for student 101 whenever the write failed. See docs/adr/0004 -- no
+        # silent fallbacks.
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication is temporarily unavailable. Please try again shortly.",
+            detail="Registration is temporarily unavailable.",
         ) from exc
 
 
@@ -160,22 +176,22 @@ async def register(
 async def get_me(
     current_student: Student = Depends(get_current_user)
 ) -> StudentUserResponse:
-    """Get authenticated student info."""
-    budget_val = 15000.0
-    try:
-        if current_student.budget:
+    """Get authenticated student info. Unset fields are returned as null, not filled in."""
+    budget_val: Optional[float] = None
+    if current_student.budget:
+        try:
             budget_val = float(current_student.budget)
-    except ValueError:
-        pass
+        except ValueError:
+            budget_val = None
 
-    degree_val: DegreeLevel = "master"
+    degree_val: Optional[DegreeLevel] = None
     if current_student.degree_level in ["bachelor", "master", "phd"]:
         degree_val = current_student.degree_level  # type: ignore
 
     return StudentUserResponse(
-        id=current_student.id or 101,
-        email=current_student.email or "student@ausa.edu.az",
-        gpa=current_student.gpa or 3.5,
+        id=current_student.id,
+        email=current_student.email,
+        gpa=current_student.gpa,
         budget=budget_val,
         ielts=current_student.ielts,
         toefl=current_student.toefl,

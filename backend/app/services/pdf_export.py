@@ -6,7 +6,7 @@ and drafted motivation letters using ReportLab.
 
 import io
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -20,6 +20,21 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+
+
+def _display(value: Any, formatter: Optional[Callable[[Any], str]] = None) -> str:
+    """Render a value for the dossier, or "Not stated" if it was never supplied.
+
+    `is not None` rather than truthiness: a genuine 0.0, 0, or "" is a value we were
+    given, not a blank we get to fill in ourselves. Every field in the PDF -- student
+    or programme, string or number -- is routed through this so there is exactly one
+    place that decides what "missing" looks like.
+    """
+    if value is None:
+        return "Not stated"
+    if formatter is not None:
+        return formatter(value)
+    return str(value)
 
 
 def generate_application_dossier_pdf(
@@ -121,14 +136,17 @@ def generate_application_dossier_pdf(
     # 2. Candidate & Target Program Summary Table
     elements.append(Paragraph("Candidate & Target University Details", section_heading))
 
-    candidate_email = str(student_data.get("email", "Candidate Student"))
-    degree_level = str(student_data.get("degree_level", "Master")).title()
-    field_of_study = str(student_data.get("field_of_study", "Computer Science"))
+    # No defaults here either -- see _display. A student who did not give an email or a
+    # programme that has no listed country gets "Not stated", never "Candidate Student"
+    # or "International".
+    candidate_email = _display(student_data.get("email"))
+    degree_level = _display(student_data.get("degree_level"), lambda v: str(v).title())
+    field_of_study = _display(student_data.get("field_of_study"))
 
-    univ_name = str(program_data.get("university_name", "Target University"))
-    prog_name = str(program_data.get("program_name", "Degree Program"))
-    country = str(program_data.get("country", "International"))
-    deadline = str(program_data.get("deadline", "Upcoming Enrollment Cycle"))
+    univ_name = _display(program_data.get("university_name"))
+    prog_name = _display(program_data.get("program_name"))
+    country = _display(program_data.get("country"))
+    deadline = _display(program_data.get("deadline"))
 
     summary_table_data = [
         [
@@ -173,13 +191,16 @@ def generate_application_dossier_pdf(
     # 3. Academic & Financial Checklist Table
     elements.append(Paragraph("Academic & Financial Requirements Checklist", section_heading))
 
-    gpa_val = f"{student_data.get('gpa', 3.5):.2f}" if student_data.get("gpa") else "N/A"
-    ielts_val = f"{student_data.get('ielts', 7.0):.1f}" if student_data.get("ielts") else "N/A"
-    toefl_val = str(student_data.get("toefl")) if student_data.get("toefl") else "N/A"
+    # No defaults. A student who did not give us a GPA has no GPA, and printing 3.5 or a
+    # 11,208 EUR blocked account into a document they submit invents a fact about them.
+    # "Not Required" was a claim about the country's visa rules that we had not checked.
+    gpa_val = _display(student_data.get("gpa"), lambda v: f"{v:.2f}")
+    ielts_val = _display(student_data.get("ielts"), lambda v: f"{v:.1f}")
+    toefl_val = _display(student_data.get("toefl"))
 
-    tuition_val = f"${program_data.get('tuition_fee', 0.0):,.2f} USD" if program_data.get("tuition_fee") is not None else "Tuition Free"
-    dim_req = str(program_data.get("dim_score_required", "Not Applicable"))
-    blocked_acc = f"€{program_data.get('blocked_account_eur', 11208.0):,.2f}" if program_data.get("blocked_account_eur") else "Not Required"
+    tuition_val = _display(program_data.get("tuition_fee"), lambda v: f"${v:,.2f} USD")
+    dim_req = _display(program_data.get("dim_score_required"))
+    blocked_acc = _display(program_data.get("blocked_account_eur"), lambda v: f"€{v:,.2f}")
 
     checklist_table_data = [
         [

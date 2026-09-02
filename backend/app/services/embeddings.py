@@ -1,69 +1,71 @@
 """
 OpenAI Vector Embedding Generation Service.
 Generates 1536-dimensional embeddings for text documents and user search queries.
-Uses OpenAI text-embedding-3-small API with a deterministic fallback for offline/test environments.
+
+There is deliberately no offline fallback. A previous version returned a
+deterministic sha256-derived vector whenever the API key was missing or any
+exception was raised. That vector is not an embedding: two near-identical
+strings hash to unrelated vectors, so cosine similarity becomes noise, every
+retrieval returns arbitrary documents, and nothing anywhere raises. Callers
+cannot distinguish it from a real result -- which is exactly the failure mode
+ADR-0004 forbids. If an embedding cannot be produced, this module raises.
 """
 
-import hashlib
-import math
 import os
 from typing import List
 
+MODEL = "text-embedding-3-small"
+DIMENSIONS = 1536
 
-def generate_fallback_embedding(text: str, dim: int = 1536) -> List[float]:
-    """
-    Generate a deterministic, unit-normalized float vector of length `dim` based on text hash.
-    Used for offline testing or when OpenAI API key is unavailable.
-    """
-    seed_hash = hashlib.sha256(text.encode("utf-8")).digest()
-    vec = []
-    for i in range(dim):
-        byte_val = seed_hash[i % len(seed_hash)]
-        val = math.sin((i + 1) * (byte_val + 1))
-        vec.append(val)
-
-    norm = math.sqrt(sum(v * v for v in vec))
-    if norm > 0:
-        return [round(v / norm, 6) for v in vec]
-    return [0.0] * dim
+# Values that mean "nobody configured this yet" rather than a real key --
+# .env.example ships one of these, so it will be copied at some point.
+_PLACEHOLDER_KEYS = {
+    "",
+    "your_openai_api_key_here",
+    "sk-placeholder",
+    "sk-proj-your_openai_api_key_here",
+}
 
 
-def get_embedding(text: str, model: str = "text-embedding-3-small") -> List[float]:
+class EmbeddingUnavailableError(RuntimeError):
+    """Raised when an embedding cannot be produced. Never return a substitute vector."""
+
+
+def _require_api_key() -> str:
+    """Return the configured OpenAI key, or raise explaining what is missing."""
+    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    if api_key.lower() in _PLACEHOLDER_KEYS:
+        raise EmbeddingUnavailableError(
+            "OPENAI_API_KEY is unset or still holds the .env.example placeholder. "
+            "Embeddings cannot be generated. Set a real key -- do not substitute a "
+            "stand-in vector, which would silently corrupt every similarity search."
+        )
+    return api_key
+
+
+def get_embedding(text: str, model: str = MODEL) -> List[float]:
     """
     Generate a 1536-dimensional vector embedding for the input text.
-    Calls OpenAI API using OPENAI_API_KEY environment variable.
+
+    Raises EmbeddingUnavailableError if no key is configured; API and network
+    errors propagate unchanged so the caller sees the real cause.
     """
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or api_key.strip() in ["", "your_openai_api_key_here", "sk-placeholder"]:
-        return generate_fallback_embedding(text)
+    from openai import OpenAI
 
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=api_key.strip())
-        response = client.embeddings.create(
-            input=text,
-            model=model
-        )
-        return response.data[0].embedding
-    except Exception:
-        return generate_fallback_embedding(text)
+    client = OpenAI(api_key=_require_api_key())
+    response = client.embeddings.create(input=text, model=model)
+    return response.data[0].embedding
 
 
-async def get_embedding_async(text: str, model: str = "text-embedding-3-small") -> List[float]:
+async def get_embedding_async(text: str, model: str = MODEL) -> List[float]:
     """
     Asynchronously generate a 1536-dimensional vector embedding for the input text.
-    """
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or api_key.strip() in ["", "your_openai_api_key_here", "sk-placeholder"]:
-        return generate_fallback_embedding(text)
 
-    try:
-        from openai import AsyncOpenAI
-        client = AsyncOpenAI(api_key=api_key.strip())
-        response = await client.embeddings.create(
-            input=text,
-            model=model
-        )
-        return response.data[0].embedding
-    except Exception:
-        return generate_fallback_embedding(text)
+    Raises EmbeddingUnavailableError if no key is configured; API and network
+    errors propagate unchanged so the caller sees the real cause.
+    """
+    from openai import AsyncOpenAI
+
+    client = AsyncOpenAI(api_key=_require_api_key())
+    response = await client.embeddings.create(input=text, model=model)
+    return response.data[0].embedding

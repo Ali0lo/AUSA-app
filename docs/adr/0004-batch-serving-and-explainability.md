@@ -3,6 +3,10 @@
 **Status:** Accepted
 **Date:** 2026-08-23
 **Depends on:** [ADR-0001](0001-cutoff-prediction-replaces-weighted-scoring.md)
+**Amended by:** [ADR-0007](0007-three-number-model-and-honesty-tiers.md) — rule 2's
+two provenance states become three (`seed` / `claude-extracted` / `human-verified`), and
+rule 1's precomputed row gains the quantile ladder and `model_run_id`. Neither decision
+here is reversed; see ADR-0007 §5 and §7 for what changed and why.
 
 ---
 

@@ -17,65 +17,17 @@ from app.models.student import Student
 
 router = APIRouter(prefix="/applications", tags=["Application Tracker & Deadlines"])
 
-# -------------------------------------------------------------
-# Demo / Fallback Tracker Fixtures
-# -------------------------------------------------------------
-DEMO_APPLICATIONS: List[Dict[str, Any]] = [
-    {
-        "id": 1,
-        "student_id": "std_demo",
-        "program_id": 105,
-        "university_name": "Technical University of Munich (TUM)",
-        "program_name": "M.Sc. Informatics",
-        "degree_level": "master",
-        "country": "Germany",
-        "deadline": "2026-07-15",
-        "stage": "preparing_documents",
-        "notes": "Blocked account required; motivation letter draft ready.",
-    },
-    {
-        "id": 2,
-        "student_id": "std_demo",
-        "program_id": 101,
-        "university_name": "ADA University",
-        "program_name": "B.Sc. Computer Science",
-        "degree_level": "bachelor",
-        "country": "Azerbaijan",
-        "deadline": "2026-06-01",
-        "stage": "shortlisted",
-        "notes": "DIM score requirement 600+ points.",
-    },
-    {
-        "id": 3,
-        "student_id": "std_demo",
-        "program_id": 104,
-        "university_name": "Baku Higher Oil School (BANM / BHOS)",
-        "program_name": "B.Sc. Software Engineering",
-        "degree_level": "bachelor",
-        "country": "Azerbaijan",
-        "deadline": "2026-06-15",
-        "stage": "submitted",
-        "notes": "Application submitted via state portal.",
-    },
-    {
-        "id": 4,
-        "student_id": "std_demo",
-        "program_id": 106,
-        "university_name": "RWTH Aachen University",
-        "program_name": "M.Sc. Mechanical Engineering",
-        "degree_level": "master",
-        "country": "Germany",
-        "deadline": "2026-03-01",
-        "stage": "preparing_documents",
-        "notes": "Studienkolleg certificate uploaded.",
-    },
-]
 
+def calculate_days_remaining(deadline_val: Any) -> Tuple[Optional[int], Optional[bool]]:
+    """Calculate days remaining until deadline and return (days_remaining, is_urgent).
 
-def calculate_days_remaining(deadline_val: Any) -> Tuple[int, bool]:
-    """Calculate days remaining until deadline and return (days_remaining, is_urgent)."""
+    Returns (None, None) when the deadline is unknown or unparseable. This previously
+    returned (90, False) for an unknown deadline and (30, False) for an unparseable one --
+    a made-up countdown *and* a claim of "not urgent" for a deadline nobody has verified,
+    on the exact field spec 5.4 calls the most damaging one to get wrong (ADR-0004).
+    """
     if not deadline_val:
-        return 90, False
+        return None, None
     try:
         if isinstance(deadline_val, date):
             dl_date = deadline_val
@@ -87,7 +39,8 @@ def calculate_days_remaining(deadline_val: Any) -> Tuple[int, bool]:
         is_urgent = days <= 14
         return days, is_urgent
     except Exception:
-        return 30, False
+        # An unparseable value is unknown, not "30 days away and not urgent".
+        return None, None
 
 
 # -------------------------------------------------------------
@@ -103,8 +56,10 @@ class ApplicationResponse(BaseModel):
     country: Optional[str] = None
     deadline: Optional[str] = None
     stage: str
-    days_remaining: int
-    is_urgent: bool
+    # Null when the deadline is unknown -- never a guessed countdown (see
+    # calculate_days_remaining).
+    days_remaining: Optional[int] = None
+    is_urgent: Optional[bool] = None
     notes: Optional[str] = None
 
 
@@ -113,8 +68,14 @@ class CreateApplicationPayload(BaseModel):
     program_id: Optional[int] = Field(None, description="Target program ID")
     university_name: str = Field(..., description="University name")
     program_name: str = Field(..., description="Program name")
-    degree_level: Optional[str] = Field("master", description="Degree level")
-    country: Optional[str] = Field("International", description="Destination country")
+    # None, not a plausible value. These are persisted onto the student's own tracker
+    # entry, so a default here is indistinguishable from something they typed -- the same
+    # defect fixed in RegisterRequest, and "International" is the literal removed from
+    # pdf_export.py for inventing a country nobody stated (ADR-0004). `stage` below keeps
+    # its default because a starting stage is a workflow fact we do decide, not a claim
+    # about the student.
+    degree_level: Optional[str] = Field(None, description="Degree level")
+    country: Optional[str] = Field(None, description="Destination country")
     deadline: Optional[str] = Field(None, description="Application deadline YYYY-MM-DD")
     stage: Optional[str] = Field("shortlisted", description="Initial stage")
     notes: Optional[str] = Field(None, description="Personal application notes")
@@ -175,6 +136,13 @@ async def get_my_applications(
     The owner is taken from the bearer token. It was previously a `student_id`
     query parameter with a default, so any caller could read any student's
     applications by passing their id.
+
+    An empty result is a real answer -- a student who has tracked nothing gets an
+    empty list, never four applications that are not theirs. This previously fell
+    through to DEMO_APPLICATIONS (TUM, ADA, BHOS, RWTH Aachen) whenever the query
+    returned zero rows, which is indistinguishable from "the database is fine and
+    you have no applications". A database that cannot be read is reported as an
+    outage (503), not silently answered with the same invented rows.
     """
     owner_id = _owner_key(current_student)
 
@@ -208,8 +176,13 @@ async def create_application(
 
     `payload.student_id` is deliberately ignored: the owner comes from the token,
     so a caller cannot create records under another student's account.
+
+    A write that did not happen is not a 201. This previously caught any exception
+    from the insert, invented an id from `len(DEMO_APPLICATIONS) + 101`, appended to
+    an in-memory list nothing else ever reads back from the database, defaulted a
+    missing deadline to "2026-07-01", and returned 201 Created for a row that was
+    never persisted.
     """
-    days, is_urgent = calculate_days_remaining(payload.deadline)
     sid = _owner_key(current_student)
 
     try:
@@ -229,29 +202,16 @@ async def create_application(
         db.add(new_app)
         await db.commit()
         await db.refresh(new_app)
-
-        return ApplicationResponse(
-            id=new_app.id,
-            student_id=new_app.student_id,
-            program_id=new_app.program_id,
-            university_name=new_app.university_name,
-            program_name=new_app.program_name,
-            degree_level=new_app.degree_level,
-            country=new_app.country,
-            deadline=str(new_app.deadline) if new_app.deadline else None,
-            stage=new_app.stage,
-            days_remaining=days,
-            is_urgent=is_urgent,
-            notes=new_app.notes,
-        )
     except SQLAlchemyError as exc:
         # Previously this appended to an in-memory demo list and reported success,
         # so the student believed the program was saved when nothing was written.
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Could not save the application. Please try again shortly.",
+            detail="The application could not be saved.",
         ) from exc
+
+    return _to_response(new_app)
 
 
 @router.patch(
@@ -270,6 +230,10 @@ async def update_application_stage(
 
     The record is looked up by id **and** owner. Looking up by primary key alone
     let any caller mutate any student's application.
+
+    An application we do not hold cannot be updated. This previously answered an
+    unknown id with HTTP 200 and the literals "Target Institution" / "Degree Program"
+    -- the same fabricated strings Ruling 6 removed from pdf_export.py, one file over.
     """
     owner_id = _owner_key(current_student)
 
@@ -280,28 +244,32 @@ async def update_application_stage(
         )
         res = await db.execute(stmt)
         app = res.scalar_one_or_none()
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Cannot reach the applications store; nothing was updated.",
+        ) from exc
 
+    if app is None:
         # 404 rather than 403 so the response does not reveal that an application
         # with this id exists under another account.
-        if app is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Application not found.",
-            )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No application with id {application_id}.",
+        )
 
-        app.stage = payload.stage
-        if payload.notes is not None:
-            app.notes = payload.notes
+    app.stage = payload.stage
+    if payload.notes is not None:
+        app.notes = payload.notes
+
+    try:
         await db.commit()
-        await db.refresh(app)
-    except HTTPException:
-        raise
     except SQLAlchemyError as exc:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Could not update the application. Please try again shortly.",
+            detail="The stage update could not be saved.",
         ) from exc
 
+    await db.refresh(app)
     return _to_response(app)
-

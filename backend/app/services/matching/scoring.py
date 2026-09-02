@@ -15,10 +15,16 @@ def calculate_academic_score(
         (score, explanation_text, passed_hard_filter)
     """
     if required_gpa is None or required_gpa == 0.0:
+        # A NULL (or literal 0.0) minimum means the requirement is unknown, never "not
+        # required" (Ruling 15 / ADR-0004). An unconfirmed requirement is never scored as
+        # met: score 0.0 and passed_hard_filter=False so it cannot contribute a passing
+        # score or read as eligible on data we do not hold.
         return (
-            100.0,
-            f"No minimum GPA specified for this program. Student GPA ({student_gpa:.2f}/4.0) granted full score.",
-            True
+            0.0,
+            f"Minimum GPA for this program has not been confirmed, so this factor cannot "
+            f"be verified as met (Student GPA: {student_gpa:.2f}/4.0). An unconfirmed "
+            f"requirement is never scored as a pass.",
+            False
         )
 
     if student_gpa >= required_gpa:
@@ -171,10 +177,14 @@ def calculate_language_score(
         (score, explanation_text, passed_hard_filter)
     """
     if min_ielts is None and min_toefl is None:
+        # Same NULL-means-unknown rule as GPA above: an unconfirmed requirement is never
+        # scored as met, regardless of what score the student holds.
         return (
-            100.0,
-            "No English language proficiency test scores required for this program.",
-            True
+            0.0,
+            "Minimum English language proficiency requirement for this program has not "
+            "been confirmed, so this factor cannot be verified as met. An unconfirmed "
+            "requirement is never scored as a pass.",
+            False
         )
 
     # Resolve effective student IELTS equivalent score
@@ -200,10 +210,14 @@ def calculate_language_score(
         )
 
     if effective_min_ielts is None or effective_min_ielts == 0.0:
+        # A literal 0.0 minimum is the same unknown as NULL here (see the guard above) --
+        # never read as "no requirement, any score satisfies it".
         return (
-            100.0,
-            f"Student provided language score (IELTS {effective_student_ielts:.1f} equivalent) which satisfies requirement.",
-            True
+            0.0,
+            "Minimum English language proficiency requirement for this program has not "
+            "been confirmed, so this factor cannot be verified as met. An unconfirmed "
+            "requirement is never scored as a pass.",
+            False
         )
 
     if effective_student_ielts >= effective_min_ielts:

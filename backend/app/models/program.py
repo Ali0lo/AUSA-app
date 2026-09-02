@@ -20,7 +20,9 @@ class Program(Base):
     deadline = Column(Date, nullable=True)
     requirements_text = Column(Text, nullable=True)
     source_url = Column(Text, nullable=True)
-    confidence_score = Column(Float, default=70.0)
+    # No default. A row nobody scored has no confidence, and 70.0 is a number that looks
+    # measured. NULL means "not scored" and must render as that, never as a figure.
+    confidence_score = Column(Float, nullable=True)
     verification_status = Column(String(50), default="flagged_for_review")
     verified_by = Column(String(100), nullable=True)
     last_updated = Column(Date, server_default=func.current_date())

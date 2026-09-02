@@ -7,7 +7,6 @@ from app.schemas.matching import (
     ProgramRequirements,
     StudentProfile,
 )
-from app.services.matching.prediction import admission_predictor
 from app.services.matching.scoring import (
     calculate_academic_score,
     calculate_budget_score,
@@ -33,14 +32,13 @@ def evaluate_match(
     """
     Main deterministic matching engine function with:
     1. Scholarship-First Net-Cost Evaluation (ADR-0005).
-    2. Predictive Cutoff Machine Learning Inference (ADR-0001 & ADR-0002).
 
     Steps:
     1. Evaluates strict Hard Filters (Degree Level mismatch).
     2. Calculates Net Cost by evaluating eligible scholarships *before* applying budget filters.
-    3. Runs ML admission cutoff prediction model for Turkey/USA programs.
-    4. Evaluates Soft Ranking weighted scores across Academic (50%), Net Budget (30%), and Language (20%).
-    5. Produces an explainable MatchResult detailing net-cost, scholarship metadata, and ML admission probability.
+    3. Evaluates Soft Ranking weighted scores across Academic (50%), Net Budget (30%), and Language (20%).
+    4. Produces an explainable MatchResult detailing net-cost and scholarship metadata. No
+       admission-chance estimate is published (ADR-0008); see `prediction_rationale` below.
     """
     ineligibility_reasons: List[str] = []
     original_tuition = program.tuition_fee
@@ -101,30 +99,20 @@ def evaluate_match(
         scholarship_amount = min(parse_scholarship_amount(raw_amt, original_tuition), original_tuition)
 
     # -------------------------------------------------------------
-    # Step 3: ML Admission Cutoff Prediction (ADR-0001 & ADR-0002)
+    # Step 3: No admission-chance estimate is published (ADR-0008)
     # -------------------------------------------------------------
-    probability = admission_predictor.calculate_admission_probability(
-        student_profile=student,
-        program=program
+    # ADR-0008 withdrew admission probability as a user-facing number, and the 31 Aug
+    # narrowing left one model in this project: DIM cutoffs for Azerbaijani programmes.
+    # What stood here computed a percentage from a hardcoded formula whenever the model
+    # artifacts were missing -- which, since they are gitignored, was every fresh clone --
+    # and captioned it "based on historical data from 2019-2024".
+    prediction_rationale = (
+        "No admission-chance estimate is published for this programme. This product "
+        "predicts an admission chance only where admission is mechanical, and estimates "
+        "one nowhere else. What is shown instead is whether you meet the stated "
+        "requirements, and what the programme costs."
     )
-    prob_pct = int(round(probability * 100))
-    country_upper = (program.country or "").upper().strip()
-
-    if "TURKEY" in country_upper or "TÜRKIYE" in country_upper or country_upper == "TR":
-        prediction_rationale = (
-            f"Based on historical data from 2019-2024, students with your profile have an "
-            f"estimated {prob_pct}% probability of meeting the cutoff for this program."
-        )
-    elif "UNITED STATES" in country_upper or "USA" in country_upper or country_upper == "US":
-        prediction_rationale = (
-            f"Based on historical US College Scorecard data, students with your profile have an "
-            f"estimated {prob_pct}% probability of admission to this program."
-        )
-    else:
-        prediction_rationale = (
-            f"Based on academic benchmark analysis, students with your profile have an "
-            f"estimated {prob_pct}% probability of admission to this program."
-        )
+    probability = None
 
     # If degree level hard filter fails, short-circuit soft ranking to 0% match
     if not degree_passed:

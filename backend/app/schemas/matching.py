@@ -76,7 +76,7 @@ class MatchBreakdown(BaseModel):
 
 
 class MatchResult(BaseModel):
-    """Final deterministic match evaluation result with net-cost, scholarship, and ML admission probability support."""
+    """Final deterministic match evaluation result with net-cost and scholarship support. No admission-chance estimate is published (ADR-0008)."""
     program_name: str = Field(..., description="Program name evaluated")
     university_name: str = Field(..., description="University name evaluated")
     overall_match_percentage: float = Field(..., ge=0.0, le=100.0, description="Final overall match percentage (0-100%)")
@@ -88,5 +88,15 @@ class MatchResult(BaseModel):
     scholarship_name: Optional[str] = Field(None, description="Name of applied scholarship if eligible")
     scholarship_amount: float = Field(default=0.0, ge=0.0, description="Scholarship discount or coverage amount applied")
     net_cost: float = Field(default=0.0, ge=0.0, description="Effective net tuition cost after scholarship application")
-    admission_probability: Optional[float] = Field(None, ge=0.0, le=1.0, description="ML predicted admission probability (0.0 to 1.0)")
-    admission_prediction_rationale: Optional[str] = Field(None, description="Explainable rationale text for ML cutoff prediction")
+    admission_probability: Optional[float] = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Always null. The project publishes a predicted admission chance only where "
+            "admission is mechanical -- Azerbaijani DIM programmes, where clearing the "
+            "cutoff IS admission -- and never estimates one for any other country "
+            "(ADR-0008). An absent number is deliberate and is never filled in."
+        ),
+    )
+    admission_prediction_rationale: Optional[str] = Field(None, description="Explains why no admission-chance estimate is published for this programme (ADR-0008)")

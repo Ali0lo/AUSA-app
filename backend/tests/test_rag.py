@@ -1,6 +1,7 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from app.models.document import UniversityDocument
+from app.services.embeddings import EmbeddingUnavailableError
 from app.services.rag.generator import (
     NO_INFO_RESPONSE,
     answer_student_question,
@@ -60,6 +61,11 @@ async def test_answer_student_question_grounded():
 
 @pytest.mark.asyncio
 async def test_retrieve_relevant_chunks_query_building():
+    """Covers SQL construction only, so the embedding is stubbed rather than called.
+
+    This previously relied on the real embedding path, which returned a sha256-derived
+    vector when no API key was set -- so the test passed while retrieval was meaningless.
+    """
     mock_db = AsyncMock()
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = [
@@ -67,13 +73,25 @@ async def test_retrieve_relevant_chunks_query_building():
     ]
     mock_db.execute.return_value = mock_result
 
-    results = await retrieve_relevant_chunks(
-        db=mock_db,
-        query="What is the IELTS requirement?",
-        top_k=3,
-        filters={"university_id": 5}
-    )
-    
+    with patch(
+        "app.services.rag.retriever.get_embedding_async",
+        new=AsyncMock(return_value=[0.1] * 1536),
+    ):
+        results = await retrieve_relevant_chunks(
+            db=mock_db,
+            query="What is the IELTS requirement?",
+            top_k=3,
+            filters={"university_id": 5}
+        )
+
     assert len(results) == 1
     assert results[0].content == "Test content"
     assert mock_db.execute.called
+
+
+@pytest.mark.asyncio
+async def test_retrieve_raises_when_embeddings_unavailable(monkeypatch):
+    """Retrieval must fail rather than search with a substitute vector."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    with pytest.raises(EmbeddingUnavailableError):
+        await retrieve_relevant_chunks(db=AsyncMock(), query="What is the IELTS requirement?")
