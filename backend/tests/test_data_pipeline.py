@@ -46,7 +46,16 @@ async def test_fetch_page_content_html_stripping():
     mock_response.text = sample_html
     mock_response.raise_for_status = MagicMock()
 
-    with patch("httpx.AsyncClient.get", return_value=mock_response):
+    # fetch_page_content now consults robots.txt before requesting the page, so the fetch
+    # has to be permitted for this test to reach the parsing it is actually about. See
+    # tests/test_robots.py for the guard itself.
+    robots_ok = MagicMock()
+    robots_ok.status_code = 200
+    robots_ok.text = "User-agent: *\nAllow: /\n"
+
+    with patch("app.data_pipeline.robots._get_robots_response",
+               new=AsyncMock(return_value=robots_ok)), \
+         patch("httpx.AsyncClient.get", return_value=mock_response):
         text = await fetch_page_content("https://example.edu/program")
         assert "Master of Computer Science" in text
         assert "Annual tuition fee: $15,000 USD" in text

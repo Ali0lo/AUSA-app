@@ -21,6 +21,27 @@ from app.models.qualifications import (
 
 ANABIN = "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'"
 UK_ENIC = "UK ENIC: an Azerbaijani attestat is 'not accepted for direct entry to undergraduate programmes'"
+
+# The two citations below are the evidence for the product's central claim: that a year of
+# Azerbaijani university study unlocks the countries an attestat cannot open. Both were read
+# from the primary source on 2026-09-02 and are recorded in data/curation/sources.csv.
+#
+# They are cited on the DIRECT routes rather than on AZ_PREP_YEAR, because the claim they
+# support is "this destination accepts that qualification" -- which is a fact about Germany
+# and the UK, not a fact about the Azerbaijani year itself.
+UNI_ASSIST_HZB = (
+    "https://www.uni-assist.de/en/tools/glossary-of-terms/description/term/"
+    "university-entrance-qualification-hochschulzugangsberechtigung/ -- 'your university "
+    "entrance qualification for German universities may only result from a combination of "
+    "the school leaving certificate and a University entrance exam and/or specific lengths "
+    "of university studies in your home country'"
+)
+MANCHESTER_AZ = (
+    "https://www.manchester.ac.uk/study/international/country-specific-information/"
+    "azerbaijan/entry-requirements/ -- Manchester 'may also accept applicants who have "
+    "completed the first year of an undergraduate degree in Azerbaijan into the first year "
+    "of a bachelor degree'; the High School Diploma alone is 'not accepted for direct entry'"
+)
 STUDY_IN_TURKIYE = "https://www.studyinturkiye.gov.tr/"
 CAMPUS_CHINA = "https://www.campuschina.org/"
 DP_RULES = "https://dp.edu.az/ -- Dövlət Proqramı eligibility rules"
@@ -146,7 +167,12 @@ DE_BACHELOR_DIRECT = Route(
     exams=(ExamRequirement("IELTS", 6.5, "ielts"),),
     time_cost_months=0,
     money_cost_azn=(0, 1200),
-    citation=ANABIN,
+    # uni-assist, not anabin: anabin says what the attestat opens (the Studienkolleg), while
+    # uni-assist is the body that states university study in the home country can itself
+    # produce the entrance qualification. That second statement is what makes
+    # QUALIFICATION_ONE_YEAR_UNIVERSITY appear in requires_qualification above, so it is the
+    # one this route has to be able to show.
+    citation=UNI_ASSIST_HZB,
 )
 
 UK_BACHELOR_FOUNDATION = Route(
@@ -177,7 +203,12 @@ UK_BACHELOR_DIRECT = Route(
     exams=(ExamRequirement("IELTS", 6.5, "ielts"),),
     time_cost_months=0,
     money_cost_azn=(30000, 70000),
-    citation=UK_ENIC,
+    # UK ENIC establishes that the attestat is not accepted for direct entry; Manchester
+    # establishes what IS accepted, naming Azerbaijan and the completed first university
+    # year explicitly. The second half is the harder claim and the one this route makes, so
+    # both are cited. Manchester is one university rather than a sector-wide rule -- the
+    # remaining GB universities in data/curation/sources.csv have still to be read.
+    citation=f"{UK_ENIC}. {MANCHESTER_AZ}",
 )
 
 # --- Master's. A completed bachelor's is an accepted entry qualification everywhere,
