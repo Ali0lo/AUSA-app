@@ -1,0 +1,22 @@
+university_name,country_code,level,dp_bachelor_programmes,url,url_status,robots_status,carries,checked_at
+Technical University of Munich,DE,bachelor,13,https://www.tum.de/en/studies/application/application-info-portal/higher-education-entrance-qualification/international-higher-education-entrance-qualification/,verified_200,allowed,Entry qualification equivalence; Studienkolleg and Feststellungspruefung rule; uni-assist VPD requirement,2026-09-02
+Heidelberg University,DE,bachelor,7,https://www.uni-heidelberg.de/en/study/application-enrolment/requirements-for-enrolment/studienkolleg-and-feststellungsprufung/admission-to-the-preparatory-course-studienkolleg-application-documents,verified_200,allowed,Studienkolleg admission documents; B2+ German at application; uni-assist VPD validity,2026-09-02
+LMU Munich,DE,bachelor,6,,url_not_yet_discovered,unknown,Entry qualification and Studienkolleg policy,
+Humboldt University of Berlin,DE,bachelor,1,,url_not_yet_discovered,unknown,Entry qualification and Studienkolleg policy,
+University of Edinburgh,GB,bachelor,33,https://www.ed.ac.uk/studying/international/country/asia/central-west-asia/other-countries,verified_200,refused_robots_403,"Azerbaijan named explicitly; foundation year normally required. THE AUTOMATED COLLECTOR MUST NOT FETCH THIS: ed.ac.uk returns HTTP 403 for robots.txt, so permission cannot be established and the fetcher refuses. The row in program_requirements_2026.csv was read once by a person, not crawled. Re-checking it is a manual task.",2026-09-02
+UCL,GB,bachelor,20,https://www.ucl.ac.uk/languages-international-education/preparation-courses/upc-foundation/entry-requirements/country,verified_200,allowed,Attestat grades accepted for the UPC foundation year,2026-09-02
+University of Manchester,GB,bachelor,19,https://www.manchester.ac.uk/study/international/country-specific-information/azerbaijan/entry-requirements/,verified_200,allowed,Azerbaijan country page; foundation routes AND the first-year-transfer route,2026-09-02
+University of Cambridge,GB,bachelor,20,,url_not_yet_discovered,unknown,Entry qualification for Azerbaijani applicants,
+Imperial College London,GB,bachelor,19,,url_not_yet_discovered,unknown,Entry qualification for Azerbaijani applicants,
+Istanbul Technical University,TR,bachelor,29,https://www.sis.itu.edu.tr/EN/student/intenational-students/application.php,verified_200,allowed,International undergraduate application conditions,2026-09-02
+Istanbul Technical University,TR,bachelor,29,https://www.sis.itu.edu.tr/EN/regulations/valid-exam-results.php,discovered_not_yet_read,allowed,The valid exam list and minimum scores left blank in the ITU row,2026-09-02
+Ankara University,TR,bachelor,24,,url_not_yet_discovered,unknown,International undergraduate admission requirements,
+Middle East Technical University,TR,bachelor,20,,url_not_yet_discovered,unknown,International undergraduate admission requirements,
+Bilkent University,TR,bachelor,11,,url_not_yet_discovered,unknown,International undergraduate admission requirements,
+Bogazici University,TR,bachelor,10,,url_not_yet_discovered,unknown,International undergraduate admission requirements,
+Tsinghua University,CN,bachelor,35,,url_not_yet_discovered,unknown,International undergraduate admission; HSK requirement,
+Harbin Institute of Technology,CN,bachelor,34,,url_not_yet_discovered,unknown,International undergraduate admission; HSK requirement,
+Zhejiang University,CN,bachelor,19,,url_not_yet_discovered,unknown,International undergraduate admission; HSK requirement,
+Beijing University of Chemical Technology,CN,bachelor,19,,url_not_yet_discovered,unknown,International undergraduate admission; HSK requirement,
+uni-assist,DE,bachelor,0,https://www.uni-assist.de/en/tools/glossary-of-terms/description/term/university-entrance-qualification-hochschulzugangsberechtigung/,verified_200,allowed,"ROUTE CITATION not a programme row. States the HZB may result from the school certificate combined with an entrance exam and/or specific lengths of university studies in the home country. This is the authoritative source for the prep-year mechanic in Germany.",2026-09-02
+UCL Undergraduate Preparatory Certificate,GB,bachelor,0,https://www.ucl.ac.uk/languages-international-education/preparation-courses/upc-foundation,discovered_not_yet_read,allowed,UPC course structure and fees,2026-09-02
