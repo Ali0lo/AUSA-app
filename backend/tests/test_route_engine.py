@@ -319,3 +319,38 @@ def test_a_mutually_blocked_cycle_produces_no_plan():
     profile = StudentRouteProfile(level_sought="bachelor", qualification_held="test-qualification-unrelated")
 
     assert compose_two_hop(profile, routes=(route_a, route_b)) == []
+
+
+def test_the_german_visa_deposit_is_carried_separately_from_the_route_cost():
+    """Germany's routes cost almost nothing and require the most cash up front of any of
+    the six countries. Both facts are true and they are not the same field.
+
+    Until `proof_of_funds` existed, `money_cost_azn=(0, 1200)` was the whole financial
+    picture the product showed for Germany -- so the destination with the largest liquidity
+    barrier read as the cheapest thing on the page. This pins that the deposit is present,
+    that it is NOT added into the route cost (the money stays the student's own), and that
+    it reaches every German route including the Studienkolleg year and the master's.
+    """
+    german = {r.key: r for r in ALL_ROUTES if r.country_code == "DE"}
+    assert set(german) == {
+        "de-bachelor-studienkolleg", "de-bachelor-direct", "de-master-direct",
+    }
+
+    for key, route in german.items():
+        assert route.proof_of_funds is not None, f"{key} lost its deposit requirement"
+        assert route.proof_of_funds.currency == "EUR"
+        assert route.proof_of_funds.amount == 11904
+
+    # Never folded into the cost. The deposit is EUR and the cost is AZN, so the two cannot
+    # be compared at all without a conversion this project deliberately does not store --
+    # which is the reason they are separate fields. What IS checkable is that adding the
+    # deposit did not inflate the cost band: Germany's direct route is still tuition-free,
+    # and the honest answer to "what does Germany cost" remains "almost nothing in fees, and
+    # EUR 11,904 you must have in the bank first".
+    assert german["de-bachelor-direct"].money_cost_azn == (0, 1200)
+    assert german["de-master-direct"].money_cost_azn == (0, 1200)
+
+    # And it is not silently applied to countries we have not collected it for. An absent
+    # figure means "not recorded", which the UI must not render as "none required".
+    turkey = [r for r in ALL_ROUTES if r.country_code == "TR"]
+    assert turkey and all(r.proof_of_funds is None for r in turkey)

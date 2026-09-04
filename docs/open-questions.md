@@ -168,6 +168,28 @@ have.
 
 **Answer (28 Aug, grilling Q7): bachelor's only.** It is what the data supports.
 
+**Superseded 4 September — the answer conflated two different products.**
+
+"Bachelor's only" was correct about the **ML**, and was then wrongly applied to the
+**route engine**, which needs no training data at all. The two are now separated:
+
+| | Levels | Why |
+|---|---|---|
+| **ML (cutoff / selectivity)** | bachelor only, **Azerbaijan-internal only** | All three collected datasets are undergraduate. The model serves the domestic DİM question, not the abroad routes |
+| **Route engine + DP + curation** | **bachelor AND master's** | Hand-written routes and curated requirement rows. No training data involved, so the constraint above never applied |
+
+Two findings forced this. The Dövlət Proqramı funds **353 master's places against 125
+bachelor** (Brief 01), so bachelor-only pointed the product at the smallest queue. And
+`dp-master-2026.csv` — 2,907 rows, 223 universities, 33 countries — had been on disk
+unused since collection. It is loaded now: a master's profile reaches **1,692 funded
+programmes against the bachelor's 601**, and the USA funds **zero** DP bachelor places
+against **289** at master's.
+
+Consequence to act on: every one of the 15 curated `program_requirements` rows is
+`level=bachelor`, so master's plans currently return universities with a named "we have
+not collected this" explanation rather than a list. That is honest, and it is the next
+curation gap.
+
 ### B3 🔴 Coverage check — what fraction of the catalogue is cutoff-based?
 
 Flagged as the top risk in the design review. If your curated set skews toward
@@ -464,6 +486,115 @@ YKS earns its place as a **selectivity signal** — it tells us how competitive 
 programme is relative to its peers, which is exactly what the Q2 selectivity index needs,
 and that transfers across routes even though the score does not. This is a stated
 decision, to be repeated verbatim in the report's limitations section.
+
+---
+
+## H. Funding
+
+Spec §5.2 named ten funding instruments across three tiers and stated that **a funding
+programme IS a route**, so scholarships run through the same eligibility engine as
+programmes. Implementation-plan Step 8 budgeted 2 person-days for it. Until 4 Sep 2026 the
+product modelled **one** of the ten — the Dövlət Proqramı.
+
+**The reason was data-availability bias, and it is worth recording as such.** The DP was
+the only funder publishing a downloadable catalogue (4,121 rows, one fetch); everything
+else needs hand-curation. So the product optimised for what was machine-readable rather
+than for what students need. The cost is visible in our own general research brief, whose
+advice is that a school-leaver should prioritise **Türkiye Bursları or the CSC** over the
+DP because the DP caps bachelor at 25% of its quota — meaning we had built the instrument
+the research says undergraduates should skip.
+
+### H1 ✅ Does the product model funders other than the DP?
+
+**Answered (4 Sep 2026): yes — ten instruments, each carrying the gate that actually
+decides it.** `domain/scholarship_definitions.py`, assessed by
+`services/scholarship_eligibility.py`, returned on `/routes/assess` as `scholarships`.
+
+The gates are the point, and several have nothing to do with academic merit:
+
+| Instrument | Level | The gate that excludes |
+|---|---|---|
+| Dövlət Proqramı | b · m · PhD | DİM 400/550 + C1 + listed university (assessed separately) |
+| SOCAR Xarici Təqaüd | master | **SOCAR group employment** — nothing academic opens it |
+| Türkiye Bursları | bachelor · master | **under 21** at bachelor |
+| CSC / Silk Road | bachelor · master | Chinese-taught at bachelor; CSCA + HSK 4 (on the route) |
+| Chevening | master only | **2,800 documented hours** |
+| Fulbright | master only | professional experience; 2-year home-residency after |
+| DAAD | master only | per-grant; database is `Disallow:` in robots |
+| NAWA Banach | master only | field of study — **our two sources contradict** |
+| Erasmus Mundus | master only | per-consortium |
+| GREAT | master only | per-university; a £10,000 **reduction**, not full funding |
+
+**Seven of the ten are master's-only and exactly two reach bachelor.** That is spec §2.3's
+finding rendered rather than described, and it is why the honest answer to a school-leaver
+is short: apply to the two that exist, and treat affordability — not scholarships — as the
+lever.
+
+The DP stays out of this catalogue deliberately. It is assessed by
+`services/dp_eligibility.py` against its own regulation, with a funded-programme catalogue
+and a quota split nothing in the scholarship shape could express. One award, one assessor;
+two would diverge on the first correction.
+
+Three profile inputs were added for these gates and nothing else: `age`,
+`work_experience_hours`, `employer`. Every one is optional, and an omission is reported as
+`gates_unknown` — a fourth outcome beside met/missing/blocked, which **never contributes to
+`open`**. That is ADR-0004 applied to money: an award whose age limit we never checked must
+not read as one the student clears.
+
+### H2 ✅ Can the engine surface the prep-year / Türkiye Bursları trade-off?
+
+Spec §11 recorded this as a known interaction the engine "should surface; whether it can is
+untested". **Answered (4 Sep 2026): it can, now that the profile carries an age.**
+
+The prep year at an Azerbaijani university is the product's central finding — it is what
+opens Germany and the UK to a school-leaver. It also costs twelve months, and Türkiye
+Bursları' bachelor award is under-21. A 20-year-old who takes the prep year to open Germany
+is 21 at the next Turkish window and loses a fully funded place in the same move.
+`prep_year_scholarship_warning` reports it; `prep_year_warning` carries it on the response.
+
+It fires only for a student the trade-off is real for — currently under the limit and over
+it after the year. Someone **already** past 21 is not told the prep year costs them the
+award, because it is already closed to them and its own gate says so.
+
+### H3 🔴 NAWA Banach — which fields, for Azerbaijanis?
+
+Our two sources give **exactly opposite** lists:
+
+- spec §5.2 — *"for Azerbaijanis, humanities/social sciences only"*
+- the 4 Sep general research brief — *"engineering, technical, agricultural, and natural
+  sciences"*
+
+These are complements, so one is wrong and we cannot tell which. The gate is reported as
+unresolved rather than resolved: picking a side would produce a confident answer with a 50%
+chance of being backwards.
+
+**This is also why no `field_of_study` input exists yet.** It was considered and deferred:
+its only consumers would be Banach (whose own sources contradict), the DP's 15 priority
+fields (unverified list) and Türkiye Bursları/CSC priority fields (unread). Adding the
+input before any of those is readable would let the engine compute a wrong answer
+confidently. **Read `nawa.gov.pl` first, then add the field.**
+
+### H4 🔴 Every figure in the funding catalogue is `research-brief` provenance
+
+One rung below `claude-extracted`: taken from spec §5.2 and the Deep Research briefs, whose
+primary pages **this project has not opened**. Nothing is verified by having been loaded.
+
+Pages to open, in rough order of how much a wrong figure would cost a student:
+
+1. **turkiyeburslari.gov.tr** — the under-21 limit and the 10 Jan–20 Feb window. No official
+   URL is recorded; the nearest source we hold is `studyinturkiye.gov.tr`. This is the most
+   load-bearing unverified figure in the catalogue, because it is one of only two
+   instruments open at bachelor level.
+2. **chevening.org/resource-hub/guidance/eligibility/** — the 2,800 hours.
+3. **nawa.gov.pl** — H3's conflict.
+4. **The SOCAR programme page** — no URL identified at all. Age ≤40 (45 MBA) and the
+   language bar are both unverified, and the MBA exception is deliberately **not** applied
+   in code because nothing in a profile says the degree is an MBA.
+5. **az.usembassy.gov/fulbright-foreign-student-program/** — whether a published experience
+   minimum exists.
+6. **DAAD** — the scholarship database is `Disallow:` in robots.txt and DAAD's terms of use
+   have not been read. Every grant must be hand-read from a page that allows it, or DAAD
+   ships as the named gap it currently is.
 
 ---
 

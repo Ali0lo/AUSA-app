@@ -29,6 +29,28 @@ class ExamRequirement:
 
 
 @dataclass(frozen=True)
+class ProofOfFunds:
+    """Cash the student must be able to SHOW before a visa is issued.
+
+    Deliberately not folded into `money_cost_azn`, and the separation matters in both
+    directions. Folding it in would claim Germany costs €11,904 a year, when the money stays
+    the student's own and is released back to them monthly. Leaving it out -- which is what
+    this product did until now -- quotes Germany at "0 to 1,200 AZN, tuition-free" to a
+    student who cannot raise the deposit and will therefore never be issued the visa.
+    Tuition-free is true, and it is not the binding constraint.
+
+    The amount is held in the currency the issuing government sets it in. No AZN conversion
+    is stored: the rate moves, and a figure printed to the manat would read as measured.
+    """
+    amount: int
+    currency: str
+    # What the amount buys: "per year of study", "one-off". Not a date range.
+    period: str
+    mechanism: str
+    citation: str
+
+
+@dataclass(frozen=True)
 class Route:
     key: str
     country_code: str
@@ -47,6 +69,11 @@ class Route:
     # Where this was read. Every route carries one; this is the highest-value data in the
     # product and none of it is scraped.
     citation: str
+    # Money that must exist in an account before the visa, if this destination demands it.
+    # None means no such requirement is recorded for this route -- which, per ADR-0004, is
+    # not the same as "this country has none", and is why the UI says "not recorded" rather
+    # than rendering an absent gate as a cleared one.
+    proof_of_funds: Optional[ProofOfFunds] = None
     # 'seed' until a person has opened the citation and confirmed it.
     provenance: str = "seed"
 
@@ -70,7 +97,43 @@ class StudentRouteProfile:
     hsk: Optional[int] = None
     language_certificate_level: Optional[str] = None
     has_international_olympiad_medal: Optional[bool] = None
+    # The DİM ixtisas qrupu (1-4) the student sat under. Not a score and not a preference:
+    # the Dövlət Proqramı's academic threshold is 400 for Group 1 (engineering and
+    # technology) and 550 for every other field, so without this the engine can only answer
+    # at the extremes. None means "not told us", never "Group 1".
+    dim_field_group: Optional[int] = None
+    # --- The three inputs the non-DP funding gates need, and none of the academic ones do.
+    #
+    # Several scholarships are decided by facts that have nothing to do with merit: Türkiye
+    # Bursları' bachelor award requires you to be under 21, SOCAR's is open only to its own
+    # employees, and Chevening publishes its bar as 2,800 documented hours. Without these
+    # fields the engine could only report those gates as permanently unknown -- which is
+    # honest, and useless. None still means "not told us", never a value in the student's
+    # favour (see services/scholarship_eligibility.py).
+    #
+    # `age` is a plain integer rather than a date of birth: the request carries the whole
+    # profile and stores nothing, so there is no birthday to keep current, and a year is the
+    # granularity every one of these limits is published at.
+    age: Optional[int] = None
+    # Hours, not years. Chevening counts documented hours, and part-time or overlapping work
+    # converts to years differently under any rule of thumb we could apply.
+    work_experience_hours: Optional[int] = None
+    # A self-declaration, used only to avoid presenting an award that is impossible. SOCAR
+    # verifies employment itself; nothing here is treated as proof of anything.
+    employer: Optional[str] = None
     budget_azn_per_year: Optional[float] = None
+    # The grade average OF THE QUALIFICATION NAMED IN `qualification_held` -- the attestat
+    # for a school-leaver, the completed bachelor's degree for a master's applicant. One
+    # field pair serves both levels because `qualification_held` already says which
+    # qualification it belongs to, and master's admission abroad routinely turns on the
+    # bachelor GPA against the same kind of published minimum.
+    #
+    # `gpa_scale` travels with it and is not optional in spirit: a grade without its scale
+    # is not a number (see app/domain/grades.py). A grade supplied without one is reported
+    # as not comparable rather than compared against an assumed scale -- assuming 4.0 is
+    # what makes an Azerbaijani 4.5 out of 5 look like an impossible value.
+    gpa: Optional[float] = None
+    gpa_scale: Optional[str] = None
 
 
 @dataclass(frozen=True)

@@ -231,8 +231,10 @@ assumed:
 ## Honest status
 
 **Working end to end:** route engine and two-hop composition · State Programme eligibility and the
-funded catalogue · `POST /routes/assess` · auth and access control · application tracker · admin
-review queue · PDF export · 186 passing tests.
+funded catalogue · `POST /routes/assess`, which now answers with the **named universities** each
+plan reaches and what each one asks · curated requirements for 12 universities across DE, GB, TR
+and CN · auth and access control · application tracker · admin review queue · PDF export ·
+233 passing tests.
 
 **Built but not yet connected:** the frontend still shows demo programmes rather than calling the
 route engine · the agent's tools cannot see routes or the catalogue · the RAG store holds no
@@ -240,6 +242,29 @@ curated university documents · the cutoff models have no serving path.
 
 **Not built:** per-programme deadlines · motivation-letter generation · application submission,
 which is deliberately out of scope and always will be.
+
+### How a plan finds its universities
+
+`Route` and `ProgramRequirement` speak the same vocabulary — the `QUALIFICATION_*` constants — so
+the join needs no mapping table between them. A plan delivers whatever qualification its last
+*producing* hop produces, and a university's row names the one qualification it accepts:
+
+| plan | delivers | universities it reaches |
+|---|---|---|
+| `tr-bachelor-direct` | `attestat` | Istanbul Technical, Boğaziçi |
+| `de-bachelor-studienkolleg` | `feststellungspruefung` | TUM, Heidelberg, LMU |
+| `uk-bachelor-foundation` | `foundation_year` | UCL, Edinburgh, Manchester |
+| `az-prep-year` → `uk-bachelor-direct` | `one_year_university` | **Manchester, Cambridge** |
+
+The last row is the product's claim, resolved to two named universities whose own admissions pages
+say so. Note that the two UK plans end at the same hop in the same country and reach **different**
+universities — anything keyed on the destination alone cannot tell them apart.
+
+An empty list is never left to speak for itself. `universities_status` distinguishes *we have not
+collected that country yet* (a gap in our data) from *we collected it and none of those universities
+documents this qualification* (a finding about the country). And every `NULL` requirement is named
+in `unknown_fields` rather than rendered as a blank, because a blank tuition reads as free and a
+blank language test reads as none required — both wrong in the direction that costs an application.
 
 ---
 

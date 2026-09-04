@@ -14,7 +14,11 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base
 from app.domain.routes import RouteStatus, StudentRouteProfile
 from app.models.dp_catalogue import DPCatalogueEntry
-from app.models.qualifications import QUALIFICATION_ATTESTAT, QUALIFICATION_BACHELOR_DEGREE
+from app.models.qualifications import (
+    QUALIFICATION_ATTESTAT,
+    QUALIFICATION_BACHELOR_DEGREE,
+    ProgramRequirement,
+)
 from app.services.dp_eligibility import (
     FUNDED_STATUS_LISTED,
     FUNDED_STATUS_NONE_AT_LEVEL,
@@ -37,7 +41,14 @@ async def session():
         poolclass=StaticPool,
     )
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all, tables=[DPCatalogueEntry.__table__])
+        # `program_requirements` is created but left EMPTY on purpose. The endpoint now
+        # reads it as well, and this test's subject is the DP funded-programmes answer --
+        # so the empty table also pins that an uncollected country degrades to a named
+        # "we have not collected this" rather than to a 500 or a silent empty list.
+        await conn.run_sync(
+            Base.metadata.create_all,
+            tables=[DPCatalogueEntry.__table__, ProgramRequirement.__table__],
+        )
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with factory() as s:
         now = datetime.now(timezone.utc)
@@ -74,17 +85,63 @@ def test_a_clear_dim_score_and_c1_is_possibly_eligible():
     assert "550" in result.band_checked
 
 
-def test_a_score_inside_the_band_says_so_rather_than_inventing_a_threshold():
-    """400-550 'depending on field', and the per-field table is not verified. The band is
-    reported; a single number would be invented."""
+def test_a_score_above_both_thresholds_is_decided_without_the_field_group():
+    """560 clears the harder of the two thresholds, so the student's ixtisas qrupu cannot
+    change the answer. Withholding a verdict here would be false caution: the check really
+    was conclusive."""
+    profile = StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+        dim_score=560.0, language_certificate_level="C1",
+    )
+    result = assess_dp_eligibility(profile)
+    assert result.status is RouteStatus.OPEN
+    assert any("does not change the answer" in gate for gate in result.gates_met)
+
+
+def test_a_score_below_both_thresholds_is_decided_without_the_field_group():
+    """The mirror image, and the one that must not be softened: 380 clears neither 400 nor
+    550, so no field group rescues it. A 'we cannot say' here would read as hope."""
+    profile = StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+        dim_score=380.0, language_certificate_level="C1",
+    )
+    result = assess_dp_eligibility(profile)
+    assert result.status is RouteStatus.UNLOCKABLE
+    assert any("below both thresholds" in gate for gate in result.gates_missing)
+
+
+def test_a_score_between_the_thresholds_withholds_the_verdict_and_asks_for_the_group():
+    """470 clears Group 1's 400 and fails everyone else's 550. This is the ONLY case the
+    field group decides, and picking a side would be a coin flip presented as a check."""
     profile = StudentRouteProfile(
         level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
         dim_score=470.0, language_certificate_level="C1",
     )
     result = assess_dp_eligibility(profile)
     assert result.status is RouteStatus.UNLOCKABLE
-    assert "400" in result.band_checked and "550" in result.band_checked
-    assert any("field" in gate.lower() for gate in result.gates_missing)
+    assert any("ixtisas qrupu" in gate for gate in result.gates_missing)
+    assert any("400" in gate and "550" in gate for gate in result.gates_missing)
+
+
+def test_the_same_score_passes_for_group_1_and_fails_for_the_others():
+    """The correction the research forced, stated as one test. 470 is not 'partly
+    qualifying' -- it is a pass for engineering and a fail for everything else, and the old
+    code could express neither."""
+    engineering = StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+        dim_score=470.0, dim_field_group=1, language_certificate_level="C1",
+    )
+    result = assess_dp_eligibility(engineering)
+    assert result.status is RouteStatus.OPEN
+    assert any("clears the 400" in gate for gate in result.gates_met)
+
+    humanities = StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+        dim_score=470.0, dim_field_group=3, language_certificate_level="C1",
+    )
+    result = assess_dp_eligibility(humanities)
+    assert result.status is RouteStatus.UNLOCKABLE
+    assert any("below the 550" in gate for gate in result.gates_missing)
 
 
 def test_a_missing_language_certificate_is_named_as_a_gate():
@@ -97,6 +154,21 @@ def test_a_missing_language_certificate_is_named_as_a_gate():
     assert any("C1" in gate for gate in result.gates_missing)
 
 
+def test_a_toefl_score_surfaces_the_unresolved_language_conflict_without_resolving_it():
+    """Our two sources disagree: C1 in the spec, TOEFL 80 in the research brief. The
+    stricter reading stands, so a TOEFL-85 student is still UNLOCKABLE and never told they
+    clear a bar nobody verified -- but they are told the disagreement exists, because
+    silently failing them on a contested rule is its own kind of dishonesty."""
+    profile = StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+        dim_score=560.0, toefl=85,
+    )
+    result = assess_dp_eligibility(profile)
+    assert result.status is RouteStatus.UNLOCKABLE
+    assert any("disagree" in gate for gate in result.gates_missing)
+    assert any("85" in gate for gate in result.gates_missing)
+
+
 def test_an_olympiad_medal_is_an_alternative_to_the_dim_route():
     profile = StudentRouteProfile(
         level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
@@ -106,55 +178,64 @@ def test_an_olympiad_medal_is_an_alternative_to_the_dim_route():
 
 
 def test_master_applicants_are_not_asked_for_a_bachelor_only_dim_score():
-    """The DİM/SAT/Olympiad academic gate is published for bachelor level only (spec
-    §2.2's eligibility table names that row 'Bachelor' specifically). A master's applicant
-    -- degree in hand, C1, correctly no DİM score, since DİM is a bachelor-admission exam
-    -- must never be told they are missing it."""
+    """The DİM threshold is a bachelor gate and the regulation excludes it above that
+    level. A master's applicant -- degree in hand, C1, correctly no DİM score, since DİM is
+    a school-leaving exam -- must never be told they are missing it."""
     profile = StudentRouteProfile(
         level_sought="master", qualification_held=QUALIFICATION_BACHELOR_DEGREE,
-        language_certificate_level="C1",
+        language_certificate_level="C1", gpa=3.6, gpa_scale="4.0",
     )
     result = assess_dp_eligibility(profile)
     assert not any("DİM" in gate for gate in result.gates_missing)
     assert not any("SAT" in gate for gate in result.gates_missing)
 
 
-def test_master_level_academic_gate_is_reported_unknown_not_open():
-    """No master-level academic gate is published anywhere in this project's sources.
-    Per ADR-0004 an unknown must never read as permission: even a strong master's profile
-    (degree held, C1 language) must not come back OPEN on the strength of a gate nobody
-    checked, and the band shown must not be the bachelor 400-550 band this profile was
-    never tested against."""
+def test_the_master_gate_is_gpa_and_an_offer_not_an_unknown():
+    """This module used to report the master's gate as UNKNOWN and record the spec's
+    self-contradiction as an open question. The research settles it: CGPA plus an
+    unconditional offer. The GPA is read and reported, and -- because no numeric minimum is
+    published anywhere -- it is never compared against a threshold."""
+    profile = StudentRouteProfile(
+        level_sought="master", qualification_held=QUALIFICATION_BACHELOR_DEGREE,
+        language_certificate_level="C1", gpa=3.6, gpa_scale="4.0",
+    )
+    result = assess_dp_eligibility(profile)
+    assert "CGPA" in result.band_checked
+    assert "550" not in result.band_checked
+    assert any("3.6" in gate for gate in result.gates_met)
+    assert any("no published minimum" in gate.lower() for gate in result.gates_met)
+    # The offer is a document, not a score, so it can never be cleared from a profile.
+    assert any("unconditional offer" in gate.lower() for gate in result.gates_missing)
+    assert result.status is RouteStatus.UNLOCKABLE
+
+
+def test_a_master_applicant_without_a_gpa_is_asked_for_it():
     profile = StudentRouteProfile(
         level_sought="master", qualification_held=QUALIFICATION_BACHELOR_DEGREE,
         language_certificate_level="C1",
     )
     result = assess_dp_eligibility(profile)
-    assert result.status is RouteStatus.UNLOCKABLE
-    assert "550" not in result.band_checked
-    assert any("master" in gate.lower() for gate in result.gates_missing)
+    assert any("grade average" in gate for gate in result.gates_missing)
 
 
-def test_a_sat_score_alone_does_not_clear_the_gate():
-    """The 75th-percentile SAT/ACT alternative (spec §2.2) is per-institution and
-    per-year, and we have not collected it. The presence of a SAT number must never be
-    read as clearing an unchecked threshold -- it must stay in `gates_missing`, and
-    `status` must never come back OPEN on it alone (Critical 5)."""
+def test_a_sat_score_never_opens_the_dp_because_no_sat_route_exists():
+    """The regulation exempts exactly one group from the DİM requirement: international
+    subject-olympiad medallists. The 75th-percentile SAT/ACT alternative in spec §2.2 does
+    not exist, and this pins that a SAT can never satisfy the academic gate -- the property
+    the old fail-closed code happened to have, now the property the rule actually states."""
     profile = StudentRouteProfile(
         level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
         sat=1550, language_certificate_level="C1",
     )
     result = assess_dp_eligibility(profile)
     assert result.status is RouteStatus.UNLOCKABLE
-    assert not any("clears" in gate.lower() and "SAT" in gate for gate in result.gates_met)
-    assert any("SAT" in gate for gate in result.gates_missing)
-    assert any("not been confirmed" in gate or "not confirmed" in gate for gate in result.gates_missing)
+    assert not any("SAT" in gate for gate in result.gates_met)
+    assert any("no SAT or ACT route" in gate for gate in result.gates_missing)
 
 
-def test_a_low_sat_score_does_not_clear_the_gate_either():
-    """Reproduces the live defect exactly: SAT 200 (an implausibly low score) must not be
-    treated any differently from a high one -- the field is never checked against a
-    threshold at all, so no score, however small, may satisfy it."""
+def test_a_low_sat_score_is_treated_exactly_like_a_high_one():
+    """SAT 200 and SAT 1550 must produce the same outcome, because the score is never
+    compared to anything -- there is no bar to compare it to."""
     profile = StudentRouteProfile(
         level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
         sat=200, dim_score=300.0, language_certificate_level="C1",
@@ -164,29 +245,22 @@ def test_a_low_sat_score_does_not_clear_the_gate_either():
     assert result.gates_missing
 
 
-def test_sat_does_not_bypass_a_sub_band_dim_evaluation():
-    """Because the academic-gate chain used to be a single elif chain, a SAT value
-    skipped the DİM band checks entirely. A student who offers both a sub-band DİM score
-    and a SAT score must have both considered -- and clearing neither must not read as
-    OPEN (Critical 5)."""
+def test_a_sat_does_not_bypass_the_dim_evaluation():
+    """The academic-gate chain was once a single elif, so a SAT value skipped the DİM
+    checks entirely. A student offering both must have both considered."""
     profile = StudentRouteProfile(
         level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
         dim_score=470.0, sat=1550, language_certificate_level="C1",
     )
     result = assess_dp_eligibility(profile)
     assert result.status is RouteStatus.UNLOCKABLE
-    # The DİM-in-band gate is still reported, exactly as it is without a SAT score.
-    assert any("field" in gate.lower() for gate in result.gates_missing)
-    # And the SAT alternative is separately reported as unconfirmed, not silently dropped.
+    assert any("ixtisas qrupu" in gate for gate in result.gates_missing)
     assert any("SAT" in gate for gate in result.gates_missing)
 
 
-def test_an_act_score_is_read_and_reported_as_unconfirmed_not_ignored():
-    """`act` is a StudentRouteProfile field but was never read anywhere in this module --
-    an ACT-only candidate fell through to the generic 'One of: ...' missing message,
-    which mentions 'ACT' regardless of whether the field was ever inspected. Asserting
-    the offered score itself (35) appears in the explanation proves the value was
-    actually read, not that a fixed string happened to contain the letters."""
+def test_an_act_score_is_read_and_reported_not_ignored():
+    """Asserting the offered score itself (35) appears in the explanation proves the value
+    was actually read, not that a fixed string happened to contain the letters."""
     profile = StudentRouteProfile(
         level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
         act=35, language_certificate_level="C1",
@@ -194,7 +268,51 @@ def test_an_act_score_is_read_and_reported_as_unconfirmed_not_ignored():
     result = assess_dp_eligibility(profile)
     assert result.status is RouteStatus.UNLOCKABLE
     assert any("35" in gate for gate in result.gates_missing)
-    assert not any("clears" in gate.lower() and "ACT" in gate for gate in result.gates_met)
+    assert not any("ACT" in gate for gate in result.gates_met)
+
+
+def test_the_quota_note_names_the_places_at_the_students_own_level():
+    """125 bachelor against 353 master's out of 500. A student choosing a level is choosing
+    a queue, and the size of that queue was previously rendered nowhere."""
+    bachelor = assess_dp_eligibility(StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+    ))
+    assert "125" in bachelor.quota_note and "500" in bachelor.quota_note
+
+    master = assess_dp_eligibility(StudentRouteProfile(
+        level_sought="master", qualification_held=QUALIFICATION_BACHELOR_DEGREE,
+    ))
+    assert "353" in master.quota_note
+    # And the note must never be read as odds of winning one of them.
+    assert "not your odds" in master.quota_note
+
+
+def test_the_five_year_return_obligation_is_always_stated():
+    """Accepting the funding is a contract with a repayment clause. It is not conditional
+    on clearing any gate, so it is reported for every profile -- including one that clears
+    nothing, because that student is still deciding whether to aim for this at all."""
+    result = assess_dp_eligibility(StudentRouteProfile(
+        level_sought="bachelor", qualification_held=QUALIFICATION_ATTESTAT,
+    ))
+    assert "5 years" in result.obligation_note
+    assert "repaying" in result.obligation_note
+
+
+def test_the_window_note_says_which_academic_year_an_application_would_be_for():
+    """After June the current cycle has closed, so an application is for the year after --
+    the difference between a plan a student can act on now and one they cannot."""
+    from datetime import date as _date
+
+    from app.services.dp_eligibility import application_window_note
+
+    september = application_window_note(_date(2026, 9, 4))
+    assert "2026/2027" in september and "closed" in september
+    assert "2027/2028" in september
+
+    february = application_window_note(_date(2026, 2, 4))
+    assert "closed" not in february
+    # No invented precision: the sources give months, so the note gives months.
+    assert "dp.edu.az" in february
 
 
 def test_the_gate_never_promises_an_award():

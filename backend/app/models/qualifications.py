@@ -50,6 +50,17 @@ class StudentQualification(Base):
     language_certificate_level = Column(String(10), nullable=True)
     has_international_olympiad_medal = Column(Boolean, nullable=True)
 
+    # The grade average of the qualification named in `qualification_held` above -- the
+    # attestat for a school-leaver, the completed bachelor's degree for a master's
+    # applicant. Mirrors StudentRouteProfile.gpa; see app/domain/grades.py.
+    gpa = Column(Float, nullable=True)
+    # NOT optional in spirit, only in the column. A grade without its scale is not a
+    # number, and the two are stored together for the same reason program_requirements
+    # stores gpa_minimum beside gpa_scale. '5.0' | '100' | '4.0' | 'german'. Deliberately
+    # unbounded here: 4.5 is a valid Azerbaijani attestat average and invalid on a 4.0
+    # scale, so the scale decides the range, not the column.
+    gpa_scale = Column(String(10), nullable=True)
+
     budget_azn_per_year = Column(Float, nullable=True)
     field_of_interest = Column(String(120), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

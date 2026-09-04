@@ -7,6 +7,9 @@ import { useState } from "react";
 import { NavAuthButton } from "@/components/NavAuthButton";
 
 const navigation = [
+  // First, and deliberately. This is the one surface backed by the real route engine and
+  // real curated requirements; everything after it is the earlier prototype.
+  { href: "/plan", label: "Plan my route" },
   { href: "/match", label: "Match" },
   { href: "/advisor", label: "AI advisor" },
   { href: "/application", label: "Application" },

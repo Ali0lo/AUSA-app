@@ -1,10 +1,17 @@
-import { ArrowRight, BookOpenText, FileCheck2, Scale } from "lucide-react";
+import { ArrowRight, BookOpenText, FileCheck2, Route, Scale } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FeatureTag } from "@/components/FeatureTag";
 import { LandingSearch } from "@/components/LandingSearch";
 
 const capabilities = [
+  {
+    title: "Route planning",
+    description: "Enter your qualification and scores and see every route open to you, what each costs in time and money, and the universities that document accepting it — each quoted from its own admissions page.",
+    href: "/plan",
+    state: "available" as const,
+    icon: Route
+  },
   {
     title: "Prototype matching",
     description: "Enter a student profile, select one of the existing demo programmes, and receive the backend's current compatibility breakdown.",
@@ -53,14 +60,27 @@ export default function HomePage() {
               A clearer route to the right programme.
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-[#deddd8] sm:text-xl">
-              Compare a student profile with programme requirements, inspect the current prototype score, and prepare an application without hiding what the system can and cannot do.
+              Enter what you hold and what you scored. See every route it opens, what each costs in time and money, and the universities that document accepting it — quoted from their own admissions pages.
             </p>
-            <div className="mt-9">
-              <LandingSearch />
+            <div className="mt-9 flex flex-wrap items-center gap-5">
+              <Link className="button-primary min-h-14 px-7 text-base" href="/plan">
+                Plan my route
+                <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+              <span className="text-sm text-[#deddd8]">Free, and no account needed.</span>
             </div>
-            <p className="mt-3 text-xs leading-5 text-[#c7c6c1]">
-              Search covers three frontend demo programmes. Full catalogue search is not implemented by the current backend.
-            </p>
+
+            <div className="mt-9 border-t border-[#5d5f59] pt-7">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#c7c6c1]">
+                Or search the earlier demo catalogue
+              </p>
+              <div className="mt-4">
+                <LandingSearch />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-[#c7c6c1]">
+                Search covers three frontend demo programmes. Route planning above uses the real curated catalogue.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -120,8 +140,8 @@ export default function HomePage() {
             ))}
           </ol>
           <div className="mt-9">
-            <Link className="button-primary" href="/match">
-              Start prototype matching
+            <Link className="button-primary" href="/plan">
+              Plan my route
               <ArrowRight size={17} aria-hidden="true" />
             </Link>
           </div>

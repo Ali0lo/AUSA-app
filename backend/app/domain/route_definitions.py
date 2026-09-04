@@ -8,7 +8,7 @@ quotes. Where the spec verified a figure it is used; where it did not, the range
 rather than precise, because a narrow invented number reads as measured.
 """
 
-from app.domain.routes import ExamRequirement, Route
+from app.domain.routes import ExamRequirement, ProofOfFunds, Route
 from app.models.qualifications import (
     QUALIFICATION_A_LEVEL,
     QUALIFICATION_ATTESTAT,
@@ -46,6 +46,35 @@ STUDY_IN_TURKIYE = "https://www.studyinturkiye.gov.tr/"
 CAMPUS_CHINA = "https://www.campuschina.org/"
 DP_RULES = "https://dp.edu.az/ -- Dövlət Proqramı eligibility rules"
 SPEC_2_1 = "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §2.1"
+
+# --- Money that must exist before a visa is issued, as opposed to money the route spends.
+#
+# Germany is the only one of the six with a figure recorded here, and its absence elsewhere
+# means "not collected", never "none required" -- the UK, the USA and Poland all ask for
+# some evidence of maintenance funds and none of it has been read from a primary source yet.
+#
+# Provenance is the 2026-09-04 research brief, which states the Sperrkonto deposit at
+# EUR 11,904 per year with EUR 992 released monthly, tied to the national BAföG rate. The
+# brief's own citations for this figure are commercial blocked-account providers, which is
+# exactly the kind of source data-sourcing.md warns about -- the deposit is set by German
+# federal regulation, and the Auswärtiges Amt page stating it has NOT been opened by this
+# project. So the figure is reported with the amount it names and no more precision than
+# that, and it stays unverified until someone reads the regulation itself.
+GERMAN_BLOCKED_ACCOUNT = ProofOfFunds(
+    amount=11904,
+    currency="EUR",
+    period="per year of study",
+    mechanism=(
+        "A blocked account (Sperrkonto) opened before the visa appointment. The money "
+        "remains yours and is released to you at roughly EUR 992 a month after you arrive, "
+        "but the full year must be deposited up front and the visa is refused without it"
+    ),
+    citation=(
+        "AUSA research brief 2026-09-04, citing the German student visa financial-proof "
+        "requirement set in line with the national BAföG rate. NOT yet read from the "
+        "Auswärtiges Amt or the regulation itself -- verify before quoting this to anyone"
+    ),
+)
 
 # --- The unlock. Both blocked countries share this one escape hatch (spec §2.1). ---
 
@@ -148,6 +177,9 @@ DE_BACHELOR_STUDIENKOLLEG = Route(
     time_cost_months=12,
     money_cost_azn=(6000, 14000),
     citation=ANABIN,
+    # The Studienkolleg year is entered on a German student visa like any other, so the
+    # deposit is due before the preparatory year starts, not before the degree does.
+    proof_of_funds=GERMAN_BLOCKED_ACCOUNT,
 )
 
 DE_BACHELOR_DIRECT = Route(
@@ -173,6 +205,11 @@ DE_BACHELOR_DIRECT = Route(
     # QUALIFICATION_ONE_YEAR_UNIVERSITY appear in requires_qualification above, so it is the
     # one this route has to be able to show.
     citation=UNI_ASSIST_HZB,
+    # The money_cost_azn above is (0, 1200) and it is accurate: public German universities
+    # charge no tuition, only a semester contribution. It was also, until this field existed,
+    # the entire financial picture this product showed for Germany -- which made the most
+    # expensive precondition of the six countries look like the cheapest option.
+    proof_of_funds=GERMAN_BLOCKED_ACCOUNT,
 )
 
 UK_BACHELOR_FOUNDATION = Route(
@@ -228,6 +265,8 @@ DE_MASTER_DIRECT = Route(
     requires_qualification=(QUALIFICATION_BACHELOR_DEGREE,), produces_qualification=None,
     exams=(ExamRequirement("IELTS", 6.5, "ielts"),),
     time_cost_months=0, money_cost_azn=(0, 1200), citation=SPEC_2_1,
+    # Same visa, same deposit. A master's applicant is not exempt.
+    proof_of_funds=GERMAN_BLOCKED_ACCOUNT,
 )
 
 UK_MASTER_DIRECT = Route(

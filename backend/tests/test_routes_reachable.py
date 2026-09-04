@@ -29,6 +29,7 @@ from app.models.dp_catalogue import DPCatalogueEntry
 from app.models.qualifications import QUALIFICATION_ATTESTAT
 from app.services.dp_eligibility import funded_programmes
 from app.services.route_engine import compose_two_hop
+from app.services.university_requirements import UNIS_STATUS_NONE_CURATED_FOR_COUNTRY
 
 SYNTH_PREP_UNLOCK = Route(
     key="synth-prep-unlock", country_code="AZ", level="bachelor",
@@ -85,6 +86,18 @@ def test_reachable_countries_includes_a_two_hop_destination():
             total_cost_azn_high=plan.total_cost_azn[1],
             status=plan.status.value,
             missing=list(plan.missing),
+            # This test is about `_reachable_countries`, which reads only `hops`. The
+            # university fields are filled with the shape an uncollected destination
+            # actually produces -- an empty list with a named reason -- rather than with
+            # placeholders, so the fixture cannot drift into asserting a state the
+            # endpoint never emits.
+            destination_country=plan.hops[-1].country_code,
+            qualification_delivered=(
+                plan.hops[-1].produces_qualification or PROFILE.qualification_held
+            ),
+            universities=[],
+            universities_status=UNIS_STATUS_NONE_CURATED_FOR_COUNTRY,
+            universities_explanation="synthetic country; nothing collected",
         )
         for plan in plans_domain
     ]
