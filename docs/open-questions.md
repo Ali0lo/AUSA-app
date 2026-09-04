@@ -168,6 +168,28 @@ have.
 
 **Answer (28 Aug, grilling Q7): bachelor's only.** It is what the data supports.
 
+**Superseded 4 September — the answer conflated two different products.**
+
+"Bachelor's only" was correct about the **ML**, and was then wrongly applied to the
+**route engine**, which needs no training data at all. The two are now separated:
+
+| | Levels | Why |
+|---|---|---|
+| **ML (cutoff / selectivity)** | bachelor only, **Azerbaijan-internal only** | All three collected datasets are undergraduate. The model serves the domestic DİM question, not the abroad routes |
+| **Route engine + DP + curation** | **bachelor AND master's** | Hand-written routes and curated requirement rows. No training data involved, so the constraint above never applied |
+
+Two findings forced this. The Dövlət Proqramı funds **353 master's places against 125
+bachelor** (Brief 01), so bachelor-only pointed the product at the smallest queue. And
+`dp-master-2026.csv` — 2,907 rows, 223 universities, 33 countries — had been on disk
+unused since collection. It is loaded now: a master's profile reaches **1,692 funded
+programmes against the bachelor's 601**, and the USA funds **zero** DP bachelor places
+against **289** at master's.
+
+Consequence to act on: every one of the 15 curated `program_requirements` rows is
+`level=bachelor`, so master's plans currently return universities with a named "we have
+not collected this" explanation rather than a list. That is honest, and it is the next
+curation gap.
+
 ### B3 🔴 Coverage check — what fraction of the catalogue is cutoff-based?
 
 Flagged as the top risk in the design review. If your curated set skews toward
