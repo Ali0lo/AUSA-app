@@ -598,6 +598,209 @@ Pages to open, in rough order of how much a wrong figure would cost a student:
 
 ---
 
+## I. The ML — what actually blocks "a solid model, not partly worked"
+
+**Written 4 Sep 2026, 11 days from the deadline. These are the questions I cannot answer
+alone.** The stated standard is *"a solid ML model, not partly worked and assumed with
+fabricated data."* This section says where we actually are against that standard, then asks
+the decisions that are yours.
+
+**I1 was answered while this was being written** — the ML is an Azerbaijan feature with its
+own section of the product, separate from the abroad routing. **I2, I3, I4 and I5 are open
+and are what a new session should start from.** I4 is the one that decides how the remaining
+eleven days are spent, so answer it even if you skip the others.
+
+### The state, measured not remembered
+
+I read `models/metrics.json` and the training script rather than working from memory.
+
+**The model is not weak. It is disconnected.** That distinction matters, because the two
+have completely different fixes and only one of them is expensive.
+
+What is genuinely defensible today — the Azerbaijani cold-start model:
+
+| | MAE | RMSE | R² |
+|---|---:|---:|---:|
+| global-mean baseline | 107.12 | 130.46 | ~0.00 |
+| **department-mean baseline** | **57.37** | 82.16 | 0.60 |
+| DecisionTree | 54.04 | 76.17 | 0.66 |
+| RandomForest | 42.12 | 59.80 | 0.79 |
+| **HistGradientBoosting (shipped)** | **41.34** | **59.10** | **0.79** |
+
+**+27.9% against the department-mean baseline**, on 2,576 rows / 1,028 programmes, split
+`GroupShuffleSplit` on `program_key` so every test programme is unseen. The DİM scale is
+0–700 with an observed **sd of 131.5**, so an MAE of 41 is real signal, not noise fitting.
+This clears spec Step 6's own success criterion (*"beats the department-mean baseline,
+baseline 57.37"*). **It is a legitimate coursework result and it is honestly evaluated.**
+
+So the problem is not model quality. It is these four:
+
+### Problem 1 — the model and the product serve different students ✅ settled, see I1
+
+The ML predicts **DİM cutoffs at Azerbaijani domestic universities.** The product routes
+students **abroad** (TR/DE/GB/US/PL/CN). A student who opens AUSA to find a German master's
+gets nothing from the model, however good it is.
+
+This was raised as the deepest problem in the list. **It is now a decision instead: the ML
+ships as its own Azerbaijan section, separate from the abroad routing (I1).** The ML has
+become a second product sharing a repository, and rather than force the two together, we
+say so and give each its own section.
+
+Left here rather than deleted, because the *reason* still binds everything downstream: any
+future proposal to feed the model into a route plan runs into the same wall — no destination
+country has cutoff data describing the route an Azerbaijani applicant actually takes.
+
+### Problem 2 — nothing serves the model 🔴
+
+Three artifacts exist: `models/cutoff_coldstart_{AZ,TR,US}.joblib`. Grepping the whole
+backend for `joblib` returns **only the training scripts.** No endpoint, no service, no
+router loads any of them.
+
+The ML currently exists as a training run that produced a metrics file. It is not a feature.
+Nothing in the running application would change if all three artifacts were deleted.
+
+### Problem 3 — the forecasting evaluation was skipped by a bug, not by a data limit 🔴
+
+`metrics.json` records for Azerbaijan:
+
+> `"forecasting": {"skipped": "too few intake years for a temporal split (train<=2023 has 0 rows, test=2025 has 928)"}`
+
+**That reads as a data limitation and it is not one.** The data holds three intake years —
+2023 (805 rows), 2024 (743), 2025 (1,028) — and 748 programmes appear in more than one.
+
+The cause is in `train_cutoff_models.py`. `temporal_split_years` returns
+`(test_year-2, test_year-1, test_year)` = `(2023, 2024, 2025)`, then `evaluate_forecasting`
+drops every row without a `cut_lag1`. The 2023 rows have no prior year to lag from, so they
+vanish, and `train = d[d.intake_year <= 2023]` is empty. The generic rule produces an empty
+training set **specifically when a country has exactly three years.**
+
+A one-step split is available and was never run:
+
+- **train = 2024** (500 programmes carry a 2023→2024 pair)
+- **test = 2025** (583 programmes carry a 2024→2025 pair)
+
+That yields a real comparison against the **persistence baseline** (*next cutoff = last
+cutoff*), which is the hard baseline in this problem — it beat all three models for Turkey.
+Beating it on Azerbaijani data would be a much stronger claim than the cold-start result,
+and losing to it is also a publishable finding. **Right now we have neither, and the metrics
+file states a reason that is not the real one.**
+
+This is the single highest-value ML fix available, and it is roughly a half-day.
+
+### Problem 4 — two obsolete artifacts contradict an accepted ADR 🟡
+
+`backend/scripts/train_prediction_models.py` trains a **classifier** and calls
+`predict_proba` — that is P(admit), which ADR-0008 removed and commit `9a61f28` deleted from
+the product. Its outputs `backend/app/models/ml_weights/{turkey,usa}_cutoff_model.joblib`
+are still committed, dated 28 Aug, superseded by the 29 Aug retrain.
+
+Nothing loads them, so they mislead a reader rather than a student. Still: a repo that ships
+an admission-probability trainer while its ADR says admission probability is not published
+is a repo that contradicts itself in front of a marker.
+
+---
+
+### I1 ✅ Must the ML serve the abroad product, or is a domestic DİM predictor acceptable?
+
+**Answered by the user, 4 Sep 2026: the ML is an Azerbaijan feature and ships as its own
+section of the product, separate from the abroad routing.** Problem 1 is therefore not a
+defect to fix — it is the architecture, stated.
+
+The option this rules out, and why it was right to rule it out: making the model serve the
+abroad product would mean predicting something about the six destination countries, and
+**we hold no cutoff data for any of them that describes the route an Azerbaijani applicant
+actually takes.** Turkish YKS describes the domestic route; German NC excludes
+`Bildungsausländer` outright. Collecting real international-quota cutoffs in 11 days is not
+credible, so that path ends either in a new modelling task or in invented data — the failure
+mode this project has already had to reverse out of three times.
+
+**What this decision now requires of the code and the writing:**
+
+- The two halves get **separate sections in the UI**, not one blended results page. A DİM
+  cutoff prediction must never appear inside a route plan for Germany, where it would read
+  as a claim about German admission.
+- Each section states who it is for, in its own words: *"this predicts cutoffs at
+  Azerbaijani universities"* against *"this plans routes to six countries abroad"*.
+- The report says the same thing rather than implying one system. Two products in one
+  repository is a defensible design; two products described as one is the thing a marker
+  would catch.
+- **Nothing else in this section changes.** Problems 2, 3 and 4 are all inside the
+  Azerbaijan feature and all still stand.
+
+Supersedes the framing in G4, which accepted the train/serve split as a *limitation*. It is
+now a product boundary.
+
+### I2 🔴 Which task is the ML deliverable — cold-start, forecasting, or both?
+
+They answer different questions and only one of them is what a person would call
+"predicting the cutoff":
+
+- **Cold-start** — *"this programme has no history; what would a similar programme's cutoff
+  be?"* Currently shipped, +27.9% over baseline, honestly evaluated.
+- **Forecasting** — *"this programme has history; what will its cutoff be next year?"* Never
+  evaluated for Azerbaijan (Problem 3). This is the one a student actually asks.
+
+**My recommendation: run forecasting, report both.** Half a day, and it converts "we
+compared models on one task" into "we compared them on both tasks and here is where each
+wins". If forecasting loses to persistence — as it did for Turkey — **say so**; a negative
+result against a strong baseline is a real finding and C4 already accepted that.
+
+### I3 🟡 Does the Azerbaijan section ship as a working page, or as a report?
+
+I1 settled *where* the model lives. This asks whether that section is **running code** or
+**a written result**.
+
+Wiring it is about half a day: an endpoint that loads `cutoff_coldstart_AZ.joblib`, plus a
+page under the Azerbaijan section. Now that I1 has given it its own section, the framing
+problem is gone — a domestic prediction on a domestic page is not a bug, it is the label.
+
+C3 asks what the course deliverables are (notebook / report / running app) and is still
+open. **I3 cannot be answered before C3.** If you know the course's actual requirement,
+answering C3 settles this one for free.
+
+**My recommendation: wire it.** I1 made this cheaper than it was an hour ago, and an ML
+section with nothing behind it invites the question of whether the model runs at all. If C3
+turns out to want only a notebook, leave it unwired and state in the README that the
+artifacts are evaluated but not served — true, and costs nothing.
+
+**One thing this must not do:** the predicted cutoff is for **Azerbaijani universities**,
+and the page has to say so in its own words. It must not appear anywhere near a route plan,
+where a number would read as a claim about admission abroad.
+
+### I4 🔴 Eleven days. What gets cut?
+
+Everything below is real work that a reasonable person would want. It does not all fit.
+Ranked by what I would keep, and I need to know where you draw the line:
+
+| | Work | Cost | Why it earns the slot |
+|---|---|---|---|
+| 1 | **Fix the forecasting split (Problem 3)** | 0.5 d | Turns a false "skipped" into a real result; highest value per hour in the repo |
+| 2 | **Delete `train_prediction_models.py` + its two artifacts** | 0.5 h | Repo stops contradicting its own ADR |
+| 3 | **Verify Türkiye Bursları' under-21 limit** (§H4) | 0.5 d | One of only two bachelor-level awards; a wrong figure here is the most expensive error we ship |
+| 4 | **Master's `program_requirements` rows** | 2 d | All 15 curated rows are `level=bachelor`, so every master's plan returns "not collected" — and master's is where 353 of the DP's 500 places are |
+| 5 | **Build the Azerbaijan section and serve the model (I1, I3)** | 0.5 d | I1 made this a product section rather than an awkward graft; an ML section with nothing behind it invites the question of whether the model runs |
+| 6 | **Run the 57 Brief 00 URLs through `check_sources_robots`** | 0.5 d | Gate before any of them enter `sources.csv` |
+| 7 | **Fix `students.gpa` `le=4.0`** | 1 h | Known-broken: rejects a valid Azerbaijani 4.5/5 |
+
+**My recommendation: 1, 2, 3, 7 are non-negotiable (about 1.5 days total).** Item 4 is the
+biggest single product gap but is also the one I would cut first if the course grades the
+ML, because it buys a better *product* and zero ML marks. **Tell me which of those two the
+grade actually rewards and I will spend the eleven days accordingly.**
+
+### I5 🟡 Who verifies the DİM rows? `verified_by` is empty for all 2,576
+
+Every row of `azerbaijan_cutoff_history.csv` has an empty `verified_by`. Under ADR-0004 that
+is correct — nobody has checked them — but it means **the model's training data is entirely
+unverified**, and "trained on unverified data" is a fair thing for a marker to ask about.
+
+The rows came from official DİM publications, so this is a signing-off task rather than a
+re-collection task. **Question: does anyone on the team have time to spot-check a sample
+(say 30 rows against the source PDFs) so we can state a verified fraction instead of
+zero?** A verified 30 out of 2,576 with a stated method beats 0 out of 2,576, and it is an
+hour's work for someone who is not me.
+
+---
+
 ## Answered — for the record
 
 These were open in `architecture-decisions.md` and are now settled:
