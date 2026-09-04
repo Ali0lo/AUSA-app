@@ -204,9 +204,26 @@ export interface AssessRoutesPayload {
   hsk?: number | null;
   language_certificate_level?: string | null;
   has_international_olympiad_medal?: boolean | null;
+  // DİM ixtisas qrupu, 1–4. The Dövlət Proqramı's threshold is 400 for Group 1
+  // (engineering and technology) and 550 for every other field, so a score between the
+  // two is only decidable with this.
+  dim_field_group?: number | null;
   budget_azn_per_year?: number | null;
   gpa?: number | null;
   gpa_scale?: GradeScaleKey | null;
+}
+
+// Cash that must sit in an account before a visa is issued. Deliberately NOT part of
+// money_cost_azn: the money stays the student's own, so adding it to the cost would
+// overstate the price, and omitting it entirely — which this product did until now —
+// showed Germany as the cheapest destination on the page when its deposit is the
+// largest financial barrier of the six.
+export interface ProofOfFunds {
+  amount: number;
+  currency: string;
+  period: string;
+  mechanism: string;
+  citation: string;
 }
 
 export interface RouteHop {
@@ -218,6 +235,9 @@ export interface RouteHop {
   money_cost_azn_high: number;
   citation: string;
   provenance: string;
+  // null means "no requirement recorded for this hop", which is NOT "this country
+  // requires none". The UI must say which of the two it is.
+  proof_of_funds: ProofOfFunds | null;
 }
 
 export interface RouteUniversity {
@@ -282,6 +302,12 @@ export interface DPEligibility {
   gates_met: string[];
   gates_missing: string[];
   note: string;
+  // Not gates. What the student needs in order to decide whether to want this at all:
+  // how many places exist at their level, the 5-year return-service contract the money
+  // carries, and which academic year an application started today would be for.
+  quota_note: string;
+  obligation_note: string;
+  window_note: string;
   funded_programmes: FundedProgramme[];
   funded_programmes_status: string;
   funded_programmes_explanation: string;

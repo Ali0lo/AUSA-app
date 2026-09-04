@@ -48,6 +48,13 @@ class AssessRoutesPayload(BaseModel):
     hsk: Optional[int] = None
     language_certificate_level: Optional[str] = None
     has_international_olympiad_medal: Optional[bool] = None
+    # 1-4. The Dövlət Proqramı's DİM threshold is 400 for Group 1 and 550 for every other
+    # field, so this turns an indefinite answer into a definite one for any score between
+    # them. Omitting it is allowed and is answered honestly rather than assumed.
+    dim_field_group: Optional[int] = Field(
+        default=None, ge=1, le=4,
+        description="DİM ixtisas qrupu, 1-4. Group 1 is engineering and technology.",
+    )
     budget_azn_per_year: Optional[float] = None
     # The grade average of the qualification named in `qualification_held`: the attestat for
     # a school-leaver, the bachelor's degree for a master's applicant. Deliberately NOT
@@ -63,6 +70,15 @@ class AssessRoutesPayload(BaseModel):
     )
 
 
+class ProofOfFundsResponse(BaseModel):
+    """Cash that must exist in an account before a visa, distinct from the route's cost."""
+    amount: int
+    currency: str
+    period: str
+    mechanism: str
+    citation: str
+
+
 class RouteHop(BaseModel):
     key: str
     country_code: str
@@ -72,6 +88,10 @@ class RouteHop(BaseModel):
     money_cost_azn_high: int
     citation: str
     provenance: str
+    # None means no requirement has been RECORDED for this hop, which is not the same as
+    # this country having none (ADR-0004). The client must not render an absent gate as a
+    # cleared one, so it says "not recorded" rather than showing nothing.
+    proof_of_funds: Optional[ProofOfFundsResponse] = None
 
 
 class UniversityResponse(BaseModel):
@@ -151,6 +171,13 @@ class DPEligibilityResponse(BaseModel):
         "Meeting these published requirements makes you possibly eligible to apply. "
         "It is not an award: selection is competitive and is decided by a committee."
     )
+    # Not gates -- the three things a student needs in order to decide whether they want
+    # this funding at all, and which the product previously rendered nowhere: how many
+    # places exist at their level, that the money carries a 5-year return-service contract,
+    # and which academic year an application started today would actually be for.
+    quota_note: str
+    obligation_note: str
+    window_note: str
     funded_programmes: List[FundedProgrammeResponse]
     # Distinguishes why the list above might be empty -- "listed", "no DP programmes exist
     # at this level at all", "programmes exist but not in a country you can reach", or "your
@@ -286,6 +313,17 @@ async def assess(
                         money_cost_azn_high=hop.money_cost_azn[1],
                         citation=hop.citation,
                         provenance=hop.provenance,
+                        proof_of_funds=(
+                            ProofOfFundsResponse(
+                                amount=hop.proof_of_funds.amount,
+                                currency=hop.proof_of_funds.currency,
+                                period=hop.proof_of_funds.period,
+                                mechanism=hop.proof_of_funds.mechanism,
+                                citation=hop.proof_of_funds.citation,
+                            )
+                            if hop.proof_of_funds is not None
+                            else None
+                        ),
                     )
                     for hop in plan.hops
                 ],
@@ -331,6 +369,9 @@ async def assess(
             band_checked=dp.band_checked,
             gates_met=list(dp.gates_met),
             gates_missing=list(dp.gates_missing),
+            quota_note=dp.quota_note,
+            obligation_note=dp.obligation_note,
+            window_note=dp.window_note,
             funded_programmes=[
                 FundedProgrammeResponse(
                     country_code=row.country_code,

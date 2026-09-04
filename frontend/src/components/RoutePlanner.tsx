@@ -197,6 +197,18 @@ function PlanCard({ plan, index }: { plan: RoutePlan; index: number }) {
                 {countryName(hop.country_code)} · {months(hop.time_cost_months)} ·{" "}
                 {money(hop.money_cost_azn_low, hop.money_cost_azn_high)}
               </p>
+              {hop.proof_of_funds && (
+                <p className="mt-2 border-l-2 border-warning pl-3 text-xs leading-5">
+                  <span className="font-semibold">
+                    {hop.proof_of_funds.amount.toLocaleString()} {hop.proof_of_funds.currency}{" "}
+                    {hop.proof_of_funds.period}, in the bank before the visa.
+                  </span>{" "}
+                  <span className="text-muted">{hop.proof_of_funds.mechanism}.</span>{" "}
+                  <span className="text-muted">
+                    This is separate from the cost above — the money stays yours.
+                  </span>
+                </p>
+              )}
               <p className="mt-1 text-xs leading-5 text-muted">{hop.citation}</p>
             </div>
           </li>
@@ -266,6 +278,7 @@ export function RoutePlanner() {
   const [ielts, setIelts] = useState("");
   const [toefl, setToefl] = useState("");
   const [dim, setDim] = useState("");
+  const [dimGroup, setDimGroup] = useState("");
   const [sat, setSat] = useState("");
   const [language, setLanguage] = useState("");
 
@@ -286,6 +299,7 @@ export function RoutePlanner() {
       ielts: num(ielts),
       toefl: num(toefl),
       dim_score: num(dim),
+      dim_field_group: num(dimGroup),
       sat: num(sat),
       language_certificate_level: language || undefined
     };
@@ -392,6 +406,31 @@ export function RoutePlanner() {
             ))}
           </div>
 
+          {/* Only asked when it can change an answer. The Dövlət Proqramı's DİM bar is 400
+              for Group 1 and 550 for every other field, so without this a score between the
+              two cannot be decided either way. */}
+          {dim.trim() !== "" && (
+            <div className="mt-4">
+              <label className="field-label" htmlFor="dim-group">DİM ixtisas qrupu</label>
+              <select
+                id="dim-group"
+                className="field"
+                value={dimGroup}
+                onChange={(event) => setDimGroup(event.target.value)}
+              >
+                <option value="">Not sure</option>
+                <option value="1">Group 1 — engineering and technology</option>
+                <option value="2">Group 2</option>
+                <option value="3">Group 3</option>
+                <option value="4">Group 4</option>
+              </select>
+              <p className="field-help">
+                The state programme asks 400 of Group 1 and 550 of every other field. Leave
+                this blank and any score between the two stays undecided.
+              </p>
+            </div>
+          )}
+
           <div className="mt-4">
             <label className="field-label" htmlFor="language">Language certificate</label>
             <select
@@ -469,6 +508,27 @@ export function RoutePlanner() {
                   {result.dp.gates_missing.map((gate) => <li key={gate}>· {gate}</li>)}
                 </ul>
               )}
+
+              {/* Not gates, and deliberately shown whether or not the gates are cleared.
+                  A student who clears everything still needs to know they are joining a
+                  queue of 125 places, signing a five-year return contract, and applying
+                  for an academic year that is not the one they assumed. */}
+              <dl className="mt-5 space-y-3 border-t border-quiet pt-4 text-xs leading-5">
+                <div>
+                  <dt className="font-semibold uppercase tracking-[0.1em] text-muted">Places</dt>
+                  <dd className="mt-1">{result.dp.quota_note}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold uppercase tracking-[0.1em] text-muted">When</dt>
+                  <dd className="mt-1">{result.dp.window_note}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold uppercase tracking-[0.1em] text-muted">
+                    What you commit to
+                  </dt>
+                  <dd className="mt-1">{result.dp.obligation_note}</dd>
+                </div>
+              </dl>
 
               {result.dp.funded_programmes.length > 0 ? (
                 <p className="mt-4 text-sm">

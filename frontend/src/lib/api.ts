@@ -263,7 +263,12 @@ function isPlan(value: unknown): value is RoutePlan {
         typeof hop.country_code === "string" &&
         typeof hop.mechanism === "string" &&
         isNumber(hop.time_cost_months) &&
-        typeof hop.citation === "string"
+        typeof hop.citation === "string" &&
+        // Present and nullable, never absent. `null` is the backend saying "no
+        // requirement recorded here"; a missing key would be indistinguishable
+        // from an older backend that cannot report one at all, and this client
+        // would then render Germany's EUR 11,904 deposit as though it did not exist.
+        (hop.proof_of_funds === null || isRecord(hop.proof_of_funds))
     ) &&
     isNumber(value.total_months) &&
     isNumber(value.total_cost_azn_low) &&
@@ -294,6 +299,14 @@ function assertAssessment(data: unknown): asserts data is AssessRoutesResponse {
     !isStringArray(data.dp.gates_met) ||
     !isStringArray(data.dp.gates_missing) ||
     typeof data.dp.note !== "string" ||
+    // Required, all three. The quota tells a student how many places exist at their
+    // level, the obligation tells them the money carries a 5-year return contract,
+    // and the window tells them which academic year they are actually applying for.
+    // A DP panel rendered without them presents a funding programme as if accepting
+    // it were free of consequences and available right now, and neither is true.
+    typeof data.dp.quota_note !== "string" ||
+    typeof data.dp.obligation_note !== "string" ||
+    typeof data.dp.window_note !== "string" ||
     !Array.isArray(data.dp.funded_programmes) ||
     typeof data.dp.funded_programmes_status !== "string" ||
     typeof data.dp.funded_programmes_explanation !== "string"

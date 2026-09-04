@@ -14,7 +14,8 @@
           "money_cost_azn_low": 0,
           "money_cost_azn_high": 0,
           "citation": "https://www.campuschina.org/",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         }
       ],
       "total_months": 0,
@@ -212,7 +213,8 @@
           "money_cost_azn_low": 1200,
           "money_cost_azn_high": 6000,
           "citation": "https://www.studyinturkiye.gov.tr/",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         }
       ],
       "total_months": 0,
@@ -308,7 +310,8 @@
           "money_cost_azn_low": 1700,
           "money_cost_azn_high": 12000,
           "citation": "https://www.studyinturkiye.gov.tr/",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         }
       ],
       "total_months": 0,
@@ -402,7 +405,8 @@
           "money_cost_azn_low": 3400,
           "money_cost_azn_high": 8500,
           "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §2.1",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         }
       ],
       "total_months": 0,
@@ -426,7 +430,8 @@
           "money_cost_azn_low": 30000,
           "money_cost_azn_high": 100000,
           "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §2.1",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         }
       ],
       "total_months": 0,
@@ -450,7 +455,8 @@
           "money_cost_azn_low": 1000,
           "money_cost_azn_high": 4000,
           "citation": "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         }
       ],
       "total_months": 12,
@@ -476,7 +482,8 @@
           "money_cost_azn_low": 1000,
           "money_cost_azn_high": 4000,
           "citation": "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         },
         {
           "key": "de-bachelor-direct",
@@ -486,7 +493,14 @@
           "money_cost_azn_low": 0,
           "money_cost_azn_high": 1200,
           "citation": "https://www.uni-assist.de/en/tools/glossary-of-terms/description/term/university-entrance-qualification-hochschulzugangsberechtigung/ -- 'your university entrance qualification for German universities may only result from a combination of the school leaving certificate and a University entrance exam and/or specific lengths of university studies in your home country'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": {
+            "amount": 11904,
+            "currency": "EUR",
+            "period": "per year of study",
+            "mechanism": "A blocked account (Sperrkonto) opened before the visa appointment. The money remains yours and is released to you at roughly EUR 992 a month after you arrive, but the full year must be deposited up front and the visa is refused without it",
+            "citation": "AUSA research brief 2026-09-04, citing the German student visa financial-proof requirement set in line with the national BAföG rate. NOT yet read from the Auswärtiges Amt or the regulation itself -- verify before quoting this to anyone"
+          }
         }
       ],
       "total_months": 12,
@@ -512,7 +526,14 @@
           "money_cost_azn_low": 6000,
           "money_cost_azn_high": 14000,
           "citation": "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": {
+            "amount": 11904,
+            "currency": "EUR",
+            "period": "per year of study",
+            "mechanism": "A blocked account (Sperrkonto) opened before the visa appointment. The money remains yours and is released to you at roughly EUR 992 a month after you arrive, but the full year must be deposited up front and the visa is refused without it",
+            "citation": "AUSA research brief 2026-09-04, citing the German student visa financial-proof requirement set in line with the national BAföG rate. NOT yet read from the Auswärtiges Amt or the regulation itself -- verify before quoting this to anyone"
+          }
         }
       ],
       "total_months": 12,
@@ -645,7 +666,14 @@
           "money_cost_azn_low": 6000,
           "money_cost_azn_high": 14000,
           "citation": "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": {
+            "amount": 11904,
+            "currency": "EUR",
+            "period": "per year of study",
+            "mechanism": "A blocked account (Sperrkonto) opened before the visa appointment. The money remains yours and is released to you at roughly EUR 992 a month after you arrive, but the full year must be deposited up front and the visa is refused without it",
+            "citation": "AUSA research brief 2026-09-04, citing the German student visa financial-proof requirement set in line with the national BAföG rate. NOT yet read from the Auswärtiges Amt or the regulation itself -- verify before quoting this to anyone"
+          }
         },
         {
           "key": "de-bachelor-direct",
@@ -655,7 +683,14 @@
           "money_cost_azn_low": 0,
           "money_cost_azn_high": 1200,
           "citation": "https://www.uni-assist.de/en/tools/glossary-of-terms/description/term/university-entrance-qualification-hochschulzugangsberechtigung/ -- 'your university entrance qualification for German universities may only result from a combination of the school leaving certificate and a University entrance exam and/or specific lengths of university studies in your home country'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": {
+            "amount": 11904,
+            "currency": "EUR",
+            "period": "per year of study",
+            "mechanism": "A blocked account (Sperrkonto) opened before the visa appointment. The money remains yours and is released to you at roughly EUR 992 a month after you arrive, but the full year must be deposited up front and the visa is refused without it",
+            "citation": "AUSA research brief 2026-09-04, citing the German student visa financial-proof requirement set in line with the national BAföG rate. NOT yet read from the Auswärtiges Amt or the regulation itself -- verify before quoting this to anyone"
+          }
         }
       ],
       "total_months": 12,
@@ -788,7 +823,8 @@
           "money_cost_azn_low": 25000,
           "money_cost_azn_high": 45000,
           "citation": "UK ENIC: an Azerbaijani attestat is 'not accepted for direct entry to undergraduate programmes'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         }
       ],
       "total_months": 12,
@@ -919,7 +955,8 @@
           "money_cost_azn_low": 1000,
           "money_cost_azn_high": 4000,
           "citation": "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         },
         {
           "key": "uk-bachelor-direct",
@@ -929,7 +966,8 @@
           "money_cost_azn_low": 30000,
           "money_cost_azn_high": 70000,
           "citation": "UK ENIC: an Azerbaijani attestat is 'not accepted for direct entry to undergraduate programmes'. https://www.manchester.ac.uk/study/international/country-specific-information/azerbaijan/entry-requirements/ -- Manchester 'may also accept applicants who have completed the first year of an undergraduate degree in Azerbaijan into the first year of a bachelor degree'; the High School Diploma alone is 'not accepted for direct entry'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         }
       ],
       "total_months": 12,
@@ -1029,7 +1067,8 @@
           "money_cost_azn_low": 25000,
           "money_cost_azn_high": 45000,
           "citation": "UK ENIC: an Azerbaijani attestat is 'not accepted for direct entry to undergraduate programmes'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         },
         {
           "key": "uk-bachelor-direct",
@@ -1039,7 +1078,8 @@
           "money_cost_azn_low": 30000,
           "money_cost_azn_high": 70000,
           "citation": "UK ENIC: an Azerbaijani attestat is 'not accepted for direct entry to undergraduate programmes'. https://www.manchester.ac.uk/study/international/country-specific-information/azerbaijan/entry-requirements/ -- Manchester 'may also accept applicants who have completed the first year of an undergraduate degree in Azerbaijan into the first year of a bachelor degree'; the High School Diploma alone is 'not accepted for direct entry'",
-          "provenance": "seed"
+          "provenance": "seed",
+          "proof_of_funds": null
         }
       ],
       "total_months": 12,
@@ -1163,14 +1203,17 @@
   ],
   "dp": {
     "status": "unlockable",
-    "band_checked": "DİM 400-550, the exact bar depending on field",
+    "band_checked": "DİM at least 400 for Group 1 (engineering and technology), at least 550 for every other field",
     "gates_met": [
       "Language certificate at C1"
     ],
     "gates_missing": [
-      "One of: DİM 400-550, the exact bar depending on field; SAT/ACT at the 75th percentile; or an international Olympiad medal"
+      "A DİM score is required: DİM at least 400 for Group 1 (engineering and technology), at least 550 for every other field. The alternative is an international subject-olympiad medal"
     ],
     "note": "Meeting these published requirements makes you possibly eligible to apply. It is not an award: selection is competitive and is decided by a committee.",
+    "quota_note": "125 of the 500 funded places in the 2026/2027 cycle are for bachelor study (25%). That is the size of the queue, not your odds in it: selection among applicants who clear the gates is a committee decision",
+    "obligation_note": "Accepting this funding is a contract. Graduates must return to Azerbaijan and work here for 5 years; failing to return, failing to complete the degree, or breaking the service period requires repaying everything the state spent, with interest and contractual penalties",
+    "window_note": "Applications open in the first quarter and close between April and June, so by September 2026 the window for the 2026/2027 academic year has closed. An application made now would be for 2027/2028, which is the year to plan against",
     "funded_programmes": [],
     "funded_programmes_status": "no_dp_programmes_at_this_level",
     "funded_programmes_explanation": "The Dövlət Proqramı funds zero programmes at this level. That is a real answer, not a gap in our data."

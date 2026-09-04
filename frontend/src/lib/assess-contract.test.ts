@@ -128,6 +128,80 @@ describe("the /routes/assess contract", () => {
     ).rejects.toThrow(ApiError);
   });
 
+  it("carries Germany's visa deposit separately from the route cost", async () => {
+    mockFetchOnce(fixture);
+    const result = await assessRoutes({
+      level_sought: "bachelor",
+      qualification_held: "attestat"
+    });
+
+    const germanHops = result.plans
+      .flatMap((plan) => plan.hops)
+      .filter((hop) => hop.country_code === "DE");
+
+    expect(germanHops.length).toBeGreaterThan(0);
+    for (const hop of germanHops) {
+      expect(hop.proof_of_funds).not.toBeNull();
+      expect(hop.proof_of_funds?.currency).toBe("EUR");
+      // The deposit is never added into the route's cost. The direct route stays
+      // tuition-free, which is true, and the deposit is why "tuition-free" was
+      // never the whole answer for Germany.
+      const direct = germanHops.find((h) => h.key === "de-bachelor-direct");
+      expect(direct?.money_cost_azn_high).toBe(1200);
+    }
+
+    // And it is not invented for countries we have not collected it for. Turkish hops
+    // carry null, which the UI renders as "not recorded", never as "none required".
+    const turkishHops = result.plans
+      .flatMap((plan) => plan.hops)
+      .filter((hop) => hop.country_code === "TR");
+    expect(turkishHops.length).toBeGreaterThan(0);
+    expect(turkishHops.every((hop) => hop.proof_of_funds === null)).toBe(true);
+  });
+
+  it("carries the DP's quota, window and obligation on every response", async () => {
+    mockFetchOnce(fixture);
+    const result = await assessRoutes({
+      level_sought: "bachelor",
+      qualification_held: "attestat"
+    });
+
+    // 125 of 500 bachelor places. The size of the queue, which the product showed nowhere
+    // before, and which is the single most decision-relevant fact about the programme.
+    expect(result.dp.quota_note).toContain("125");
+    expect(result.dp.quota_note).toContain("500");
+    // Accepting the money is a five-year contract with a repayment clause.
+    expect(result.dp.obligation_note).toContain("5 years");
+    // And an application is always for a specific academic year.
+    expect(result.dp.window_note.length).toBeGreaterThan(0);
+  });
+
+  it("rejects a response missing the DP return-service obligation", async () => {
+    // Rendering the DP panel without it presents a scholarship as free of consequences.
+    const damaged = structuredClone(fixture) as typeof fixture;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (damaged.dp as any).obligation_note;
+    mockFetchOnce(damaged);
+
+    await expect(
+      assessRoutes({ level_sought: "bachelor", qualification_held: "attestat" })
+    ).rejects.toThrow(ApiError);
+  });
+
+  it("rejects a hop whose proof_of_funds key is absent rather than null", async () => {
+    // `null` means "no requirement recorded". A MISSING key means an older backend that
+    // cannot report one at all -- and treating the two alike would silently drop
+    // Germany's deposit from the page with nothing to notice it.
+    const damaged = structuredClone(fixture) as typeof fixture;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (damaged.plans[0].hops[0] as any).proof_of_funds;
+    mockFetchOnce(damaged);
+
+    await expect(
+      assessRoutes({ level_sought: "bachelor", qualification_held: "attestat" })
+    ).rejects.toThrow(ApiError);
+  });
+
   it("omits a blank score from the request body rather than sending zero", async () => {
     mockFetchOnce(fixture);
     await assessRoutes({
