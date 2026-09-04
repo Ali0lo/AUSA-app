@@ -71,6 +71,18 @@ class StudentRouteProfile:
     language_certificate_level: Optional[str] = None
     has_international_olympiad_medal: Optional[bool] = None
     budget_azn_per_year: Optional[float] = None
+    # The grade average OF THE QUALIFICATION NAMED IN `qualification_held` -- the attestat
+    # for a school-leaver, the completed bachelor's degree for a master's applicant. One
+    # field pair serves both levels because `qualification_held` already says which
+    # qualification it belongs to, and master's admission abroad routinely turns on the
+    # bachelor GPA against the same kind of published minimum.
+    #
+    # `gpa_scale` travels with it and is not optional in spirit: a grade without its scale
+    # is not a number (see app/domain/grades.py). A grade supplied without one is reported
+    # as not comparable rather than compared against an assumed scale -- assuming 4.0 is
+    # what makes an Azerbaijani 4.5 out of 5 look like an impossible value.
+    gpa: Optional[float] = None
+    gpa_scale: Optional[str] = None
 
 
 @dataclass(frozen=True)

@@ -49,6 +49,18 @@ class AssessRoutesPayload(BaseModel):
     language_certificate_level: Optional[str] = None
     has_international_olympiad_medal: Optional[bool] = None
     budget_azn_per_year: Optional[float] = None
+    # The grade average of the qualification named in `qualification_held`: the attestat for
+    # a school-leaver, the bachelor's degree for a master's applicant. Deliberately NOT
+    # bounded to 0-4.0 the way `students.gpa` is -- that bound rejects an Azerbaijani
+    # attestat average of 4.5 out of 5 as invalid input. The scale is what decides the
+    # valid range, and `check_grade` reports an out-of-range value rather than a 422, so a
+    # student who picks the wrong scale is told which scale their number cannot be on.
+    gpa: Optional[float] = Field(default=None, ge=0.0)
+    gpa_scale: Optional[str] = Field(
+        default=None,
+        description="One of: 5.0 (Azerbaijani attestat), 100, 4.0, german. "
+                    "A grade sent without one is reported as not comparable, never assumed.",
+    )
 
 
 class RouteHop(BaseModel):
@@ -91,6 +103,12 @@ class UniversityResponse(BaseModel):
     notes: Optional[str]
     unknown_fields: List[str]
     not_stated: Optional[str]
+    # Advisory. `grade_exact` is False when the comparison crossed two scales and is a
+    # proportional screening signal rather than an official conversion -- a client that
+    # renders the verdict without that flag is overstating what was checked.
+    grade_verdict: str
+    grade_exact: bool
+    grade_explanation: str
     provenance: str
     source_url: str
     last_checked: Optional[str]
@@ -181,6 +199,9 @@ def _university_response(match) -> UniversityResponse:
         notes=row.documents_required,
         unknown_fields=list(match.unknown_fields),
         not_stated=missing_requirement_note(match.unknown_fields),
+        grade_verdict=match.grade.verdict,
+        grade_exact=match.grade.exact,
+        grade_explanation=match.grade.explanation,
         provenance=row.provenance,
         source_url=row.source_url,
         last_checked=row.last_checked.isoformat() if row.last_checked else None,
@@ -232,6 +253,8 @@ async def assess(
                 country_code=destination,
                 level=profile.level_sought,
                 qualification=delivered,
+                student_gpa=profile.gpa,
+                student_gpa_scale=profile.gpa_scale,
             )
             # Only ask the existence question when it can change the answer.
             any_curated = (

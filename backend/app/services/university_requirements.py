@@ -26,6 +26,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.grades import GradeCheck, check_grade
 from app.models.qualifications import ProgramRequirement
 from app.services.route_engine import RoutePlan
 from app.domain.routes import StudentRouteProfile
@@ -54,6 +55,8 @@ class UniversityMatch:
     """One curated university row, with its unknowns named rather than left blank."""
     requirement: ProgramRequirement
     unknown_fields: tuple[str, ...]
+    # Advisory only. A grade never changes a route's status -- see app/domain/grades.py.
+    grade: GradeCheck
 
 
 def qualification_delivered(plan: RoutePlan, profile: StudentRouteProfile) -> str:
@@ -106,6 +109,8 @@ async def universities_accepting(
     country_code: str,
     level: str,
     qualification: str,
+    student_gpa: Optional[float] = None,
+    student_gpa_scale: Optional[str] = None,
 ) -> list[UniversityMatch]:
     """The curated universities in one country that document accepting one qualification.
 
@@ -123,7 +128,13 @@ async def universities_accepting(
     )
     rows = list((await session.execute(stmt)).scalars().all())
     return [
-        UniversityMatch(requirement=row, unknown_fields=_unknown_fields(row))
+        UniversityMatch(
+            requirement=row,
+            unknown_fields=_unknown_fields(row),
+            grade=check_grade(
+                student_gpa, student_gpa_scale, row.gpa_minimum, row.gpa_scale
+            ),
+        )
         for row in _latest_intake_only(rows)
     ]
 

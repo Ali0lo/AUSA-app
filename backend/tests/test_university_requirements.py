@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
+from app.domain.grades import check_grade
 from app.domain.routes import StudentRouteProfile
 from app.domain.route_definitions import (
     AZ_PREP_YEAR,
@@ -283,7 +284,14 @@ async def test_a_collected_country_with_no_match_is_reported_as_a_finding(sessio
 
 def test_a_non_empty_result_needs_no_explanation():
     status, text = describe_universities(
-        [UniversityMatch(requirement=make_row(), unknown_fields=())],
+        [UniversityMatch(
+            requirement=make_row(),
+            unknown_fields=(),
+            # This test is about the empty-list explanation, not about grades. The grade
+            # check is filled with the shape a university publishing no minimum actually
+            # produces, so the fixture cannot assert a state the service never emits.
+            grade=check_grade(None, None, None, None),
+        )],
         country_code="GB", qualification=QUALIFICATION_ONE_YEAR_UNIVERSITY,
         any_curated=True,
     )
@@ -322,3 +330,47 @@ async def test_the_prep_year_plan_reaches_the_uk_universities_that_document_it(s
     # foundation year, and listing them would send the student down a route they have
     # already bypassed by spending a year at an Azerbaijani university.
     assert "UCL" not in names
+
+
+@pytest.mark.asyncio
+async def test_an_attestat_average_is_checked_against_ucls_real_stated_minimum(session):
+    """The grade path, end to end on the curated file rather than on a fixture.
+
+    UCL is the one row in the real data whose scale matches an Azerbaijani attestat, so
+    this is the comparison that must come back EXACT. Everything else is proportional, and
+    a change that quietly turned this one proportional too would be invisible without it.
+    """
+    from scripts.load_program_requirements import DEFAULT_FILE, load_program_requirements
+
+    await load_program_requirements(session, DEFAULT_FILE)
+
+    foundation = await universities_accepting(
+        session, country_code="GB", level="bachelor",
+        qualification=QUALIFICATION_FOUNDATION_YEAR,
+        student_gpa=4.8, student_gpa_scale="5",
+    )
+    ucl = next(m for m in foundation if m.requirement.university_name == "UCL")
+    assert ucl.grade.verdict == "meets"
+    assert ucl.grade.exact is True
+
+    below = await universities_accepting(
+        session, country_code="GB", level="bachelor",
+        qualification=QUALIFICATION_FOUNDATION_YEAR,
+        student_gpa=4.0, student_gpa_scale="5",
+    )
+    assert next(
+        m for m in below if m.requirement.university_name == "UCL"
+    ).grade.verdict == "below"
+
+
+@pytest.mark.asyncio
+async def test_a_student_who_gives_no_grade_gets_no_grade_verdict_not_a_pass(session):
+    """A profile with no GPA must not have every university silently report 'meets'."""
+    session.add(make_row(gpa_minimum=4.5, gpa_scale="5.0"))
+    await session.commit()
+
+    matches = await universities_accepting(
+        session, country_code="GB", level="bachelor",
+        qualification=QUALIFICATION_ONE_YEAR_UNIVERSITY,
+    )
+    assert matches[0].grade.verdict == "no_grade_given"
