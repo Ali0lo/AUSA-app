@@ -1,5 +1,7 @@
 import type {
   AgentStateData,
+  AssessRoutesPayload,
+  AssessRoutesResponse,
   ChatMessageResponse,
   DocumentSourceInfo,
   FactorScoreDetail,
@@ -8,6 +10,8 @@ import type {
   MatchResult,
   ProgramRequirements,
   RegisterPayload,
+  RoutePlan,
+  RouteUniversity,
   StudentAccountProfile,
   StudentProfile,
   TrackedApplication,
@@ -221,6 +225,83 @@ function assertAgentState(data: unknown): asserts data is AgentStateData {
   }
 }
 
+function isUniversity(value: unknown): value is RouteUniversity {
+  return (
+    isRecord(value) &&
+    typeof value.university_name === "string" &&
+    typeof value.program_name === "string" &&
+    typeof value.country_code === "string" &&
+    isNumber(value.intake_year) &&
+    isOptionalString(value.entry_qualification_accepted) &&
+    (value.foundation_required === null ||
+      value.foundation_required === undefined ||
+      typeof value.foundation_required === "boolean") &&
+    isOptionalNumber(value.tuition_per_year) &&
+    isOptionalString(value.application_deadline) &&
+    isStringArray(value.unknown_fields) &&
+    isOptionalString(value.not_stated) &&
+    // The three grade fields are required, not optional. A client that renders a
+    // verdict without `grade_exact` reports a proportional cross-scale comparison
+    // as though it were an exact one, so a response missing it is not a response
+    // this client can render honestly.
+    typeof value.grade_verdict === "string" &&
+    typeof value.grade_exact === "boolean" &&
+    typeof value.grade_explanation === "string" &&
+    typeof value.provenance === "string" &&
+    typeof value.source_url === "string"
+  );
+}
+
+function isPlan(value: unknown): value is RoutePlan {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.hops) &&
+    value.hops.every(
+      (hop) =>
+        isRecord(hop) &&
+        typeof hop.key === "string" &&
+        typeof hop.country_code === "string" &&
+        typeof hop.mechanism === "string" &&
+        isNumber(hop.time_cost_months) &&
+        typeof hop.citation === "string"
+    ) &&
+    isNumber(value.total_months) &&
+    isNumber(value.total_cost_azn_low) &&
+    isNumber(value.total_cost_azn_high) &&
+    typeof value.status === "string" &&
+    isStringArray(value.missing) &&
+    typeof value.destination_country === "string" &&
+    typeof value.qualification_delivered === "string" &&
+    Array.isArray(value.universities) &&
+    value.universities.every(isUniversity) &&
+    // Both are required. An empty `universities` list rendered without its status
+    // is indistinguishable from "no university will take you", which is a claim
+    // the backend never makes and this client must not make on its behalf.
+    typeof value.universities_status === "string" &&
+    typeof value.universities_explanation === "string"
+  );
+}
+
+function assertAssessment(data: unknown): asserts data is AssessRoutesResponse {
+  if (
+    !isRecord(data) ||
+    !isStringArray(data.blocked) ||
+    !Array.isArray(data.plans) ||
+    !data.plans.every(isPlan) ||
+    !isRecord(data.dp) ||
+    typeof data.dp.status !== "string" ||
+    typeof data.dp.band_checked !== "string" ||
+    !isStringArray(data.dp.gates_met) ||
+    !isStringArray(data.dp.gates_missing) ||
+    typeof data.dp.note !== "string" ||
+    !Array.isArray(data.dp.funded_programmes) ||
+    typeof data.dp.funded_programmes_status !== "string" ||
+    typeof data.dp.funded_programmes_explanation !== "string"
+  ) {
+    invalidResponse("route assessment");
+  }
+}
+
 export function getUserFacingError(error: unknown, feature: string): UserFacingError {
   if (error instanceof ApiError) {
     if (error.kind === "offline") {
@@ -274,6 +355,33 @@ export function getUserFacingError(error: unknown, feature: string): UserFacingE
 export async function fetchHealth(): Promise<HealthResponse> {
   const data = await request<unknown>("/health");
   assertHealth(data);
+  return data;
+}
+
+/**
+ * Assess which routes are open, unlockable or blocked for one profile.
+ *
+ * The payload IS the profile -- there is no student record to look up and
+ * therefore no "row not found" case. Every score is optional, and an omitted
+ * score is sent as absent rather than as 0: "did not sit the exam" and "scored
+ * zero" are different facts and the backend keeps them apart.
+ *
+ * No token. Route assessment reads no student's stored data, so requiring a sign-in
+ * to answer "where could I go" would gate the one question the product exists to
+ * answer behind an account.
+ */
+export async function assessRoutes(payload: AssessRoutesPayload): Promise<AssessRoutesResponse> {
+  const body: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (value !== null && value !== undefined && value !== "") body[key] = value;
+  }
+
+  const data = await request<unknown>("/routes/assess", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  assertAssessment(data);
   return data;
 }
 

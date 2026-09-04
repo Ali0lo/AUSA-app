@@ -162,3 +162,133 @@ export interface HealthResponse {
   version: string;
   environment: string;
 }
+
+/* ---------------------------------------------------------------------------
+ * Route planning: POST /routes/assess
+ *
+ * Every requirement below is nullable and stays nullable. A null means the
+ * university's page did not state it -- never that the requirement does not
+ * exist. `unknown_fields` names which ones came back null, so the interface can
+ * show the gap rather than render an empty cell that reads as "not required".
+ * ------------------------------------------------------------------------- */
+
+export type RouteQualification =
+  | "attestat"
+  | "one_year_university"
+  | "foundation_year"
+  | "feststellungspruefung"
+  | "a_level"
+  | "ib"
+  | "bachelor_degree";
+
+export type GradeScaleKey = "5.0" | "100" | "4.0" | "german";
+
+export type GradeVerdict =
+  | "meets"
+  | "below"
+  | "no_grade_given"
+  | "no_minimum_published"
+  | "scales_not_comparable";
+
+export interface AssessRoutesPayload {
+  level_sought: "bachelor" | "master";
+  qualification_held: RouteQualification;
+  dim_score?: number | null;
+  ielts?: number | null;
+  toefl?: number | null;
+  sat?: number | null;
+  act?: number | null;
+  tr_yos?: number | null;
+  test_as?: number | null;
+  csca?: number | null;
+  hsk?: number | null;
+  language_certificate_level?: string | null;
+  has_international_olympiad_medal?: boolean | null;
+  budget_azn_per_year?: number | null;
+  gpa?: number | null;
+  gpa_scale?: GradeScaleKey | null;
+}
+
+export interface RouteHop {
+  key: string;
+  country_code: string;
+  mechanism: string;
+  time_cost_months: number;
+  money_cost_azn_low: number;
+  money_cost_azn_high: number;
+  citation: string;
+  provenance: string;
+}
+
+export interface RouteUniversity {
+  university_name: string;
+  program_name: string;
+  country_code: string;
+  intake_year: number;
+  entry_qualification_accepted: string | null;
+  foundation_required: boolean | null;
+  foundation_providers: string | null;
+  language_test: string | null;
+  language_minimum_score: number | null;
+  entrance_exam: string | null;
+  entrance_exam_minimum: number | null;
+  gpa_minimum: number | null;
+  gpa_scale: string | null;
+  tuition_per_year: number | null;
+  currency: string | null;
+  application_fee: number | null;
+  application_deadline: string | null;
+  application_portal: string | null;
+  notes: string | null;
+  unknown_fields: string[];
+  not_stated: string | null;
+  grade_verdict: GradeVerdict | string;
+  // False when the grade comparison crossed two different scales. Rendering the
+  // verdict without this flag overstates what was actually checked.
+  grade_exact: boolean;
+  grade_explanation: string;
+  provenance: string;
+  source_url: string;
+  last_checked: string | null;
+}
+
+export interface RoutePlan {
+  hops: RouteHop[];
+  total_months: number;
+  total_cost_azn_low: number;
+  total_cost_azn_high: number;
+  status: "open" | "unlockable" | string;
+  missing: string[];
+  destination_country: string;
+  qualification_delivered: string;
+  universities: RouteUniversity[];
+  // Distinguishes "we have not collected this country" from "we collected it and
+  // none of those universities accepts this qualification". An empty list must
+  // never be shown without one of these.
+  universities_status: string;
+  universities_explanation: string;
+}
+
+export interface FundedProgramme {
+  country_code: string | null;
+  university_name: string;
+  program_name: string;
+  source_url: string;
+}
+
+export interface DPEligibility {
+  status: string;
+  band_checked: string;
+  gates_met: string[];
+  gates_missing: string[];
+  note: string;
+  funded_programmes: FundedProgramme[];
+  funded_programmes_status: string;
+  funded_programmes_explanation: string;
+}
+
+export interface AssessRoutesResponse {
+  blocked: string[];
+  plans: RoutePlan[];
+  dp: DPEligibility;
+}
