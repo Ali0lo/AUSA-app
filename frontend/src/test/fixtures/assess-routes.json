@@ -1217,5 +1217,231 @@
     "funded_programmes": [],
     "funded_programmes_status": "no_dp_programmes_at_this_level",
     "funded_programmes_explanation": "The Dövlət Proqramı funds zero programmes at this level. That is a real answer, not a gap in our data."
-  }
+  },
+  "scholarships": [
+    {
+      "key": "turkiye-burslari",
+      "name": "Türkiye Bursları",
+      "provider": "Government of Türkiye",
+      "tier": 2,
+      "country_code": "TR",
+      "coverage": "Fully funded: tuition waiver, monthly stipend, university dormitory, health insurance, and a mandatory one-year Turkish language year (TÖMER)",
+      "status": "open",
+      "gates_met": [
+        "This award funds bachelor's or master's study, which is your level",
+        "You are 20, under the age limit of 21",
+        "Your routes reach TR, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [],
+      "gates_unknown": [],
+      "obligation": null,
+      "window": "Applications run 10 January to 20 February. The 2026 window has closed, so the next one opens in January 2027 -- that is the cycle to plan against",
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2 and AUSA general research brief 2026-09-04, 'Study Abroad Guide for Azerbaijanis': fully funded, under 21 at bachelor level, applications 10 January - 20 February. No official turkiyeburslari.gov.tr page has been opened by this project; the nearest source we hold is https://www.studyinturkiye.gov.tr/",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "csc-china",
+      "name": "Chinese Government Scholarship (CSC)",
+      "provider": "China Scholarship Council",
+      "tier": 2,
+      "country_code": "CN",
+      "coverage": "Tuition, accommodation and a stipend; Type A applies via the embassy, Type B via the university",
+      "status": "unlockable",
+      "gates_met": [
+        "This award funds bachelor's or master's study, which is your level",
+        "Your routes reach CN, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [],
+      "gates_unknown": [
+        "A CSC bachelor place must be taken in a CHINESE-taught programme -- English-taught study is open to graduate and non-degree students only -- and requires a CSCA score plus HSK 4. Those bars are checked on the China entry route rather than here. No age limit has been read from a CSC source by this project, and the programme is understood to set one"
+      ],
+      "obligation": null,
+      "window": "Applications run from early January to early April via campuschina.org",
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2, citing https://www.campuschina.org/. Bachelor is Chinese-taught with CSCA and HSK 4; English-taught master's needs IELTS 6.5 / TOEFL 80 or two years of prior English-medium study. Applications early January to early April. CUCAS is a third-party aggregator and is excluded as a source",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "socar-xarici-teqaud",
+      "name": "SOCAR Xarici Təqaüd Proqramı",
+      "provider": "SOCAR",
+      "tier": 1,
+      "country_code": null,
+      "coverage": "Full funding for a master's degree abroad, for SOCAR group employees",
+      "status": "blocked",
+      "gates_met": [
+        "Your C1 certificate clears B2, IELTS 6, or TOEFL 80"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "This award is open only to SOCAR group employees. Tell us your employer and we can say whether it applies to you",
+        "This programme funds master's study only, so no age limit is checked at other levels"
+      ],
+      "obligation": null,
+      "window": null,
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2: employment-gated to SOCAR group employees; age at most 40 (45 for an MBA); IELTS 6.0 / TOEFL 80 / B2. No official programme page has been identified by this project -- the age and language figures are unverified, and the MBA exception is NOT applied below because nothing in a profile tells us the degree is an MBA",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "prezident-teqaudu",
+      "name": "Prezident Təqaüdü",
+      "provider": "Office of the President of Azerbaijan",
+      "tier": 1,
+      "country_code": "AZ",
+      "coverage": "600-700 AZN a month, roughly 100-150 places a year, for study IN Azerbaijan",
+      "status": "blocked",
+      "gates_met": [],
+      "gates_missing": [],
+      "gates_blocked": [
+        "Prezident Təqaüdü funds study inside Azerbaijan only. It is not a study-abroad award, so no eligibility check applies -- this is about what the award is, not about you"
+      ],
+      "gates_unknown": [],
+      "obligation": null,
+      "window": null,
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2: 600-700 AZN/month, ~100-150 places a year, domestic study only. Listed here precisely so the product does NOT offer it as a study-abroad option: it is the most prestigious domestic award and students will ask about it, so answering beats silence. No official page has been identified by this project",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "chevening",
+      "name": "Chevening Scholarship",
+      "provider": "UK Foreign, Commonwealth & Development Office",
+      "tier": 2,
+      "country_code": "GB",
+      "coverage": "Full tuition, a monthly stipend, return flights and visa fees for a one-year taught master's",
+      "status": "blocked",
+      "gates_met": [
+        "Your routes reach GB, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "This award requires 2,800 documented hours of work experience, which is roughly two years full-time. Chevening publishes the bar in hours, not years, and counts part-time and overlapping work against the hours. Tell us your documented hours and we can check it"
+      ],
+      "obligation": "Chevening requires you to return to Azerbaijan for at least two years after graduating. It is a condition of the award, not a suggestion",
+      "window": null,
+      "citation": "AUSA general research brief 2026-09-04, 'Study Abroad Guide for Azerbaijanis', citing https://www.chevening.org/resource-hub/guidance/eligibility/ and https://www.chevening.org/scholarships/guidance/courses/ -- 2,800 documented hours and four assessed essays on leadership, networking, choice of UK course, and career plan. Those pages have not been opened by this project",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "fulbright-foreign-student",
+      "name": "Fulbright Foreign Student Program",
+      "provider": "U.S. Department of State, via the U.S. Embassy in Baku",
+      "tier": 2,
+      "country_code": "US",
+      "coverage": "Full tuition, a monthly stipend, health insurance and J-1 visa sponsorship for a master's degree",
+      "status": "blocked",
+      "gates_met": [
+        "Your routes reach US, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "Fulbright selects young professionals and weighs professional experience heavily, but this project has not read a published minimum. No hours bar is applied here, which is not the same as there being none"
+      ],
+      "obligation": "The J-1 visa carries a two-year home-country physical presence requirement: after the degree you must spend two years in Azerbaijan before you are eligible for certain US visas. This constrains what you can do next far beyond the degree itself",
+      "window": null,
+      "citation": "AUSA general research brief 2026-09-04, 'Study Abroad Guide for Azerbaijanis', citing https://az.usembassy.gov/fulbright-foreign-student-program/. That page has not been opened by this project",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "daad-individual-grants",
+      "name": "DAAD individual scholarships",
+      "provider": "Deutscher Akademischer Austauschdienst",
+      "tier": 2,
+      "country_code": "DE",
+      "coverage": "Varies sharply by grant: most are a monthly stipend plus travel and insurance, not tuition (German public tuition is already near zero)",
+      "status": "blocked",
+      "gates_met": [
+        "Your routes reach DE, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "DAAD is not one scholarship but a database of hundreds, each with its own gate, and the gates are per-grant rather than programme-wide. This project cannot list them: DAAD's robots.txt explicitly disallows the scholarship database, so no automated collection of it is permitted and every grant has to be read by hand from a page that allows it"
+      ],
+      "obligation": null,
+      "window": null,
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2: DAAD individual grants are overwhelmingly master's and PhD. DAAD's main host sets Crawl-delay: 2 and disallows /deutschland/foerderung/stipendiendatenbank/00462.*, so the database is off-limits to our collector. DAAD's terms of use have NOT been read and must be before any bulk fetch",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "nawa-banach",
+      "name": "Stefan Banach Scholarship Programme",
+      "provider": "NAWA, the Polish National Agency for Academic Exchange",
+      "tier": 2,
+      "country_code": "PL",
+      "coverage": "Fully funded master's study at a Polish public university",
+      "status": "blocked",
+      "gates_met": [
+        "Your routes reach PL, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "Banach restricts which fields Azerbaijani applicants may study, and our two sources give opposite lists: spec §5.2 says humanities and social sciences only, while the general research brief says engineering, technical, agricultural and natural sciences. Those are complements, so one of them is wrong and we cannot tell which. Read nawa.gov.pl before relying on either"
+      ],
+      "obligation": null,
+      "window": null,
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2 (humanities/social sciences only for Azerbaijanis) CONTRADICTED BY AUSA general research brief 2026-09-04, 'Study Abroad Guide for Azerbaijanis' (engineering, technical, agricultural and natural sciences). No nawa.gov.pl page has been opened by this project, and this conflict is the reason no field-of-study check is applied anywhere in the product yet",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "erasmus-mundus",
+      "name": "Erasmus Mundus Joint Masters",
+      "provider": "European Commission",
+      "tier": 2,
+      "country_code": null,
+      "coverage": "Full tuition, travel and installation costs, and a monthly stipend, across a multi-country consortium",
+      "status": "blocked",
+      "gates_met": [],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "Each joint master's consortium sets its own admission requirements and its own deadline; there is no single Erasmus Mundus gate to check. Eligibility is decided by the specific programme you apply to"
+      ],
+      "obligation": null,
+      "window": null,
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2: master's only. Erasmus+ mobility within a degree is a different instrument and is not a full-degree scholarship. No European Commission page has been opened by this project",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "great-scholarships",
+      "name": "GREAT Scholarships",
+      "provider": "British Council with participating UK universities",
+      "tier": 2,
+      "country_code": "GB",
+      "coverage": "A single-year GBP 10,000 tuition REDUCTION -- not a full scholarship. UK master's tuition typically runs well above that, so this narrows a gap rather than closing it",
+      "status": "blocked",
+      "gates_met": [
+        "Your routes reach GB, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "GREAT awards are made by each participating university, so both the eligibility rules and the list of participating universities change year to year. This project has not read either"
+      ],
+      "obligation": null,
+      "window": null,
+      "citation": "AUSA general research brief 2026-09-04, 'Study Abroad Guide for Azerbaijanis': jointly funded by the British Council and participating UK universities, GBP 10,000 for one year, master's students. No British Council page has been opened by this project",
+      "provenance": "research-brief"
+    }
+  ],
+  "scholarships_note": "Meeting an award's published gates makes you possibly eligible to apply. It is never an award: every programme here is competitive and selection is a committee decision. Awards you cannot win are shown as blocked rather than hidden, with the gate that closed them.",
+  "prep_year_warning": "Taking the 12-month prep year would make you 21 at the next Türkiye Bursları window, which is at or over its under-21 bachelor limit. That year opens Germany and the UK to you and closes a fully funded Turkish place in the same move. Both are real; which one is worth more is your decision, not ours"
 }

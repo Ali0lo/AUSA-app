@@ -23,6 +23,10 @@ from app.services.dp_eligibility import (
     funded_programmes,
 )
 from app.services.route_engine import assess_routes, compose_two_hop
+from app.services.scholarship_eligibility import (
+    assess_scholarships,
+    prep_year_scholarship_warning,
+)
 from app.services.university_requirements import (
     any_requirements_curated,
     describe_universities,
@@ -54,6 +58,22 @@ class AssessRoutesPayload(BaseModel):
     dim_field_group: Optional[int] = Field(
         default=None, ge=1, le=4,
         description="DİM ixtisas qrupu, 1-4. Group 1 is engineering and technology.",
+    )
+    # The three funding inputs. Every one is optional and an omission is answered as
+    # "we could not check this gate", never as a pass -- see scholarship_eligibility.
+    age: Optional[int] = Field(
+        default=None, ge=14, le=80,
+        description="Age in years. Decides Türkiye Bursları' under-21 bachelor limit and "
+                    "SOCAR's upper limit; omitting it leaves those gates unchecked.",
+    )
+    work_experience_hours: Optional[int] = Field(
+        default=None, ge=0,
+        description="Documented professional hours. Chevening publishes 2,800 as its bar.",
+    )
+    employer: Optional[str] = Field(
+        default=None, max_length=200,
+        description="Your employer, if any. Only used to check employment-gated awards "
+                    "such as SOCAR's, which is closed to everyone outside the group.",
     )
     budget_azn_per_year: Optional[float] = None
     # The grade average of the qualification named in `qualification_held`: the attestat for
@@ -187,10 +207,47 @@ class DPEligibilityResponse(BaseModel):
     funded_programmes_explanation: str
 
 
+class ScholarshipResponse(BaseModel):
+    """One funding instrument, with the gate that actually decides it.
+
+    `gates_unknown` is separate from `gates_missing` on purpose, and a client must not merge
+    them: a missing gate is work the student can do, an unknown gate is a fact they can tell
+    us or a source we have to read. Neither ever counts towards `status: open`.
+    """
+    key: str
+    name: str
+    provider: str
+    tier: int
+    country_code: Optional[str]
+    coverage: str
+    status: str
+    gates_met: List[str]
+    gates_missing: List[str]
+    gates_blocked: List[str]
+    gates_unknown: List[str]
+    obligation: Optional[str]
+    window: Optional[str]
+    citation: str
+    provenance: str
+
+
 class AssessRoutesResponse(BaseModel):
     blocked: List[str]
     plans: List[RoutePlanResponse]
     dp: DPEligibilityResponse
+    # Every funder EXCEPT the Dövlət Proqramı, which is scored in `dp` above against its own
+    # regulation. One award, one assessor: listing the DP in both would create a second
+    # source of truth that diverges on the first correction.
+    scholarships: List[ScholarshipResponse]
+    scholarships_note: str = (
+        "Meeting an award's published gates makes you possibly eligible to apply. It is "
+        "never an award: every programme here is competitive and selection is a committee "
+        "decision. Awards you cannot win are shown as blocked rather than hidden, with the "
+        "gate that closed them."
+    )
+    # The trade-off between the prep year and Türkiye Bursları' age limit, when this profile
+    # actually faces it. None when it does not arise (spec §11).
+    prep_year_warning: Optional[str] = None
 
 
 def _university_response(match) -> UniversityResponse:
@@ -361,9 +418,36 @@ async def assess(
     )
     funded_status, funded_explanation = describe_funded_programmes(funded, reachable, any_at_level)
 
+    # The other nine funders. Given the same `reachable` set the DP catalogue query uses, so
+    # an award is never offered for a country this profile has no way to enter -- and so
+    # that limitation is reported as a fact about routes rather than as a failed gate.
+    scholarships = assess_scholarships(profile, reachable)
+    plan_route_keys = frozenset(hop.key for plan in plans for hop in plan.hops)
+
     return AssessRoutesResponse(
         blocked=blocked,
         plans=plans,
+        scholarships=[
+            ScholarshipResponse(
+                key=a.scholarship.key,
+                name=a.scholarship.name,
+                provider=a.scholarship.provider,
+                tier=a.scholarship.tier,
+                country_code=a.scholarship.country_code,
+                coverage=a.scholarship.coverage,
+                status=a.status,
+                gates_met=list(a.gates_met),
+                gates_missing=list(a.gates_missing),
+                gates_blocked=list(a.gates_blocked),
+                gates_unknown=list(a.gates_unknown),
+                obligation=a.scholarship.obligation,
+                window=a.scholarship.window,
+                citation=a.scholarship.citation,
+                provenance=a.scholarship.provenance,
+            )
+            for a in scholarships
+        ],
+        prep_year_warning=prep_year_scholarship_warning(profile, plan_route_keys),
         dp=DPEligibilityResponse(
             status=dp.status.value,
             band_checked=dp.band_checked,

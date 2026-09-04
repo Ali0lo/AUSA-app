@@ -202,6 +202,102 @@ describe("the /routes/assess contract", () => {
     ).rejects.toThrow(ApiError);
   });
 
+  it("carries all ten funders, not just the Dövlət Proqramı", async () => {
+    mockFetchOnce(fixture);
+    const result = await assessRoutes({
+      level_sought: "bachelor",
+      qualification_held: "attestat"
+    });
+
+    expect(result.scholarships.length).toBe(10);
+    // The DP is scored in `dp` against its own regulation and must not appear a second
+    // time here -- two assessors for one award diverge on the first correction.
+    expect(result.scholarships.map((s) => s.key)).not.toContain("dovlet-proqrami");
+    expect(result.scholarships.map((s) => s.key)).toContain("turkiye-burslari");
+    expect(result.scholarships.map((s) => s.key)).toContain("chevening");
+  });
+
+  it("shows a school-leaver the two scholarships that exist and blocks the rest", async () => {
+    // The finding, not a gap: at bachelor level scholarships barely exist. The fixture
+    // profile is 20, holds an attestat, and eight of the ten are closed to them --
+    // seven for being master's-only and one for funding domestic study.
+    mockFetchOnce(fixture);
+    const result = await assessRoutes({
+      level_sought: "bachelor",
+      qualification_held: "attestat"
+    });
+
+    const blocked = result.scholarships.filter((s) => s.status === "blocked");
+    expect(blocked.length).toBe(8);
+    // And every blocked award says WHY, so it is never a bare absence.
+    for (const scholarship of blocked) {
+      expect(scholarship.gates_blocked.length).toBeGreaterThan(0);
+    }
+    // Türkiye Bursları is open to a 20-year-old and is one of only two that reach this
+    // level at all.
+    const turkish = result.scholarships.find((s) => s.key === "turkiye-burslari");
+    expect(turkish?.status).toBe("open");
+  });
+
+  it("keeps unknown gates apart from missing ones and out of an open verdict", async () => {
+    // The rule the whole funding layer turns on. A gate we could not check must never
+    // contribute to "you meet the published requirements".
+    mockFetchOnce(fixture);
+    const result = await assessRoutes({
+      level_sought: "bachelor",
+      qualification_held: "attestat"
+    });
+
+    for (const scholarship of result.scholarships) {
+      expect(Array.isArray(scholarship.gates_unknown)).toBe(true);
+      if (scholarship.gates_unknown.length > 0) {
+        expect(scholarship.status).not.toBe("open");
+      }
+    }
+  });
+
+  it("surfaces the prep-year trade-off against Türkiye Bursları' age limit", async () => {
+    // Two things this engine models and no agency puts together: the prep year opens
+    // Germany and the UK, and spends the twelve months that push a 20-year-old past
+    // Türkiye Bursları' under-21 bachelor limit.
+    mockFetchOnce(fixture);
+    const result = await assessRoutes({
+      level_sought: "bachelor",
+      qualification_held: "attestat"
+    });
+
+    expect(result.prep_year_warning).not.toBeNull();
+    expect(result.prep_year_warning).toContain("21");
+    expect(result.prep_year_warning).toContain("Germany");
+  });
+
+  it("rejects a response whose prep_year_warning key is absent rather than null", async () => {
+    // Same rule as proof_of_funds. `null` is the backend saying this student does not
+    // face the trade-off; a missing key is a backend that cannot detect it, and treating
+    // them alike would drop the warning silently for the students it exists for.
+    const damaged = structuredClone(fixture) as typeof fixture;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (damaged as any).prep_year_warning;
+    mockFetchOnce(damaged);
+
+    await expect(
+      assessRoutes({ level_sought: "bachelor", qualification_held: "attestat" })
+    ).rejects.toThrow(ApiError);
+  });
+
+  it("rejects a scholarship whose gates_unknown array is missing", async () => {
+    // Dropping it is exactly how an award with an unchecked age limit would start
+    // rendering as one the student clears.
+    const damaged = structuredClone(fixture) as typeof fixture;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (damaged.scholarships[0] as any).gates_unknown;
+    mockFetchOnce(damaged);
+
+    await expect(
+      assessRoutes({ level_sought: "bachelor", qualification_held: "attestat" })
+    ).rejects.toThrow(ApiError);
+  });
+
   it("omits a blank score from the request body rather than sending zero", async () => {
     mockFetchOnce(fixture);
     await assessRoutes({

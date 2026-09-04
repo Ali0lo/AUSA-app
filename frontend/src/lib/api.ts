@@ -12,6 +12,7 @@ import type {
   RegisterPayload,
   RoutePlan,
   RouteUniversity,
+  Scholarship,
   StudentAccountProfile,
   StudentProfile,
   TrackedApplication,
@@ -287,9 +288,48 @@ function isPlan(value: unknown): value is RoutePlan {
   );
 }
 
+function isScholarship(value: unknown): value is Scholarship {
+  return (
+    isRecord(value) &&
+    typeof value.key === "string" &&
+    typeof value.name === "string" &&
+    typeof value.provider === "string" &&
+    isNumber(value.tier) &&
+    isOptionalString(value.country_code) &&
+    typeof value.coverage === "string" &&
+    typeof value.status === "string" &&
+    // All four are required and stay four separate arrays. `gates_unknown` is the one
+    // that matters: it holds gates the backend could NOT check, and a client that
+    // dropped it — or folded it into `gates_missing` — would render an award whose age
+    // limit was never checked as though the student had cleared it.
+    isStringArray(value.gates_met) &&
+    isStringArray(value.gates_missing) &&
+    isStringArray(value.gates_blocked) &&
+    isStringArray(value.gates_unknown) &&
+    isOptionalString(value.obligation) &&
+    isOptionalString(value.window) &&
+    typeof value.citation === "string" &&
+    typeof value.provenance === "string"
+  );
+}
+
 function assertAssessment(data: unknown): asserts data is AssessRoutesResponse {
   if (
     !isRecord(data) ||
+    // Required, and required to be complete. The DP is only one of ten funders and is
+    // the one every agency already names; the other nine are where the answer a student
+    // cannot get elsewhere lives. An assessment without them is the old DP-only product.
+    !Array.isArray(data.scholarships) ||
+    !data.scholarships.every(isScholarship) ||
+    typeof data.scholarships_note !== "string" ||
+    // Present and nullable, never absent — same rule as proof_of_funds. `null` is the
+    // backend saying this profile does not face the prep-year/Türkiye Bursları
+    // trade-off; a missing key would be indistinguishable from a backend that cannot
+    // detect it, and the warning would vanish silently for the students it is for.
+    // Hence the explicit `in` check: isOptionalString alone accepts `undefined` and
+    // would let an absent key pass as "no trade-off".
+    !("prep_year_warning" in data) ||
+    (data.prep_year_warning !== null && typeof data.prep_year_warning !== "string") ||
     !isStringArray(data.blocked) ||
     !Array.isArray(data.plans) ||
     !data.plans.every(isPlan) ||

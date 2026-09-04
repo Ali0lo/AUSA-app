@@ -208,6 +208,13 @@ export interface AssessRoutesPayload {
   // (engineering and technology) and 550 for every other field, so a score between the
   // two is only decidable with this.
   dim_field_group?: number | null;
+  // The three inputs the funding gates need and the academic ones do not. Türkiye
+  // Bursları' bachelor award is under-21, SOCAR's is open only to its own employees,
+  // and Chevening publishes its bar as 2,800 documented hours. Omitting any of them
+  // leaves that gate reported as unchecked — never as cleared.
+  age?: number | null;
+  work_experience_hours?: number | null;
+  employer?: string | null;
   budget_azn_per_year?: number | null;
   gpa?: number | null;
   gpa_scale?: GradeScaleKey | null;
@@ -313,8 +320,43 @@ export interface DPEligibility {
   funded_programmes_explanation: string;
 }
 
+// One funding instrument other than the Dövlət Proqramı, which is scored separately
+// against its own regulation (see DPEligibility). The four gate arrays are four
+// different things and must not be merged: `gates_missing` is work the student can do,
+// `gates_unknown` is a fact they can tell us or a source we have not read, and neither
+// ever counts towards `status: "open"`.
+export interface Scholarship {
+  key: string;
+  name: string;
+  provider: string;
+  // 1 = Azerbaijani state, 2 = destination government, 3 = the university itself.
+  tier: number;
+  // null means the award is not tied to one country — an Erasmus Mundus consortium
+  // spans several — so no destination check was applied.
+  country_code: string | null;
+  coverage: string;
+  status: "open" | "unlockable" | "blocked" | string;
+  gates_met: string[];
+  gates_missing: string[];
+  gates_blocked: string[];
+  gates_unknown: string[];
+  // null means no obligation is RECORDED, never that the award carries none.
+  obligation: string | null;
+  window: string | null;
+  citation: string;
+  provenance: string;
+}
+
 export interface AssessRoutesResponse {
   blocked: string[];
   plans: RoutePlan[];
   dp: DPEligibility;
+  // Blocked awards are present in this list, not filtered out. A student who is 22
+  // needs to be told Türkiye Bursları is closed to them and why, or they will spend
+  // January applying for it.
+  scholarships: Scholarship[];
+  scholarships_note: string;
+  // The prep year opens Germany and the UK and costs twelve months; Türkiye Bursları'
+  // bachelor award is under-21. null when this profile does not face that trade-off.
+  prep_year_warning: string | null;
 }

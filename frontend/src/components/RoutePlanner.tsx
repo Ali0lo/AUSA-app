@@ -9,7 +9,8 @@ import type {
   GradeScaleKey,
   RoutePlan,
   RouteQualification,
-  RouteUniversity
+  RouteUniversity,
+  Scholarship
 } from "@/types";
 
 const QUALIFICATIONS: { value: RouteQualification; label: string }[] = [
@@ -270,6 +271,96 @@ function PlanCard({ plan, index }: { plan: RoutePlan; index: number }) {
   );
 }
 
+const TIER_NAMES: Record<number, string> = {
+  1: "Azerbaijani state",
+  2: "Destination government",
+  3: "University"
+};
+
+const SCHOLARSHIP_HEADLINE: Record<string, string> = {
+  open: "You meet the published requirements",
+  unlockable: "Not yet — here is what stands between you and it",
+  blocked: "Closed to you"
+};
+
+function ScholarshipCard({ scholarship }: { scholarship: Scholarship }) {
+  return (
+    <article className="border-t border-quiet py-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h4 className="font-serif text-xl font-semibold">{scholarship.name}</h4>
+        <span className="text-xs uppercase tracking-[0.12em] text-muted">
+          {TIER_NAMES[scholarship.tier] ?? "Funding"}
+          {scholarship.country_code ? ` · ${countryName(scholarship.country_code)}` : ""}
+        </span>
+      </div>
+      <p className="mt-1 text-sm text-muted">{scholarship.provider}</p>
+
+      <p
+        className={`mt-3 text-sm font-semibold ${
+          scholarship.status === "open"
+            ? "text-success"
+            : scholarship.status === "blocked"
+              ? "text-muted"
+              : "text-warning"
+        }`}
+      >
+        {SCHOLARSHIP_HEADLINE[scholarship.status] ?? scholarship.status}
+      </p>
+
+      <p className="mt-2 text-sm leading-6">{scholarship.coverage}</p>
+
+      {scholarship.gates_met.length > 0 && (
+        <ul className="mt-3 space-y-1 text-sm text-success">
+          {scholarship.gates_met.map((gate) => <li key={gate}>✓ {gate}</li>)}
+        </ul>
+      )}
+      {scholarship.gates_blocked.length > 0 && (
+        <ul className="mt-2 space-y-1 text-sm text-muted">
+          {scholarship.gates_blocked.map((gate) => <li key={gate}>✕ {gate}</li>)}
+        </ul>
+      )}
+      {scholarship.gates_missing.length > 0 && (
+        <ul className="mt-2 space-y-1 text-sm text-warning">
+          {scholarship.gates_missing.map((gate) => <li key={gate}>· {gate}</li>)}
+        </ul>
+      )}
+
+      {/* Rendered apart from the list above, and labelled, because it asks something
+          different of the reader. A missing gate is work they can go and do; an unknown
+          gate is a fact they can tell us, or a page nobody on this project has read.
+          Folding the two together would tell a student to act on a question we never
+          actually asked them. */}
+      {scholarship.gates_unknown.length > 0 && (
+        <div className="mt-3 border-l-2 border-quiet pl-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
+            What we could not check
+          </p>
+          <ul className="mt-1 space-y-1 text-sm leading-6 text-muted">
+            {scholarship.gates_unknown.map((gate) => <li key={gate}>{gate}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {scholarship.window && (
+        <p className="mt-3 text-xs leading-5 text-muted">
+          <span className="font-semibold">When: </span>
+          {scholarship.window}
+        </p>
+      )}
+      {scholarship.obligation && (
+        <p className="mt-2 text-xs leading-5 text-muted">
+          <span className="font-semibold">What you commit to: </span>
+          {scholarship.obligation}
+        </p>
+      )}
+
+      <p className="mt-3 text-xs leading-5 text-muted">
+        {scholarship.citation} · {scholarship.provenance}, not yet verified by a person.
+      </p>
+    </article>
+  );
+}
+
 export function RoutePlanner() {
   const [level, setLevel] = useState<"bachelor" | "master">("bachelor");
   const [qualification, setQualification] = useState<RouteQualification>("attestat");
@@ -281,6 +372,11 @@ export function RoutePlanner() {
   const [dimGroup, setDimGroup] = useState("");
   const [sat, setSat] = useState("");
   const [language, setLanguage] = useState("");
+  // The funding inputs. Nothing academic needs them; several scholarships are decided
+  // by them alone.
+  const [age, setAge] = useState("");
+  const [workHours, setWorkHours] = useState("");
+  const [employer, setEmployer] = useState("");
 
   const [result, setResult] = useState<AssessRoutesResponse | null>(null);
   const [error, setError] = useState<{ title: string; message: string } | null>(null);
@@ -301,7 +397,10 @@ export function RoutePlanner() {
       dim_score: num(dim),
       dim_field_group: num(dimGroup),
       sat: num(sat),
-      language_certificate_level: language || undefined
+      language_certificate_level: language || undefined,
+      age: num(age),
+      work_experience_hours: num(workHours),
+      employer: employer.trim() || undefined
     };
 
     try {
@@ -450,6 +549,74 @@ export function RoutePlanner() {
           </div>
         </fieldset>
 
+        {/* Funding asks for things nothing academic needs, so they sit in their own
+            block with the reason attached. A student who does not see why we want their
+            age will assume we are profiling them, and leave it blank. */}
+        <fieldset className="mt-7 border-t border-quiet pt-6">
+          <legend className="eyebrow">For funding</legend>
+          <p className="mt-3 text-sm leading-6 text-muted">
+            Several scholarships are decided by things that have nothing to do with your
+            grades. Leave any of these blank and we will say the gate went unchecked —
+            never that you cleared it.
+          </p>
+
+          <div className="mt-4">
+            <label className="field-label" htmlFor="age">Age</label>
+            <input
+              id="age"
+              className="field"
+              inputMode="numeric"
+              value={age}
+              onChange={(event) => setAge(event.target.value)}
+              placeholder="e.g. 18"
+            />
+            <p className="field-help">
+              {level === "bachelor"
+                ? "Türkiye Bursları funds bachelor study only for applicants under 21, and it is one of just two scholarships that reach this level at all."
+                : "SOCAR's programme sets an upper age limit; most others do not publish one we have read."}
+            </p>
+          </div>
+
+          {/* Only asked at master's level, where the awards that use them exist. */}
+          {level === "master" && (
+            <>
+              <div className="mt-4">
+                <label className="field-label" htmlFor="work-hours">
+                  Documented work experience
+                </label>
+                <input
+                  id="work-hours"
+                  className="field"
+                  inputMode="numeric"
+                  value={workHours}
+                  onChange={(event) => setWorkHours(event.target.value)}
+                  placeholder="hours, e.g. 3000"
+                />
+                <p className="field-help">
+                  In hours, not years — Chevening asks for 2,800 documented hours and
+                  counts part-time and overlapping work against that figure.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <label className="field-label" htmlFor="employer">Employer</label>
+                <input
+                  id="employer"
+                  className="field"
+                  value={employer}
+                  onChange={(event) => setEmployer(event.target.value)}
+                  placeholder="if you are working"
+                />
+                <p className="field-help">
+                  SOCAR&apos;s scholarship is open only to SOCAR group employees. No
+                  academic record opens it, so this is the only way we can tell whether it
+                  applies to you.
+                </p>
+              </div>
+            </>
+          )}
+        </fieldset>
+
         <button type="submit" className="button-primary mt-7 w-full" disabled={pending}>
           {pending ? (
             <>
@@ -564,6 +731,27 @@ export function RoutePlanner() {
                 ))}
               </>
             )}
+
+            {/* The one thing on this page that needs two models at once: the prep year
+                opens Germany and the UK, and spends the twelve months that can push a
+                student past Türkiye Bursları' under-21 bachelor limit. Placed between
+                the routes and the funding because it belongs to both. */}
+            {result.prep_year_warning && (
+              <div className="notice-warning mt-8">
+                <p className="font-semibold">One route costs you another option</p>
+                <p className="mt-2 leading-6">{result.prep_year_warning}</p>
+              </div>
+            )}
+
+            <section className="mt-10 border-t border-line pt-6">
+              <p className="eyebrow">Funding beyond the state programme</p>
+              <p className="mt-3 text-sm leading-6 text-muted">
+                {result.scholarships_note}
+              </p>
+              {result.scholarships.map((scholarship) => (
+                <ScholarshipCard key={scholarship.key} scholarship={scholarship} />
+              ))}
+            </section>
 
             {result.blocked.length > 0 && (
               <section className="mt-10 border-t border-line pt-6">

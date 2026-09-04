@@ -102,6 +102,25 @@ class StudentRouteProfile:
     # technology) and 550 for every other field, so without this the engine can only answer
     # at the extremes. None means "not told us", never "Group 1".
     dim_field_group: Optional[int] = None
+    # --- The three inputs the non-DP funding gates need, and none of the academic ones do.
+    #
+    # Several scholarships are decided by facts that have nothing to do with merit: Türkiye
+    # Bursları' bachelor award requires you to be under 21, SOCAR's is open only to its own
+    # employees, and Chevening publishes its bar as 2,800 documented hours. Without these
+    # fields the engine could only report those gates as permanently unknown -- which is
+    # honest, and useless. None still means "not told us", never a value in the student's
+    # favour (see services/scholarship_eligibility.py).
+    #
+    # `age` is a plain integer rather than a date of birth: the request carries the whole
+    # profile and stores nothing, so there is no birthday to keep current, and a year is the
+    # granularity every one of these limits is published at.
+    age: Optional[int] = None
+    # Hours, not years. Chevening counts documented hours, and part-time or overlapping work
+    # converts to years differently under any rule of thumb we could apply.
+    work_experience_hours: Optional[int] = None
+    # A self-declaration, used only to avoid presenting an award that is impossible. SOCAR
+    # verifies employment itself; nothing here is treated as proof of anything.
+    employer: Optional[str] = None
     budget_azn_per_year: Optional[float] = None
     # The grade average OF THE QUALIFICATION NAMED IN `qualification_held` -- the attestat
     # for a school-leaver, the completed bachelor's degree for a master's applicant. One

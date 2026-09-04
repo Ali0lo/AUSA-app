@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RoutePlanner } from "@/components/RoutePlanner";
-import type { AssessRoutesResponse, RouteUniversity } from "@/types";
+import type { AssessRoutesResponse, RouteUniversity, Scholarship } from "@/types";
 
 const assessRoutes = vi.fn();
 vi.mock("@/lib/api", async () => {
@@ -45,9 +45,34 @@ function university(overrides: Partial<RouteUniversity> = {}): RouteUniversity {
   };
 }
 
+function scholarship(overrides: Partial<Scholarship> = {}): Scholarship {
+  return {
+    key: "turkiye-burslari",
+    name: "Türkiye Bursları",
+    provider: "Government of Türkiye",
+    tier: 2,
+    country_code: "TR",
+    coverage: "Fully funded: tuition waiver, monthly stipend, dormitory and health insurance",
+    status: "open",
+    gates_met: ["You are 19, under the age limit of 21"],
+    gates_missing: [],
+    gates_blocked: [],
+    gates_unknown: [],
+    obligation: null,
+    window: "Applications run 10 January to 20 February.",
+    citation: "spec §5.2",
+    provenance: "research-brief",
+    ...overrides
+  };
+}
+
 function response(overrides: Partial<AssessRoutesResponse> = {}): AssessRoutesResponse {
   return {
     blocked: [],
+    scholarships: [scholarship()],
+    scholarships_note:
+      "Meeting an award's published gates makes you possibly eligible to apply. It is never an award.",
+    prep_year_warning: null,
     plans: [
       {
         hops: [
@@ -236,12 +261,130 @@ describe("RoutePlanner", () => {
     expect(await screen.findByText(/gap in our data/i)).toBeInTheDocument();
   });
 
-  it("shows the state programme's own wording that eligibility is not an award", async () => {
+  it("says eligibility is not an award for every funder, not just the state programme", async () => {
+    // The rule is spec §5.2's and it binds the whole funding section: "possibly eligible",
+    // never "you will get it". Two notices carry it now -- the DP panel and the
+    // scholarship list -- and both have to, because a student reads whichever one their
+    // own funding hopes are in.
     assessRoutes.mockResolvedValue(response());
     render(<RoutePlanner />);
     await submitForm();
 
-    expect(await screen.findByText(/possibly eligible to apply/i)).toBeInTheDocument();
+    const notices = await screen.findAllByText(/possibly eligible to apply/i);
+    expect(notices).toHaveLength(2);
+  });
+
+  it("says why a scholarship is closed rather than dropping it from the page", async () => {
+    // A 22-year-old who simply does not see Türkiye Bursları will apply for it anyway in
+    // January. The blocked award has to be on the page, with the gate that closed it.
+    assessRoutes.mockResolvedValue(
+      response({
+        scholarships: [
+          scholarship({
+            status: "blocked",
+            gates_met: [],
+            gates_blocked: [
+              "You are 22 and this award requires you to be under 21 at bachelor level."
+            ]
+          })
+        ]
+      })
+    );
+    render(<RoutePlanner />);
+    await submitForm();
+
+    expect(await screen.findByText(/Closed to you/i)).toBeInTheDocument();
+    expect(screen.getByText(/requires you to be under 21/i)).toBeInTheDocument();
+  });
+
+  it("labels a gate it could not check instead of folding it in with the missing ones", async () => {
+    // The two ask different things of the student: one is work to do, the other is a fact
+    // to tell us. Merged, we would be telling them to act on a question we never asked.
+    assessRoutes.mockResolvedValue(
+      response({
+        scholarships: [
+          scholarship({
+            status: "unlockable",
+            gates_met: [],
+            gates_unknown: [
+              "This award requires you to be under 21 at bachelor level. Tell us your age and this becomes a definite answer either way"
+            ]
+          })
+        ]
+      })
+    );
+    render(<RoutePlanner />);
+    await submitForm();
+
+    expect(await screen.findByText(/What we could not check/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tell us your age/i)).toBeInTheDocument();
+  });
+
+  it("surfaces the prep-year trade-off when the backend reports one", async () => {
+    assessRoutes.mockResolvedValue(
+      response({
+        prep_year_warning:
+          "Taking the 12-month prep year would make you 21 at the next Türkiye Bursları window, which is at or over its under-21 bachelor limit."
+      })
+    );
+    render(<RoutePlanner />);
+    await submitForm();
+
+    expect(await screen.findByText(/One route costs you another option/i)).toBeInTheDocument();
+    expect(screen.getByText(/under-21 bachelor limit/i)).toBeInTheDocument();
+  });
+
+  it("does not invent a trade-off when the backend reports none", async () => {
+    assessRoutes.mockResolvedValue(response({ prep_year_warning: null }));
+    render(<RoutePlanner />);
+    await submitForm();
+
+    await screen.findByText(/routes, soonest first/i);
+    expect(screen.queryByText(/One route costs you another option/i)).not.toBeInTheDocument();
+  });
+
+  it("asks for an employer only where an award is actually gated on one", async () => {
+    // SOCAR's scholarship is master's-only, so a school-leaver is never asked who they
+    // work for. Asking anyway reads as profiling and gets left blank.
+    render(<RoutePlanner />);
+
+    expect(screen.queryByLabelText(/^Employer$/i)).not.toBeInTheDocument();
+
+    await userEvent.selectOptions(
+      screen.getByLabelText(/I am applying for/i),
+      "master"
+    );
+
+    expect(screen.getByLabelText(/^Employer$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Documented work experience/i)).toBeInTheDocument();
+  });
+
+  it("sends age, hours and employer so the funding gates can be checked", async () => {
+    assessRoutes.mockResolvedValue(response());
+    render(<RoutePlanner />);
+
+    await userEvent.selectOptions(screen.getByLabelText(/I am applying for/i), "master");
+    await userEvent.type(screen.getByLabelText(/^Age$/i), "24");
+    await userEvent.type(screen.getByLabelText(/Documented work experience/i), "3000");
+    await userEvent.type(screen.getByLabelText(/^Employer$/i), "SOCAR");
+    await submitForm();
+
+    await waitFor(() => expect(assessRoutes).toHaveBeenCalled());
+    const payload = assessRoutes.mock.calls[0][0];
+    expect(payload.age).toBe(24);
+    expect(payload.work_experience_hours).toBe(3000);
+    expect(payload.employer).toBe("SOCAR");
+  });
+
+  it("treats a blank age as unknown rather than as zero", async () => {
+    assessRoutes.mockResolvedValue(response());
+    render(<RoutePlanner />);
+    await submitForm();
+
+    await waitFor(() => expect(assessRoutes).toHaveBeenCalled());
+    const payload = assessRoutes.mock.calls[0][0];
+    expect(payload.age).toBeUndefined();
+    expect(payload.employer).toBeUndefined();
   });
 
   it("reports a backend failure instead of rendering an empty result", async () => {
