@@ -135,8 +135,20 @@ before curating thirty rows on an assumption.
 ## When you are done
 
 Save as `data/curation/program_requirements_<yourname>.csv` using the template's exact
-header, and say so — a loader for these rows does not exist yet and is a small task once
-the first real file exists. Do not hand-write rows into the database.
+header, then dry-run it before you commit:
+
+```bash
+cd backend
+python -m scripts.load_program_requirements --file ../data/curation/program_requirements_<yourname>.csv --dry-run
+```
+
+The loader parses every row before writing any and aborts whole on a bad one, so a clean
+dry-run means a clean file; a `CuratedRowError` names the line and the column. Commit the
+CSV — **do not hand-write rows into the database.**
+
+`verified_by` must stay empty in the file; the loader rejects a file that sets it. A file
+cannot record that a person read a page — the admin review queue stamps that from the
+authenticated account.
 
 Sanity check before you submit: does every row have a `source_url` you personally opened,
 and is every blank cell a genuine "we do not know" rather than a cell you skipped?

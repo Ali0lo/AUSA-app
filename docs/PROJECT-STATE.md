@@ -28,10 +28,28 @@ they largely do not surface scholarships at all.
 
 A **separate Azerbaijan section** carries the machine learning: predicting next year's DİM
 cutoff for domestic university programmes. It is a different question for a different
-decision, and it is deliberately not blended into the abroad results.
+decision, and it is deliberately not blended into the abroad results. **One chatbot spans
+both**, explaining why a route is blocked rather than only stating that it is.
 
 **Two levels: bachelor and master's.** Six destinations: Turkey, Germany, the UK, the USA,
 Poland, China. PhD is out of scope.
+
+### 1.1 Where the boundary actually runs (corrected 5 September)
+
+An earlier phrasing of this was *"a DİM number must never appear in an abroad answer"*, and
+that is wrong — it would file the **Dövlət Proqramı** into the Azerbaijan section, which is
+the opposite of what it is. The boundary is not the DİM scale. It is **who produced the
+number**:
+
+| Number | Belongs |
+|---|---|
+| **A DİM score the student tells us** | **Anywhere.** It is a fact about them. It gates the DP (400/550) and decides the prep year — both abroad features |
+| **A DİM cutoff the model predicted** | **The Azerbaijan section only.** It is a number *we* produced about Azerbaijani universities, and it claims nothing about admission abroad |
+
+So the **State Programme belongs in the abroad universities part**, beside the other nine
+funders, even though its academic gate reads a DİM score. It funds study at foreign
+universities; filing it by the shape of its input rather than by what it does for the
+student would put it in the wrong half of the product.
 
 ---
 
@@ -220,7 +238,18 @@ an admission outcome.
 
 ## 7. Task split — four tracks, 10 days
 
-Written so the tracks do not touch the same files. Sizes are working days.
+**Each track has its own brief with executable steps in [`tracks/`](tracks/) — that is what
+you work from. The table below is the summary.** Tracks are written so that two people
+working at once do not touch the same files.
+
+| Track | Brief | Owner |
+|---|---|---|
+| A — Catalogue | [`tracks/track-a-catalogue.md`](tracks/track-a-catalogue.md) | two people, unclaimed |
+| B — ML | [`tracks/track-b-ml.md`](tracks/track-b-ml.md) | unclaimed |
+| C — Product & LLM | [`tracks/track-c-product-llm.md`](tracks/track-c-product-llm.md) | Fariz + Claude — C1/C3/C4 done |
+| D — Frontend | [`tracks/track-d-frontend.md`](tracks/track-d-frontend.md) | unclaimed |
+
+Sizes are working days.
 
 ### Track A — Catalogue and curation *(two people; the critical path)*
 
