@@ -1,6 +1,6 @@
 # Track C — Product and the LLM
 
-**One person. ~3.25 days.** C1, C3 and C4 are **done** (5 September); C2 is the remaining work.
+**One person. ~3.25 days.** C1, C3, C4 and most of C2 are **done** (5 September).
 
 ---
 
@@ -11,10 +11,18 @@
 | **C1** | `demo_walkthrough.py` runs end to end again, with a smoke test | `3bef1be` |
 | **C3** | The weighted match score deleted front to back | `367b22a` |
 | **C4** | `students.gpa` carries its scale; a 4.5/5 attestat can register | `e0dd0cd` |
+| **C2.1** | Four tools over the route engine and the funding catalogue | `907e8b4` |
+| **C2.3** | The numeral guard | `907e8b4` |
+| **C2.4** | System prompt rewritten around the contract and the DİM boundary | `907e8b4` |
 
 C1 surfaced a finding now carried as Track A's first task: the prep-year path to Germany
 resolves to **zero universities**, because all three curated German rows are
 `feststellungspruefung`.
+
+**Still open in C2: step 2 (free-text intake) and step 5 (the process library).**
+`services/agent/route_tools.py` also does not reach the universities a plan lands on —
+`university_requirements` needs a database session and those tools are deliberately sync
+and I/O-free, so a caller that needs universities calls `POST /routes/assess`.
 
 ---
 
@@ -46,7 +54,7 @@ it**. A predicted DİM cutoff must never appear in an answer about Germany.
 
 ### Steps
 
-**1 · Tools over the route engine** — `backend/app/services/agent/tools.py`
+**1 · Tools over the route engine** ✅ — `backend/app/services/agent/route_tools.py`
 
 Each tool calls the existing service and returns its structured result. None of them
 computes anything new; that is the point.
@@ -64,7 +72,7 @@ work the student can do; an unknown gate is a fact they can tell us or a source 
 read. Merging them in prose is the same error as merging them in the API, and neither ever
 counts as open.
 
-**2 · Free-text intake** — *"I want to study robotics, I have DİM 520 and IELTS 7"*
+**2 · Free-text intake** ← **next** — *"I want to study robotics, I have DİM 520 and IELTS 7"*
 
 Maps free text onto the `AssessRoutesPayload` fields. This is the "based on own interest"
 half of the product: there is no field taxonomy a 17-year-old knows.
@@ -73,12 +81,18 @@ half of the product: there is no field taxonomy a 17-year-old knows.
 context. This is the exact site where `extract_and_update_profile` used to invent GPA 3.8 and
 IELTS 7.5 from an unparseable transcript and report success.
 
-**3 · The numeral guard** — the test that makes the rest safe
+**3 · The numeral guard** ✅ — `backend/app/services/agent/numerals.py`
 
-Extract every numeral from the generated text and assert each appears in the payload the
-model was given. Wire it as a test over recorded responses, not as a runtime hope.
+Extracts every numeral from generated text and asserts the payload supports it. Normalises
+both sides (`1,200` = `1200`, `7.0` = `7`) and mines citation strings, so quoting *"2,800
+documented hours"* back passes. It does **no arithmetic of its own** on purpose: a total the
+model computed correctly still trips it, because a total shown to a student should be
+computed by the service and passed in.
 
-**4 · Route explanation in the answer**
+Test-time and development assertion, never a runtime filter — silently dropping a sentence
+would leave the student reading an explanation with a hole in it and no sign there was one.
+
+**4 · Route explanation in the answer** ✅ *(the prompt half; the rendering is Track D)*
 
 The engine already produces *"This route needs one of: one_year_university,
 feststellungspruefung, a_level, ib. You hold: attestat."* The LLM's job is to turn that into
