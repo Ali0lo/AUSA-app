@@ -1,32 +1,10 @@
-import { expect, Page, Route, test } from "@playwright/test";
+﻿import { expect, Page, Route, test } from "@playwright/test";
 
 const health = {
   status: "healthy",
   service: "AUSA",
   version: "0.1.0",
   environment: "test"
-};
-
-const factor = (score: number, passed: boolean, explanation: string) => ({
-  score,
-  weight: 0.25,
-  weighted_score: score * 0.25,
-  passed_hard_filter: passed,
-  explanation
-});
-
-const matchResult = {
-  program_name: "BSc Data Science",
-  university_name: "University College London (UCL)",
-  overall_match_percentage: 72,
-  is_eligible: true,
-  ineligibility_reasons: [],
-  breakdown: {
-    degree_level: factor(100, true, "The degree level matches."),
-    academic: factor(88, true, "The GPA meets the minimum."),
-    budget: factor(40, false, "The budget is below the listed tuition."),
-    language: factor(60, true, "The language result meets the minimum.")
-  }
 };
 
 function monitorErrors(page: Page): string[] {
@@ -64,26 +42,18 @@ async function mockHealth(page: Page) {
   });
 }
 
-test("landing search, navigation, and mobile menu always produce an outcome", async ({ page }) => {
+test("landing navigation and the mobile menu always produce an outcome", async ({ page }) => {
   const errors = monitorErrors(page);
   await mockHealth(page);
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "A clearer route to the right programme." })).toBeVisible();
   await expect(page.locator("header").getByRole("link", { name: "Sign in" })).toBeVisible();
-  const search = page.getByRole("combobox", { name: "Search the demo programme catalogue" });
-  await page.getByRole("button", { name: "Search demo" }).click();
-  await expect(page.getByText(/Enter a programme, university, field, or country/)).toBeVisible();
 
-  await search.fill("not in this catalogue");
-  await page.getByRole("button", { name: "Search demo" }).click();
-  await expect(page.getByText(/full catalogue is not implemented/)).toBeVisible();
-
-  await search.fill("UCL");
-  await page.getByRole("button", { name: "Search demo" }).click();
-  await expect(page).toHaveURL(/\/match\?program=102$/);
-  await expect(page.locator("button[aria-pressed='true']")).toContainText("University College London");
-  await expect(page.locator("header").getByRole("link", { name: "Sign in" })).toBeVisible();
+  // The landing search over three fabricated demo programmes went with the weighted matcher.
+  // The primary call to action is now the route planner, which runs on the real catalogue.
+  await page.getByRole("link", { name: "Plan my route" }).first().click();
+  await expect(page).toHaveURL(/\/plan$/);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
@@ -99,57 +69,17 @@ test("landing search, navigation, and mobile menu always produce an outcome", as
   expect(errors).toEqual([]);
 });
 
-test("matching submits the preserved contract, reports failure, retries, and resets", async ({ page }) => {
+test("the deleted matching page is a 404 with a working exit, not a blank screen", async ({ page }) => {
+  // The weighted-score prototype was removed, and /match is now an ordinary missing route.
+  // Worth asserting: a deleted page that renders empty rather than 404ing is the failure a
+  // user actually meets, and Next will happily serve one if a stale route file survives.
   const errors = monitorErrors(page);
-  let matchingFails = false;
-  let submitted: Record<string, unknown> | null = null;
-  let healthChecks = 0;
-
-  await page.route("**/api/v1/**", async (route) => {
-    const path = new URL(route.request().url()).pathname;
-    if (path.endsWith("/health")) {
-      healthChecks += 1;
-      await respond(route, health);
-      return;
-    }
-    if (path.endsWith("/matching/evaluate")) {
-      submitted = route.request().postDataJSON();
-      await respond(route, matchingFails ? { detail: "Scoring service maintenance." } : matchResult, matchingFails ? 503 : 200);
-      return;
-    }
-    await respond(route, { detail: "Unknown test endpoint." }, 404);
-  });
-
+  await mockHealth(page);
   await page.goto("/match");
-  await expect(page.locator("header").getByRole("link", { name: "Sign in" })).toBeVisible();
-  await expect(page.getByText("Backend online · v0.1.0")).toBeVisible();
-  await page.getByRole("button", { name: "Check again" }).click();
-  await expect.poll(() => healthChecks).toBeGreaterThanOrEqual(2);
 
-  const ucl = page.locator("button").filter({ hasText: "University College London (UCL)" });
-  await ucl.click();
-  await page.getByLabel("Target degree").selectOption("bachelor");
-  await page.getByRole("button", { name: "Evaluate compatibility" }).click();
-
-  await expect(page.getByRole("heading", { name: "BSc Data Science" })).toBeVisible();
-  await expect(page.getByText("72%")).toBeVisible();
-  expect(submitted).toMatchObject({
-    student: { degree_level: "bachelor" },
-    program: { program_id: 102, university_name: "University College London (UCL)" }
-  });
-
-  await page.getByRole("button", { name: "Evaluate another profile" }).click();
-  await expect(page.getByRole("heading", { name: "Your backend response will appear here." })).toBeVisible();
-  matchingFails = true;
-  await page.getByRole("button", { name: "Evaluate compatibility" }).click();
-  await expect(page.getByText("Scoring service maintenance.", { exact: true })).toBeVisible();
-
-  matchingFails = false;
-  await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByText("72%")).toBeVisible();
-  await page.getByRole("button", { name: "Evaluate another profile" }).click();
-  await page.getByRole("button", { name: "Reset form" }).click();
-  await expect(page.getByLabel("GPA on a 4.0 scale")).toHaveValue("3.6");
+  await expect(page.getByRole("heading", { name: "This route does not exist." })).toBeVisible();
+  await page.getByRole("link", { name: "Plan my route" }).click();
+  await expect(page).toHaveURL(/\/plan$/);
   expect(errors).toEqual([]);
 });
 
@@ -285,7 +215,7 @@ test("registration validates locally and completes the existing account flow", a
     await respond(route, { detail: "Unknown test endpoint." }, 404);
   });
   await page.route("**/api/auth/callback/credentials", async (route) => {
-    await respond(route, { url: "http://127.0.0.1:3100/match" });
+    await respond(route, { url: "http://127.0.0.1:3100/plan" });
   });
 
   await page.goto("/register");
@@ -299,10 +229,13 @@ test("registration validates locally and completes the existing account flow", a
 
   await page.getByLabel("Confirm password").fill("secret1");
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/match$/);
+  await expect(page).toHaveURL(/\/plan$/);
   expect(registrationPayload).toMatchObject({
     email: "new.student@example.com",
-    gpa: 3.5,
+    // The grade never travels without its scale: the backend rejects a grade sent alone
+    // rather than assuming which country's scale it is on.
+    gpa: 4.5,
+    gpa_scale: "5.0",
     degree_level: "master",
     country: "Azerbaijan"
   });
@@ -337,7 +270,7 @@ test("compatibility redirect and missing route provide working exits", async ({ 
   const errors = monitorErrors(page);
   await mockHealth(page);
   await page.goto("/dashboard");
-  await expect(page).toHaveURL(/\/match$/);
+  await expect(page).toHaveURL(/\/plan$/);
 
   await page.goto("/route-that-does-not-exist");
   await expect(page.getByRole("heading", { name: "This route does not exist." })).toBeVisible();

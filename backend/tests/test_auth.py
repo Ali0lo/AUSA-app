@@ -166,6 +166,7 @@ async def test_auth_register_and_login_flow(db_session):
                 "email": test_email,
                 "password": test_password,
                 "gpa": 3.7,
+                "gpa_scale": "4.0",
                 "budget": 20000.0,
                 "degree_level": "master",
             },
@@ -187,6 +188,71 @@ async def test_auth_register_and_login_flow(db_session):
         profile = me_res.json()
         assert profile["email"] == test_email
         assert profile["gpa"] == 3.7
+        assert profile["gpa_scale"] == "4.0"
+
+
+@pytest.mark.asyncio
+async def test_an_azerbaijani_attestat_average_registers(db_session):
+    """4.5 out of 5 is an excellent attestat, and `le=4.0` used to reject it as invalid.
+
+    This is the product's own user being turned away at the door by a bound that assumed a
+    US grading scale. The grade is stored with the scale it is on, and comes back with it,
+    so no consumer can draw it against a four-point bar.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        reg_res = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "attestat@ausa.edu.az",
+                "password": "password123",
+                "gpa": 4.5,
+                "gpa_scale": "5.0",
+            },
+        )
+        assert reg_res.status_code == 201
+
+        login_res = await client.post(
+            "/api/v1/auth/login",
+            json={"email": "attestat@ausa.edu.az", "password": "password123"},
+        )
+        me_res = await client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {login_res.json()['access_token']}"},
+        )
+        assert me_res.json()["gpa"] == 4.5
+        assert me_res.json()["gpa_scale"] == "5.0"
+
+
+@pytest.mark.asyncio
+async def test_a_grade_without_its_scale_is_refused(db_session):
+    """Storing 4.5 with no scale leaves a row nobody can read back: excellent attestat, or
+    impossible US GPA? The registration is rejected rather than guessing which."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(
+            "/api/v1/auth/register",
+            json={"email": "noscale@ausa.edu.az", "password": "password123", "gpa": 4.5},
+        )
+        assert res.status_code == 422
+        assert "gpa_scale is required" in res.text
+
+
+@pytest.mark.asyncio
+async def test_a_grade_outside_its_own_scale_is_refused(db_session):
+    """4.5 on a four-point scale is not a strict grade, it is an impossible one -- almost
+    always the wrong scale picked. Said now rather than silently failing every comparison
+    downstream."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "outofrange@ausa.edu.az",
+                "password": "password123",
+                "gpa": 4.5,
+                "gpa_scale": "4.0",
+            },
+        )
+        assert res.status_code == 422
+        assert "outside the 4.0 scale" in res.text
 
 
 @pytest.mark.asyncio
