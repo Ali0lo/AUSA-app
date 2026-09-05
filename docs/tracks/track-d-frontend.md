@@ -1,12 +1,10 @@
 # Track D — Frontend and report
 
-**One person. ~5 days.**
-
-The backend answers the product's question today. `POST /routes/assess` takes a profile and
-returns classified routes, costed two-hop plans, the universities each plan reaches, State
-Programme eligibility and ten scholarship assessments. **`/plan` renders a fraction of that.**
-
-This track builds the two modes the spec specifies, over a response that already exists.
+**Status: COMPLETED (5 September 2026)**
+- [x] **D1: Discovery Flow** — Level first, live refining, baseline loaded so never empty, three status groups (OPEN, UNLOCKABLE, BLOCKED), destination ranking without exclusion ("Your score goes further here"), total cost to degree.
+- [x] **D2: Target Flow** — Name university, objective gap statements, requirement checklist, process checklist, deadlines, alternatives closing gap, honest uncurated fallback, speculative study plan excluded.
+- [x] **D3: Make Absence Visible** — `unknown_fields` + `not_stated`, distinguish catalogue gap vs country finding, separate `gates_unknown` vs `gates_missing`, `provenance` + `last_checked` on every row, warn on `grade_exact: false`.
+- [x] **D4: Report & README Pass** — Update `README.md`, create `docs/PROJECT-REPORT.md` quoting the four verified limitations verbatim.
 
 ---
 

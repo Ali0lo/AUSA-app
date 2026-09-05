@@ -1,0 +1,1447 @@
+{
+  "blocked": [
+    "DE: Direct, subject-restricted entry -- This route needs one of: one_year_university, feststellungspruefung, a_level, ib. You hold: attestat.",
+    "GB: Direct entry via UCAS -- This route needs one of: foundation_year, one_year_university, a_level, ib. You hold: attestat."
+  ],
+  "plans": [
+    {
+      "hops": [
+        {
+          "key": "cn-bachelor-csc",
+          "country_code": "CN",
+          "mechanism": "CSC-funded study, taught in Chinese, with a CSCA score",
+          "time_cost_months": 0,
+          "money_cost_azn_low": 0,
+          "money_cost_azn_high": 0,
+          "citation": "https://www.campuschina.org/",
+          "provenance": "seed",
+          "proof_of_funds": null
+        }
+      ],
+      "total_months": 0,
+      "total_cost_azn_low": 0,
+      "total_cost_azn_high": 0,
+      "status": "unlockable",
+      "missing": [
+        "CSCA required",
+        "HSK required, minimum 4.0"
+      ],
+      "destination_country": "CN",
+      "qualification_delivered": "attestat",
+      "universities": [
+        {
+          "university_name": "Harbin Institute of Technology",
+          "program_name": "International undergraduate admission (Chinese-taught)",
+          "country_code": "CN",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "attestat",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": null,
+          "language_minimum_score": null,
+          "entrance_exam": "HSK",
+          "entrance_exam_minimum": 4.0,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": 20000.0,
+          "currency": "CNY",
+          "application_fee": 400.0,
+          "application_deadline": "2026-07-15",
+          "application_portal": "https://hit.at0086.cn/student",
+          "notes": "A high school diploma or above is accepted directly; no foundation year. HSK level 4 with a total score of 210 or above, valid two years; entrance_exam_minimum records the LEVEL (4) because the student profile carries HSK as a level, and the 210 sub-score is stated here so it is not lost. An applicant whose prior compulsory courses were taught in Chinese may submit a certificate of Chinese instruction instead of an HSK score. Applicants must be under 30, or under 25 for HIT Scholarship applicants. Application fee CNY 400 (USD 60) self-financed, CNY 600 (USD 90) for scholarship applicants; the self-financed figure is recorded. Deadline for the September 2026 intake is 15 July 2026. GPA thresholds are NOT stated.",
+          "unknown_fields": [
+            "language_test",
+            "language_minimum_score",
+            "gpa_minimum"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language test, language minimum score, gpa minimum. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://studyathit.hit.edu.cn/18358/list.htm",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "Harbin Institute of Technology",
+          "program_name": "International undergraduate admission (English-taught)",
+          "country_code": "CN",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "attestat",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": "IELTS",
+          "language_minimum_score": 6.0,
+          "entrance_exam": null,
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": 26000.0,
+          "currency": "CNY",
+          "application_fee": 400.0,
+          "application_deadline": "2026-07-15",
+          "application_portal": "https://hit.at0086.cn/student",
+          "notes": "A high school diploma or above is accepted directly; no foundation year. NO HSK is required for English-taught programmes, which is why this is a separate row from the Chinese-taught one. Academic IELTS above 6.0 with no subtest below 5.5, or TOEFL iBT above 80, or an equivalent recognised certification. Only Civil Engineering and Chemical Engineering and Technology are taught in English; all other bachelor programmes at HIT are taught in Chinese. Tuition CNY 26,000 per year for English-taught, against CNY 20,000 for Chinese-taught. Applicants must be under 30, or under 25 for HIT Scholarship applicants. Deadline for the September 2026 intake is 15 July 2026. GPA thresholds are NOT stated.",
+          "unknown_fields": [
+            "entrance_exam",
+            "entrance_exam_minimum",
+            "gpa_minimum"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: entrance exam, entrance exam minimum, gpa minimum. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://studyathit.hit.edu.cn/18358/list.htm",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "Tsinghua University",
+          "program_name": "International undergraduate admission (Chinese-English taught)",
+          "country_code": "CN",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "attestat",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": "TOEFL or IELTS",
+          "language_minimum_score": null,
+          "entrance_exam": "HSK",
+          "entrance_exam_minimum": 5.0,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "Tsinghua International Undergraduate Admissions",
+          "notes": "A valid high school graduation certificate is accepted directly; no foundation year. Applicant must be a foreign citizen aged 18 or above by 1 September 2026. HSK level 5 or above with 60+ in each of Listening, Reading and Writing. An applicant holding HSK 4 at those sub-scores may be admitted but MUST reach HSK 5 within the first academic year or enrolment is terminated -- entrance_exam_minimum records the level 5 that is actually required to continue. Non-native English speakers must submit official TOEFL or IELTS results; no minimum score is stated on this page, so language_minimum_score is left blank. Entrance exam, interview, deadline, application fee and tuition are NOT stated on this page.",
+          "unknown_fields": [
+            "language_minimum_score",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language minimum score, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://international.join-tsinghua.edu.cn/Admission1/Eligibility.htm",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "Tsinghua University",
+          "program_name": "International undergraduate admission (English-taught)",
+          "country_code": "CN",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "attestat",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": "TOEFL or IELTS",
+          "language_minimum_score": null,
+          "entrance_exam": null,
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "Tsinghua International Undergraduate Admissions",
+          "notes": "A valid high school graduation certificate is accepted directly; no foundation year. Applicant must be a foreign citizen aged 18 or above by 1 September 2026. NO proof of Chinese language proficiency is required for English-taught programmes -- this is the distinction from the Chinese-English taught row and it is why the two are separate rows. Non-native English speakers must submit official TOEFL or IELTS results; the page requires 'a high level of English language proficiency' but states no minimum score, so language_minimum_score is left blank rather than approximated. Entrance exam, interview, deadline, application fee and tuition are NOT stated on this page.",
+          "unknown_fields": [
+            "language_minimum_score",
+            "entrance_exam",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language minimum score, entrance exam, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://international.join-tsinghua.edu.cn/Admission1/Eligibility.htm",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "Zhejiang University",
+          "program_name": "International undergraduate admission",
+          "country_code": "CN",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "attestat",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": "TOEFL or IELTS",
+          "language_minimum_score": null,
+          "entrance_exam": "HSK",
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": "CNY",
+          "application_fee": 800.0,
+          "application_deadline": "2026-02-28",
+          "application_portal": "https://intlstudent.zju.edu.cn/",
+          "notes": "A senior high school diploma and full senior high school transcripts are required; accepted directly with no foundation year. Applicants must be under the age of 25. An HSK certificate IS required for Chinese-taught programmes but the guide does NOT state which level, so entrance_exam_minimum is deliberately blank rather than guessed -- the level is published per programme in the Chinese-taught undergraduate catalogue. Applicants whose secondary-school compulsory courses were taught in Chinese are exempt from the HSK certificate. No Chinese requirement for English-taught programmes. Non-native English speakers must submit a TOEFL, IELTS or other English test score; no minimum is stated. Application fee RMB 800, non-refundable. General deadline 28 February 2026 (applications open 1 December 2025); certain majors run to 31 May 2026, so the earlier binding date is recorded. Tuition varies by programme and is NOT stated on this page. Passport must be valid beyond 1 March 2027.",
+          "unknown_fields": [
+            "language_minimum_score",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language minimum score, entrance exam minimum, gpa minimum, tuition per year. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://iczu.zju.edu.cn/admissionsen/2024/1030/c68988a2981659/page.htm",
+          "last_checked": "2026-09-02T00:00:00"
+        }
+      ],
+      "universities_status": "listed",
+      "universities_explanation": ""
+    },
+    {
+      "hops": [
+        {
+          "key": "tr-bachelor-yos",
+          "country_code": "TR",
+          "mechanism": "TR-YÖS, required by some public universities for competitive programmes",
+          "time_cost_months": 0,
+          "money_cost_azn_low": 1200,
+          "money_cost_azn_high": 6000,
+          "citation": "https://www.studyinturkiye.gov.tr/",
+          "provenance": "seed",
+          "proof_of_funds": null
+        }
+      ],
+      "total_months": 0,
+      "total_cost_azn_low": 1200,
+      "total_cost_azn_high": 6000,
+      "status": "unlockable",
+      "missing": [
+        "TR-YÖS required"
+      ],
+      "destination_country": "TR",
+      "qualification_delivered": "attestat",
+      "universities": [
+        {
+          "university_name": "Bogazici University",
+          "program_name": "International undergraduate admission",
+          "country_code": "TR",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "attestat",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": "IELTS",
+          "language_minimum_score": 6.5,
+          "entrance_exam": "TR-YOS",
+          "entrance_exam_minimum": 450.0,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": "EUR",
+          "application_fee": 100.0,
+          "application_deadline": null,
+          "application_portal": "Bogazici Office of International Relations",
+          "notes": "Graduates of any institution equivalent to a Turkish high school may apply. One of SAT, TR-YOS or GCE A Levels is REQUIRED in addition to the diploma; the diploma alone does not suffice. TR-YOS minimum 450. SAT minima are programme-dependent: 1350/1600 with Math 700 for Engineering, 1300/1600 for Mathematics, Molecular Biology and Genetics, Chemistry and Physics, 1200/1600 for the Faculty of Education, 1300/1600 for all others; the schema holds one entrance_exam_minimum per row so the TR-YOS figure is recorded and the SAT bands are stated here. A Levels require grade A in three relevant subjects. IELTS Academic 6.5 overall with 6.5 writing, or TOEFL iBT 79 with writing 22; otherwise the English Preparatory Program. Scores valid two years. The currency EUR applies to the application fee of 100 EUR per programme, non-refundable; tuition for international students is NOT stated on this page. Deadline not stated on this page.",
+          "unknown_fields": [
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://intl.bogazici.edu.tr/required-documents-undergraduate-application",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "Istanbul Technical University",
+          "program_name": "International undergraduate admission",
+          "country_code": "TR",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "attestat",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": null,
+          "language_minimum_score": null,
+          "entrance_exam": "ITU accepted exam",
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "ITU Registrar",
+          "notes": "Direct application on a secondary school curriculum equivalent to a Turkish high school. Application must carry one of the exam or diploma scores ITU lists; the specific list and minima were NOT readable from this page and are deliberately left blank. English proficiency is required at registration, or one year of English preparation at ITU. Applications usually open in August; no exact 2026 date was stated, so the deadline is left blank rather than guessed.",
+          "unknown_fields": [
+            "language_test",
+            "language_minimum_score",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language test, language minimum score, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.sis.itu.edu.tr/EN/student/intenational-students/application.php",
+          "last_checked": "2026-09-02T00:00:00"
+        }
+      ],
+      "universities_status": "listed",
+      "universities_explanation": ""
+    },
+    {
+      "hops": [
+        {
+          "key": "tr-bachelor-direct",
+          "country_code": "TR",
+          "mechanism": "Direct application on the diploma and grades; most private universities require no YÖS",
+          "time_cost_months": 0,
+          "money_cost_azn_low": 1700,
+          "money_cost_azn_high": 12000,
+          "citation": "https://www.studyinturkiye.gov.tr/",
+          "provenance": "seed",
+          "proof_of_funds": null
+        }
+      ],
+      "total_months": 0,
+      "total_cost_azn_low": 1700,
+      "total_cost_azn_high": 12000,
+      "status": "open",
+      "missing": [],
+      "destination_country": "TR",
+      "qualification_delivered": "attestat",
+      "universities": [
+        {
+          "university_name": "Bogazici University",
+          "program_name": "International undergraduate admission",
+          "country_code": "TR",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "attestat",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": "IELTS",
+          "language_minimum_score": 6.5,
+          "entrance_exam": "TR-YOS",
+          "entrance_exam_minimum": 450.0,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": "EUR",
+          "application_fee": 100.0,
+          "application_deadline": null,
+          "application_portal": "Bogazici Office of International Relations",
+          "notes": "Graduates of any institution equivalent to a Turkish high school may apply. One of SAT, TR-YOS or GCE A Levels is REQUIRED in addition to the diploma; the diploma alone does not suffice. TR-YOS minimum 450. SAT minima are programme-dependent: 1350/1600 with Math 700 for Engineering, 1300/1600 for Mathematics, Molecular Biology and Genetics, Chemistry and Physics, 1200/1600 for the Faculty of Education, 1300/1600 for all others; the schema holds one entrance_exam_minimum per row so the TR-YOS figure is recorded and the SAT bands are stated here. A Levels require grade A in three relevant subjects. IELTS Academic 6.5 overall with 6.5 writing, or TOEFL iBT 79 with writing 22; otherwise the English Preparatory Program. Scores valid two years. The currency EUR applies to the application fee of 100 EUR per programme, non-refundable; tuition for international students is NOT stated on this page. Deadline not stated on this page.",
+          "unknown_fields": [
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://intl.bogazici.edu.tr/required-documents-undergraduate-application",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "Istanbul Technical University",
+          "program_name": "International undergraduate admission",
+          "country_code": "TR",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "attestat",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": null,
+          "language_minimum_score": null,
+          "entrance_exam": "ITU accepted exam",
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "ITU Registrar",
+          "notes": "Direct application on a secondary school curriculum equivalent to a Turkish high school. Application must carry one of the exam or diploma scores ITU lists; the specific list and minima were NOT readable from this page and are deliberately left blank. English proficiency is required at registration, or one year of English preparation at ITU. Applications usually open in August; no exact 2026 date was stated, so the deadline is left blank rather than guessed.",
+          "unknown_fields": [
+            "language_test",
+            "language_minimum_score",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language test, language minimum score, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.sis.itu.edu.tr/EN/student/intenational-students/application.php",
+          "last_checked": "2026-09-02T00:00:00"
+        }
+      ],
+      "universities_status": "listed",
+      "universities_explanation": ""
+    },
+    {
+      "hops": [
+        {
+          "key": "pl-bachelor-direct",
+          "country_code": "PL",
+          "mechanism": "Direct application; the attestat is accepted with an apostille",
+          "time_cost_months": 0,
+          "money_cost_azn_low": 3400,
+          "money_cost_azn_high": 8500,
+          "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §2.1",
+          "provenance": "seed",
+          "proof_of_funds": null
+        }
+      ],
+      "total_months": 0,
+      "total_cost_azn_low": 3400,
+      "total_cost_azn_high": 8500,
+      "status": "open",
+      "missing": [],
+      "destination_country": "PL",
+      "qualification_delivered": "attestat",
+      "universities": [],
+      "universities_status": "no_requirements_collected_for_this_country_yet",
+      "universities_explanation": "We have not collected university requirements for PL yet. This is a gap in our data, not a statement that no university there accepts you. The route itself is still open -- check the universities directly."
+    },
+    {
+      "hops": [
+        {
+          "key": "us-bachelor-direct",
+          "country_code": "US",
+          "mechanism": "Direct application; many institutions are test-optional, but the 11-vs-12-year gap is assessed per institution",
+          "time_cost_months": 0,
+          "money_cost_azn_low": 30000,
+          "money_cost_azn_high": 100000,
+          "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §2.1",
+          "provenance": "seed",
+          "proof_of_funds": null
+        }
+      ],
+      "total_months": 0,
+      "total_cost_azn_low": 30000,
+      "total_cost_azn_high": 100000,
+      "status": "open",
+      "missing": [],
+      "destination_country": "US",
+      "qualification_delivered": "attestat",
+      "universities": [],
+      "universities_status": "no_requirements_collected_for_this_country_yet",
+      "universities_explanation": "We have not collected university requirements for US yet. This is a gap in our data, not a statement that no university there accepts you. The route itself is still open -- check the universities directly."
+    },
+    {
+      "hops": [
+        {
+          "key": "az-prep-year",
+          "country_code": "AZ",
+          "mechanism": "One year of study at a recognised Azerbaijani university",
+          "time_cost_months": 12,
+          "money_cost_azn_low": 1000,
+          "money_cost_azn_high": 4000,
+          "citation": "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'",
+          "provenance": "seed",
+          "proof_of_funds": null
+        }
+      ],
+      "total_months": 12,
+      "total_cost_azn_low": 1000,
+      "total_cost_azn_high": 4000,
+      "status": "unlockable",
+      "missing": [
+        "DİM required"
+      ],
+      "destination_country": "AZ",
+      "qualification_delivered": "one_year_university",
+      "universities": [],
+      "universities_status": "no_requirements_collected_for_this_country_yet",
+      "universities_explanation": "We have not collected university requirements for AZ yet. This is a gap in our data, not a statement that no university there accepts you. The route itself is still open -- check the universities directly."
+    },
+    {
+      "hops": [
+        {
+          "key": "az-prep-year",
+          "country_code": "AZ",
+          "mechanism": "One year of study at a recognised Azerbaijani university",
+          "time_cost_months": 12,
+          "money_cost_azn_low": 1000,
+          "money_cost_azn_high": 4000,
+          "citation": "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'",
+          "provenance": "seed",
+          "proof_of_funds": null
+        },
+        {
+          "key": "de-bachelor-direct",
+          "country_code": "DE",
+          "mechanism": "Direct, subject-restricted entry",
+          "time_cost_months": 0,
+          "money_cost_azn_low": 0,
+          "money_cost_azn_high": 1200,
+          "citation": "https://www.uni-assist.de/en/tools/glossary-of-terms/description/term/university-entrance-qualification-hochschulzugangsberechtigung/ -- 'your university entrance qualification for German universities may only result from a combination of the school leaving certificate and a University entrance exam and/or specific lengths of university studies in your home country'",
+          "provenance": "seed",
+          "proof_of_funds": {
+            "amount": 11904,
+            "currency": "EUR",
+            "period": "per year of study",
+            "mechanism": "A blocked account (Sperrkonto) opened before the visa appointment. The money remains yours and is released to you at roughly EUR 992 a month after you arrive, but the full year must be deposited up front and the visa is refused without it",
+            "citation": "AUSA research brief 2026-09-04, citing the German student visa financial-proof requirement set in line with the national BAföG rate. NOT yet read from the Auswärtiges Amt or the regulation itself -- verify before quoting this to anyone"
+          }
+        }
+      ],
+      "total_months": 12,
+      "total_cost_azn_low": 1000,
+      "total_cost_azn_high": 5200,
+      "status": "unlockable",
+      "missing": [
+        "DİM required"
+      ],
+      "destination_country": "DE",
+      "qualification_delivered": "one_year_university",
+      "universities": [],
+      "universities_status": "collected_but_none_documents_this_qualification",
+      "universities_explanation": "None of the DE universities we have collected documents accepting 'one_year_university' for entry. That is what their own admissions pages state, so it is a real finding rather than a gap -- but we hold only a few universities per country, and others may accept it."
+    },
+    {
+      "hops": [
+        {
+          "key": "de-bachelor-studienkolleg",
+          "country_code": "DE",
+          "mechanism": "Studienkolleg, ending in the Feststellungsprüfung",
+          "time_cost_months": 12,
+          "money_cost_azn_low": 6000,
+          "money_cost_azn_high": 14000,
+          "citation": "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'",
+          "provenance": "seed",
+          "proof_of_funds": {
+            "amount": 11904,
+            "currency": "EUR",
+            "period": "per year of study",
+            "mechanism": "A blocked account (Sperrkonto) opened before the visa appointment. The money remains yours and is released to you at roughly EUR 992 a month after you arrive, but the full year must be deposited up front and the visa is refused without it",
+            "citation": "AUSA research brief 2026-09-04, citing the German student visa financial-proof requirement set in line with the national BAföG rate. NOT yet read from the Auswärtiges Amt or the regulation itself -- verify before quoting this to anyone"
+          }
+        }
+      ],
+      "total_months": 12,
+      "total_cost_azn_low": 6000,
+      "total_cost_azn_high": 14000,
+      "status": "unlockable",
+      "missing": [
+        "TestAS required"
+      ],
+      "destination_country": "DE",
+      "qualification_delivered": "feststellungspruefung",
+      "universities": [
+        {
+          "university_name": "Heidelberg University",
+          "program_name": "International undergraduate admission",
+          "country_code": "DE",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "feststellungspruefung",
+          "foundation_required": true,
+          "foundation_providers": "Internationales Studienzentrum (Studienkolleg)",
+          "language_test": "German CEFR B2+",
+          "language_minimum_score": null,
+          "entrance_exam": "Feststellungspruefung",
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "heiCO",
+          "notes": "uni-assist Vorpruefungsdokumentation required and valid one year. B2+ German required AT APPLICATION for the Studienkolleg, not only at enrolment. Studienkolleg runs two semesters. Sworn translation of the certificate into German or English required.",
+          "unknown_fields": [
+            "language_minimum_score",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language minimum score, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.uni-heidelberg.de/en/study/application-enrolment/study-requirements/studienkolleg-and-feststellungsprufung/admission-to-the-preparatory-course-studienkolleg-application-documents",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "LMU Munich",
+          "program_name": "International undergraduate admission",
+          "country_code": "DE",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "feststellungspruefung",
+          "foundation_required": true,
+          "foundation_providers": "Studienkolleg",
+          "language_test": "German CEFR B2",
+          "language_minimum_score": null,
+          "entrance_exam": "Feststellungspruefung",
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "LMU International Office",
+          "notes": "LMU requires a school leaving certificate that qualifies the holder to begin a degree at a German university. Where the foreign certificate does not, the applicant 'may be able to acquire a university entrance qualification by attending a one-year preparatory course (Studienkolleg)' and must pass the final examination -- the same Studienkolleg-then-Feststellungspruefung path as TUM and Heidelberg, now confirmed at a third German university. B2-level German must be evidenced to BEGIN a preparatory course in Bavaria. Whether a uni-assist VPD is required, the application deadlines, and tuition and fees are NOT stated on this page and are left blank rather than copied from the other German rows.",
+          "unknown_fields": [
+            "language_minimum_score",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language minimum score, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.lmu.de/en/study/degree-students/prerequisites/",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "Technical University of Munich",
+          "program_name": "International undergraduate admission",
+          "country_code": "DE",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "feststellungspruefung",
+          "foundation_required": true,
+          "foundation_providers": "Studienkolleg",
+          "language_test": null,
+          "language_minimum_score": null,
+          "entrance_exam": "Feststellungspruefung",
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "TUMonline",
+          "notes": "uni-assist Preliminary Documentation (VPD) required BEFORE applying to TUM. Source states: a school-leaving degree not comparable to the German university entrance qualification grants direct admission only after attending a Studienkolleg and passing the university qualification assessment examination.",
+          "unknown_fields": [
+            "language_test",
+            "language_minimum_score",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language test, language minimum score, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.tum.de/en/studies/application/application-info-portal/higher-education-entrance-qualification/international-higher-education-entrance-qualification/",
+          "last_checked": "2026-09-02T00:00:00"
+        }
+      ],
+      "universities_status": "listed",
+      "universities_explanation": ""
+    },
+    {
+      "hops": [
+        {
+          "key": "de-bachelor-studienkolleg",
+          "country_code": "DE",
+          "mechanism": "Studienkolleg, ending in the Feststellungsprüfung",
+          "time_cost_months": 12,
+          "money_cost_azn_low": 6000,
+          "money_cost_azn_high": 14000,
+          "citation": "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'",
+          "provenance": "seed",
+          "proof_of_funds": {
+            "amount": 11904,
+            "currency": "EUR",
+            "period": "per year of study",
+            "mechanism": "A blocked account (Sperrkonto) opened before the visa appointment. The money remains yours and is released to you at roughly EUR 992 a month after you arrive, but the full year must be deposited up front and the visa is refused without it",
+            "citation": "AUSA research brief 2026-09-04, citing the German student visa financial-proof requirement set in line with the national BAföG rate. NOT yet read from the Auswärtiges Amt or the regulation itself -- verify before quoting this to anyone"
+          }
+        },
+        {
+          "key": "de-bachelor-direct",
+          "country_code": "DE",
+          "mechanism": "Direct, subject-restricted entry",
+          "time_cost_months": 0,
+          "money_cost_azn_low": 0,
+          "money_cost_azn_high": 1200,
+          "citation": "https://www.uni-assist.de/en/tools/glossary-of-terms/description/term/university-entrance-qualification-hochschulzugangsberechtigung/ -- 'your university entrance qualification for German universities may only result from a combination of the school leaving certificate and a University entrance exam and/or specific lengths of university studies in your home country'",
+          "provenance": "seed",
+          "proof_of_funds": {
+            "amount": 11904,
+            "currency": "EUR",
+            "period": "per year of study",
+            "mechanism": "A blocked account (Sperrkonto) opened before the visa appointment. The money remains yours and is released to you at roughly EUR 992 a month after you arrive, but the full year must be deposited up front and the visa is refused without it",
+            "citation": "AUSA research brief 2026-09-04, citing the German student visa financial-proof requirement set in line with the national BAföG rate. NOT yet read from the Auswärtiges Amt or the regulation itself -- verify before quoting this to anyone"
+          }
+        }
+      ],
+      "total_months": 12,
+      "total_cost_azn_low": 6000,
+      "total_cost_azn_high": 15200,
+      "status": "unlockable",
+      "missing": [
+        "TestAS required"
+      ],
+      "destination_country": "DE",
+      "qualification_delivered": "feststellungspruefung",
+      "universities": [
+        {
+          "university_name": "Heidelberg University",
+          "program_name": "International undergraduate admission",
+          "country_code": "DE",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "feststellungspruefung",
+          "foundation_required": true,
+          "foundation_providers": "Internationales Studienzentrum (Studienkolleg)",
+          "language_test": "German CEFR B2+",
+          "language_minimum_score": null,
+          "entrance_exam": "Feststellungspruefung",
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "heiCO",
+          "notes": "uni-assist Vorpruefungsdokumentation required and valid one year. B2+ German required AT APPLICATION for the Studienkolleg, not only at enrolment. Studienkolleg runs two semesters. Sworn translation of the certificate into German or English required.",
+          "unknown_fields": [
+            "language_minimum_score",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language minimum score, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.uni-heidelberg.de/en/study/application-enrolment/study-requirements/studienkolleg-and-feststellungsprufung/admission-to-the-preparatory-course-studienkolleg-application-documents",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "LMU Munich",
+          "program_name": "International undergraduate admission",
+          "country_code": "DE",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "feststellungspruefung",
+          "foundation_required": true,
+          "foundation_providers": "Studienkolleg",
+          "language_test": "German CEFR B2",
+          "language_minimum_score": null,
+          "entrance_exam": "Feststellungspruefung",
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "LMU International Office",
+          "notes": "LMU requires a school leaving certificate that qualifies the holder to begin a degree at a German university. Where the foreign certificate does not, the applicant 'may be able to acquire a university entrance qualification by attending a one-year preparatory course (Studienkolleg)' and must pass the final examination -- the same Studienkolleg-then-Feststellungspruefung path as TUM and Heidelberg, now confirmed at a third German university. B2-level German must be evidenced to BEGIN a preparatory course in Bavaria. Whether a uni-assist VPD is required, the application deadlines, and tuition and fees are NOT stated on this page and are left blank rather than copied from the other German rows.",
+          "unknown_fields": [
+            "language_minimum_score",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language minimum score, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.lmu.de/en/study/degree-students/prerequisites/",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "Technical University of Munich",
+          "program_name": "International undergraduate admission",
+          "country_code": "DE",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "feststellungspruefung",
+          "foundation_required": true,
+          "foundation_providers": "Studienkolleg",
+          "language_test": null,
+          "language_minimum_score": null,
+          "entrance_exam": "Feststellungspruefung",
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "TUMonline",
+          "notes": "uni-assist Preliminary Documentation (VPD) required BEFORE applying to TUM. Source states: a school-leaving degree not comparable to the German university entrance qualification grants direct admission only after attending a Studienkolleg and passing the university qualification assessment examination.",
+          "unknown_fields": [
+            "language_test",
+            "language_minimum_score",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language test, language minimum score, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.tum.de/en/studies/application/application-info-portal/higher-education-entrance-qualification/international-higher-education-entrance-qualification/",
+          "last_checked": "2026-09-02T00:00:00"
+        }
+      ],
+      "universities_status": "listed",
+      "universities_explanation": ""
+    },
+    {
+      "hops": [
+        {
+          "key": "uk-bachelor-foundation",
+          "country_code": "GB",
+          "mechanism": "International foundation year",
+          "time_cost_months": 12,
+          "money_cost_azn_low": 25000,
+          "money_cost_azn_high": 45000,
+          "citation": "UK ENIC: an Azerbaijani attestat is 'not accepted for direct entry to undergraduate programmes'",
+          "provenance": "seed",
+          "proof_of_funds": null
+        }
+      ],
+      "total_months": 12,
+      "total_cost_azn_low": 25000,
+      "total_cost_azn_high": 45000,
+      "status": "open",
+      "missing": [],
+      "destination_country": "GB",
+      "qualification_delivered": "foundation_year",
+      "universities": [
+        {
+          "university_name": "UCL",
+          "program_name": "International undergraduate admission",
+          "country_code": "GB",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "foundation_year",
+          "foundation_required": true,
+          "foundation_providers": "UCL Undergraduate Preparatory Certificates (UPC)",
+          "language_test": null,
+          "language_minimum_score": null,
+          "entrance_exam": null,
+          "entrance_exam_minimum": null,
+          "gpa_minimum": 4.5,
+          "gpa_scale": "5.0",
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "UCL CLIE",
+          "notes": "Orta Tehsil Haqqinda Attestati accepted for UPC entry at minimum 4.5 overall and 5 in each required subject. The UPC is UCL's international foundation year, for students whose school qualification UCL does not accept for direct undergraduate entry.",
+          "unknown_fields": [
+            "language_test",
+            "language_minimum_score",
+            "entrance_exam",
+            "entrance_exam_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language test, language minimum score, entrance exam, entrance exam minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "meets",
+          "grade_exact": true,
+          "grade_explanation": "Your 4.6 clears the stated minimum of 4.5 (five-point scale, 5 best -- the Azerbaijani attestat, and what UCL states its attestat minimum against).",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.ucl.ac.uk/languages-international-education/preparation-courses/upc-foundation/entry-requirements/country",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "University of Edinburgh",
+          "program_name": "International undergraduate admission",
+          "country_code": "GB",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "foundation_year",
+          "foundation_required": true,
+          "foundation_providers": "University of Edinburgh International Foundation Programme (IFP)",
+          "language_test": "IELTS",
+          "language_minimum_score": 5.5,
+          "entrance_exam": null,
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "UCAS",
+          "notes": "Source states applicants from Azerbaijan with a Certificate of Secondary Education would normally be required to complete a foundation year. IELTS 5.5 with no band below 5.5 is the IFP entry requirement, not the degree requirement, which is higher and set per programme.",
+          "unknown_fields": [
+            "entrance_exam",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: entrance exam, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.ed.ac.uk/studying/international/country/asia/central-west-asia/other-countries",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "University of Manchester",
+          "program_name": "International undergraduate admission (foundation route)",
+          "country_code": "GB",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "foundation_year",
+          "foundation_required": true,
+          "foundation_providers": "Manchester integrated foundation year; INTO Manchester",
+          "language_test": "CEFR B2",
+          "language_minimum_score": null,
+          "entrance_exam": null,
+          "entrance_exam_minimum": null,
+          "gpa_minimum": 80.0,
+          "gpa_scale": "100",
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "UCAS",
+          "notes": "Source states the High School Diploma is NOT accepted for direct entry. Science and Engineering integrated foundation year requires 80% overall with 80%+ in Maths and Physics. B2 is the UKVI minimum; individual Schools may require higher.",
+          "unknown_fields": [
+            "language_minimum_score",
+            "entrance_exam",
+            "entrance_exam_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language minimum score, entrance exam, entrance exam minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "meets",
+          "grade_exact": false,
+          "grade_explanation": "You appear to clear this minimum. Compared proportionally, because your grade is on the 5.0 scale and their minimum is on the 100 scale: 92% of your scale's maximum against 80% of theirs. THIS IS A ROUGH COMPARISON, NOT AN OFFICIAL CONVERSION -- universities apply their own conversion tables and may reach a different figure.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.manchester.ac.uk/study/international/country-specific-information/azerbaijan/entry-requirements/",
+          "last_checked": "2026-09-02T00:00:00"
+        }
+      ],
+      "universities_status": "listed",
+      "universities_explanation": ""
+    },
+    {
+      "hops": [
+        {
+          "key": "az-prep-year",
+          "country_code": "AZ",
+          "mechanism": "One year of study at a recognised Azerbaijani university",
+          "time_cost_months": 12,
+          "money_cost_azn_low": 1000,
+          "money_cost_azn_high": 4000,
+          "citation": "https://anabin.kmk.org/ -- attestat 'eröffnet den Zugang zum Studienkolleg/Feststellungsprüfung'",
+          "provenance": "seed",
+          "proof_of_funds": null
+        },
+        {
+          "key": "uk-bachelor-direct",
+          "country_code": "GB",
+          "mechanism": "Direct entry via UCAS",
+          "time_cost_months": 0,
+          "money_cost_azn_low": 30000,
+          "money_cost_azn_high": 70000,
+          "citation": "UK ENIC: an Azerbaijani attestat is 'not accepted for direct entry to undergraduate programmes'. https://www.manchester.ac.uk/study/international/country-specific-information/azerbaijan/entry-requirements/ -- Manchester 'may also accept applicants who have completed the first year of an undergraduate degree in Azerbaijan into the first year of a bachelor degree'; the High School Diploma alone is 'not accepted for direct entry'",
+          "provenance": "seed",
+          "proof_of_funds": null
+        }
+      ],
+      "total_months": 12,
+      "total_cost_azn_low": 31000,
+      "total_cost_azn_high": 74000,
+      "status": "unlockable",
+      "missing": [
+        "DİM required"
+      ],
+      "destination_country": "GB",
+      "qualification_delivered": "one_year_university",
+      "universities": [
+        {
+          "university_name": "University of Cambridge",
+          "program_name": "International undergraduate admission",
+          "country_code": "GB",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "one_year_university",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": null,
+          "language_minimum_score": null,
+          "entrance_exam": null,
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "UCAS",
+          "notes": "SECOND UK CONFIRMATION OF THE PREP-YEAR MECHANIC, AND A DIRECT-ENTRY REFUSAL. Cambridge lists accepted qualifications by country in a dropdown of 190+ countries and regions; AZERBAIJAN IS NOT LISTED. The page states: 'If your country/region is not listed, it is likely that your local/national qualifications are not accepted.' The alternatives it names as acceptable are A Levels, the International Baccalaureate, five or more Advanced Placement tests at score 5, and 'first year of undergraduate study outside the UK' -- which is the qualification recorded in entry_qualification_accepted here. Because the attestat is not an accepted qualification, no row claims direct entry on it. English is required for applicants not from a majority English speaking country as defined by the UK Home Office, but the IELTS and TOEFL minima are on a separate page that was not read, so language_test and language_minimum_score are left blank.",
+          "unknown_fields": [
+            "language_test",
+            "language_minimum_score",
+            "entrance_exam",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language test, language minimum score, entrance exam, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.undergraduate.study.cam.ac.uk/international-students/international-entry-requirements",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "University of Manchester",
+          "program_name": "International undergraduate admission (first-year transfer route)",
+          "country_code": "GB",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "one_year_university",
+          "foundation_required": false,
+          "foundation_providers": null,
+          "language_test": "CEFR B2",
+          "language_minimum_score": null,
+          "entrance_exam": null,
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "UCAS",
+          "notes": "THE PREP-YEAR MECHANIC, CONFIRMED BY A UK UNIVERSITY NAMING AZERBAIJAN. Source states Manchester may also accept applicants who have completed the first year of an undergraduate degree in Azerbaijan into the first year of a bachelor degree. Recorded as a separate row because the schema holds one entry_qualification_accepted per row and this university accepts two distinct routes.",
+          "unknown_fields": [
+            "language_minimum_score",
+            "entrance_exam",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language minimum score, entrance exam, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.manchester.ac.uk/study/international/country-specific-information/azerbaijan/entry-requirements/",
+          "last_checked": "2026-09-02T00:00:00"
+        }
+      ],
+      "universities_status": "listed",
+      "universities_explanation": ""
+    },
+    {
+      "hops": [
+        {
+          "key": "uk-bachelor-foundation",
+          "country_code": "GB",
+          "mechanism": "International foundation year",
+          "time_cost_months": 12,
+          "money_cost_azn_low": 25000,
+          "money_cost_azn_high": 45000,
+          "citation": "UK ENIC: an Azerbaijani attestat is 'not accepted for direct entry to undergraduate programmes'",
+          "provenance": "seed",
+          "proof_of_funds": null
+        },
+        {
+          "key": "uk-bachelor-direct",
+          "country_code": "GB",
+          "mechanism": "Direct entry via UCAS",
+          "time_cost_months": 0,
+          "money_cost_azn_low": 30000,
+          "money_cost_azn_high": 70000,
+          "citation": "UK ENIC: an Azerbaijani attestat is 'not accepted for direct entry to undergraduate programmes'. https://www.manchester.ac.uk/study/international/country-specific-information/azerbaijan/entry-requirements/ -- Manchester 'may also accept applicants who have completed the first year of an undergraduate degree in Azerbaijan into the first year of a bachelor degree'; the High School Diploma alone is 'not accepted for direct entry'",
+          "provenance": "seed",
+          "proof_of_funds": null
+        }
+      ],
+      "total_months": 12,
+      "total_cost_azn_low": 55000,
+      "total_cost_azn_high": 115000,
+      "status": "open",
+      "missing": [],
+      "destination_country": "GB",
+      "qualification_delivered": "foundation_year",
+      "universities": [
+        {
+          "university_name": "UCL",
+          "program_name": "International undergraduate admission",
+          "country_code": "GB",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "foundation_year",
+          "foundation_required": true,
+          "foundation_providers": "UCL Undergraduate Preparatory Certificates (UPC)",
+          "language_test": null,
+          "language_minimum_score": null,
+          "entrance_exam": null,
+          "entrance_exam_minimum": null,
+          "gpa_minimum": 4.5,
+          "gpa_scale": "5.0",
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "UCL CLIE",
+          "notes": "Orta Tehsil Haqqinda Attestati accepted for UPC entry at minimum 4.5 overall and 5 in each required subject. The UPC is UCL's international foundation year, for students whose school qualification UCL does not accept for direct undergraduate entry.",
+          "unknown_fields": [
+            "language_test",
+            "language_minimum_score",
+            "entrance_exam",
+            "entrance_exam_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language test, language minimum score, entrance exam, entrance exam minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "meets",
+          "grade_exact": true,
+          "grade_explanation": "Your 4.6 clears the stated minimum of 4.5 (five-point scale, 5 best -- the Azerbaijani attestat, and what UCL states its attestat minimum against).",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.ucl.ac.uk/languages-international-education/preparation-courses/upc-foundation/entry-requirements/country",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "University of Edinburgh",
+          "program_name": "International undergraduate admission",
+          "country_code": "GB",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "foundation_year",
+          "foundation_required": true,
+          "foundation_providers": "University of Edinburgh International Foundation Programme (IFP)",
+          "language_test": "IELTS",
+          "language_minimum_score": 5.5,
+          "entrance_exam": null,
+          "entrance_exam_minimum": null,
+          "gpa_minimum": null,
+          "gpa_scale": null,
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "UCAS",
+          "notes": "Source states applicants from Azerbaijan with a Certificate of Secondary Education would normally be required to complete a foundation year. IELTS 5.5 with no band below 5.5 is the IFP entry requirement, not the degree requirement, which is higher and set per programme.",
+          "unknown_fields": [
+            "entrance_exam",
+            "entrance_exam_minimum",
+            "gpa_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: entrance exam, entrance exam minimum, gpa minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "no_minimum_published",
+          "grade_exact": false,
+          "grade_explanation": "This university's page does not state a minimum grade. That is not the same as there being none -- it may be published elsewhere, or decided per programme.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.ed.ac.uk/studying/international/country/asia/central-west-asia/other-countries",
+          "last_checked": "2026-09-02T00:00:00"
+        },
+        {
+          "university_name": "University of Manchester",
+          "program_name": "International undergraduate admission (foundation route)",
+          "country_code": "GB",
+          "intake_year": 2026,
+          "entry_qualification_accepted": "foundation_year",
+          "foundation_required": true,
+          "foundation_providers": "Manchester integrated foundation year; INTO Manchester",
+          "language_test": "CEFR B2",
+          "language_minimum_score": null,
+          "entrance_exam": null,
+          "entrance_exam_minimum": null,
+          "gpa_minimum": 80.0,
+          "gpa_scale": "100",
+          "tuition_per_year": null,
+          "currency": null,
+          "application_fee": null,
+          "application_deadline": null,
+          "application_portal": "UCAS",
+          "notes": "Source states the High School Diploma is NOT accepted for direct entry. Science and Engineering integrated foundation year requires 80% overall with 80%+ in Maths and Physics. B2 is the UKVI minimum; individual Schools may require higher.",
+          "unknown_fields": [
+            "language_minimum_score",
+            "entrance_exam",
+            "entrance_exam_minimum",
+            "tuition_per_year",
+            "application_deadline"
+          ],
+          "not_stated": "Not stated on the source page, so not recorded: language minimum score, entrance exam, entrance exam minimum, tuition per year, application deadline. Unknown here means we could not find it, never that it is not required.",
+          "grade_verdict": "meets",
+          "grade_exact": false,
+          "grade_explanation": "You appear to clear this minimum. Compared proportionally, because your grade is on the 5.0 scale and their minimum is on the 100 scale: 92% of your scale's maximum against 80% of theirs. THIS IS A ROUGH COMPARISON, NOT AN OFFICIAL CONVERSION -- universities apply their own conversion tables and may reach a different figure.",
+          "provenance": "claude-extracted",
+          "source_url": "https://www.manchester.ac.uk/study/international/country-specific-information/azerbaijan/entry-requirements/",
+          "last_checked": "2026-09-02T00:00:00"
+        }
+      ],
+      "universities_status": "listed",
+      "universities_explanation": ""
+    }
+  ],
+  "dp": {
+    "status": "unlockable",
+    "band_checked": "DİM at least 400 for Group 1 (engineering and technology), at least 550 for every other field",
+    "gates_met": [
+      "Language certificate at C1"
+    ],
+    "gates_missing": [
+      "A DİM score is required: DİM at least 400 for Group 1 (engineering and technology), at least 550 for every other field. The alternative is an international subject-olympiad medal"
+    ],
+    "note": "Meeting these published requirements makes you possibly eligible to apply. It is not an award: selection is competitive and is decided by a committee.",
+    "quota_note": "125 of the 500 funded places in the 2026/2027 cycle are for bachelor study (25%). That is the size of the queue, not your odds in it: selection among applicants who clear the gates is a committee decision",
+    "obligation_note": "Accepting this funding is a contract. Graduates must return to Azerbaijan and work here for 5 years; failing to return, failing to complete the degree, or breaking the service period requires repaying everything the state spent, with interest and contractual penalties",
+    "window_note": "Applications open in the first quarter and close between April and June, so by September 2026 the window for the 2026/2027 academic year has closed. An application made now would be for 2027/2028, which is the year to plan against",
+    "funded_programmes": [],
+    "funded_programmes_status": "no_dp_programmes_at_this_level",
+    "funded_programmes_explanation": "The Dövlət Proqramı funds zero programmes at this level. That is a real answer, not a gap in our data."
+  },
+  "scholarships": [
+    {
+      "key": "turkiye-burslari",
+      "name": "Türkiye Bursları",
+      "provider": "Government of Türkiye",
+      "tier": 2,
+      "country_code": "TR",
+      "coverage": "Fully funded: tuition waiver, monthly stipend, university dormitory, health insurance, and a mandatory one-year Turkish language year (TÖMER)",
+      "status": "open",
+      "gates_met": [
+        "This award funds bachelor's or master's study, which is your level",
+        "You are 20, under the age limit of 21",
+        "Your routes reach TR, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [],
+      "gates_unknown": [],
+      "obligation": null,
+      "window": "Applications run 10 January to 20 February. The 2026 window has closed, so the next one opens in January 2027 -- that is the cycle to plan against",
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2 and AUSA general research brief 2026-09-04, 'Study Abroad Guide for Azerbaijanis': fully funded, under 21 at bachelor level, applications 10 January - 20 February. No official turkiyeburslari.gov.tr page has been opened by this project; the nearest source we hold is https://www.studyinturkiye.gov.tr/",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "csc-china",
+      "name": "Chinese Government Scholarship (CSC)",
+      "provider": "China Scholarship Council",
+      "tier": 2,
+      "country_code": "CN",
+      "coverage": "Tuition, accommodation and a stipend; Type A applies via the embassy, Type B via the university",
+      "status": "unlockable",
+      "gates_met": [
+        "This award funds bachelor's or master's study, which is your level",
+        "Your routes reach CN, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [],
+      "gates_unknown": [
+        "A CSC bachelor place must be taken in a CHINESE-taught programme -- English-taught study is open to graduate and non-degree students only -- and requires a CSCA score plus HSK 4. Those bars are checked on the China entry route rather than here. No age limit has been read from a CSC source by this project, and the programme is understood to set one"
+      ],
+      "obligation": null,
+      "window": "Applications run from early January to early April via campuschina.org",
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2, citing https://www.campuschina.org/. Bachelor is Chinese-taught with CSCA and HSK 4; English-taught master's needs IELTS 6.5 / TOEFL 80 or two years of prior English-medium study. Applications early January to early April. CUCAS is a third-party aggregator and is excluded as a source",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "socar-xarici-teqaud",
+      "name": "SOCAR Xarici Təqaüd Proqramı",
+      "provider": "SOCAR",
+      "tier": 1,
+      "country_code": null,
+      "coverage": "Full funding for a master's degree abroad, for SOCAR group employees",
+      "status": "blocked",
+      "gates_met": [
+        "Your C1 certificate clears B2, IELTS 6, or TOEFL 80"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "This award is open only to SOCAR group employees. Tell us your employer and we can say whether it applies to you",
+        "This programme funds master's study only, so no age limit is checked at other levels"
+      ],
+      "obligation": null,
+      "window": null,
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2: employment-gated to SOCAR group employees; age at most 40 (45 for an MBA); IELTS 6.0 / TOEFL 80 / B2. No official programme page has been identified by this project -- the age and language figures are unverified, and the MBA exception is NOT applied below because nothing in a profile tells us the degree is an MBA",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "prezident-teqaudu",
+      "name": "Prezident Təqaüdü",
+      "provider": "Office of the President of Azerbaijan",
+      "tier": 1,
+      "country_code": "AZ",
+      "coverage": "600-700 AZN a month, roughly 100-150 places a year, for study IN Azerbaijan",
+      "status": "blocked",
+      "gates_met": [],
+      "gates_missing": [],
+      "gates_blocked": [
+        "Prezident Təqaüdü funds study inside Azerbaijan only. It is not a study-abroad award, so no eligibility check applies -- this is about what the award is, not about you"
+      ],
+      "gates_unknown": [],
+      "obligation": null,
+      "window": null,
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2: 600-700 AZN/month, ~100-150 places a year, domestic study only. Listed here precisely so the product does NOT offer it as a study-abroad option: it is the most prestigious domestic award and students will ask about it, so answering beats silence. No official page has been identified by this project",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "chevening",
+      "name": "Chevening Scholarship",
+      "provider": "UK Foreign, Commonwealth & Development Office",
+      "tier": 2,
+      "country_code": "GB",
+      "coverage": "Full tuition, a monthly stipend, return flights and visa fees for a one-year taught master's",
+      "status": "blocked",
+      "gates_met": [
+        "Your routes reach GB, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "This award requires 2,800 documented hours of work experience, which is roughly two years full-time. Chevening publishes the bar in hours, not years, and counts part-time and overlapping work against the hours. Tell us your documented hours and we can check it"
+      ],
+      "obligation": "Chevening requires you to return to Azerbaijan for at least two years after graduating. It is a condition of the award, not a suggestion",
+      "window": null,
+      "citation": "AUSA general research brief 2026-09-04, 'Study Abroad Guide for Azerbaijanis', citing https://www.chevening.org/resource-hub/guidance/eligibility/ and https://www.chevening.org/scholarships/guidance/courses/ -- 2,800 documented hours and four assessed essays on leadership, networking, choice of UK course, and career plan. Those pages have not been opened by this project",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "fulbright-foreign-student",
+      "name": "Fulbright Foreign Student Program",
+      "provider": "U.S. Department of State, via the U.S. Embassy in Baku",
+      "tier": 2,
+      "country_code": "US",
+      "coverage": "Full tuition, a monthly stipend, health insurance and J-1 visa sponsorship for a master's degree",
+      "status": "blocked",
+      "gates_met": [
+        "Your routes reach US, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "Fulbright selects young professionals and weighs professional experience heavily, but this project has not read a published minimum. No hours bar is applied here, which is not the same as there being none"
+      ],
+      "obligation": "The J-1 visa carries a two-year home-country physical presence requirement: after the degree you must spend two years in Azerbaijan before you are eligible for certain US visas. This constrains what you can do next far beyond the degree itself",
+      "window": null,
+      "citation": "AUSA general research brief 2026-09-04, 'Study Abroad Guide for Azerbaijanis', citing https://az.usembassy.gov/fulbright-foreign-student-program/. That page has not been opened by this project",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "daad-individual-grants",
+      "name": "DAAD individual scholarships",
+      "provider": "Deutscher Akademischer Austauschdienst",
+      "tier": 2,
+      "country_code": "DE",
+      "coverage": "Varies sharply by grant: most are a monthly stipend plus travel and insurance, not tuition (German public tuition is already near zero)",
+      "status": "blocked",
+      "gates_met": [
+        "Your routes reach DE, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "DAAD is not one scholarship but a database of hundreds, each with its own gate, and the gates are per-grant rather than programme-wide. This project cannot list them: DAAD's robots.txt explicitly disallows the scholarship database, so no automated collection of it is permitted and every grant has to be read by hand from a page that allows it"
+      ],
+      "obligation": null,
+      "window": null,
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2: DAAD individual grants are overwhelmingly master's and PhD. DAAD's main host sets Crawl-delay: 2 and disallows /deutschland/foerderung/stipendiendatenbank/00462.*, so the database is off-limits to our collector. DAAD's terms of use have NOT been read and must be before any bulk fetch",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "nawa-banach",
+      "name": "Stefan Banach Scholarship Programme",
+      "provider": "NAWA, the Polish National Agency for Academic Exchange",
+      "tier": 2,
+      "country_code": "PL",
+      "coverage": "Fully funded master's study at a Polish public university",
+      "status": "blocked",
+      "gates_met": [
+        "Your routes reach PL, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "Banach restricts which fields Azerbaijani applicants may study, and our two sources give opposite lists: spec §5.2 says humanities and social sciences only, while the general research brief says engineering, technical, agricultural and natural sciences. Those are complements, so one of them is wrong and we cannot tell which. Read nawa.gov.pl before relying on either"
+      ],
+      "obligation": null,
+      "window": null,
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2 (humanities/social sciences only for Azerbaijanis) CONTRADICTED BY AUSA general research brief 2026-09-04, 'Study Abroad Guide for Azerbaijanis' (engineering, technical, agricultural and natural sciences). No nawa.gov.pl page has been opened by this project, and this conflict is the reason no field-of-study check is applied anywhere in the product yet",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "erasmus-mundus",
+      "name": "Erasmus Mundus Joint Masters",
+      "provider": "European Commission",
+      "tier": 2,
+      "country_code": null,
+      "coverage": "Full tuition, travel and installation costs, and a monthly stipend, across a multi-country consortium",
+      "status": "blocked",
+      "gates_met": [],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "Each joint master's consortium sets its own admission requirements and its own deadline; there is no single Erasmus Mundus gate to check. Eligibility is decided by the specific programme you apply to"
+      ],
+      "obligation": null,
+      "window": null,
+      "citation": "docs/superpowers/specs/2026-08-31-route-first-advisor-design.md §5.2: master's only. Erasmus+ mobility within a degree is a different instrument and is not a full-degree scholarship. No European Commission page has been opened by this project",
+      "provenance": "research-brief"
+    },
+    {
+      "key": "great-scholarships",
+      "name": "GREAT Scholarships",
+      "provider": "British Council with participating UK universities",
+      "tier": 2,
+      "country_code": "GB",
+      "coverage": "A single-year GBP 10,000 tuition REDUCTION -- not a full scholarship. UK master's tuition typically runs well above that, so this narrows a gap rather than closing it",
+      "status": "blocked",
+      "gates_met": [
+        "Your routes reach GB, so this award has somewhere to spend"
+      ],
+      "gates_missing": [],
+      "gates_blocked": [
+        "This award funds master's study only. You are applying at bachelor level, so it is closed to you this cycle -- not competitive, closed"
+      ],
+      "gates_unknown": [
+        "GREAT awards are made by each participating university, so both the eligibility rules and the list of participating universities change year to year. This project has not read either"
+      ],
+      "obligation": null,
+      "window": null,
+      "citation": "AUSA general research brief 2026-09-04, 'Study Abroad Guide for Azerbaijanis': jointly funded by the British Council and participating UK universities, GBP 10,000 for one year, master's students. No British Council page has been opened by this project",
+      "provenance": "research-brief"
+    }
+  ],
+  "scholarships_note": "Meeting an award's published gates makes you possibly eligible to apply. It is never an award: every programme here is competitive and selection is a committee decision. Awards you cannot win are shown as blocked rather than hidden, with the gate that closed them.",
+  "prep_year_warning": "Taking the 12-month prep year would make you 21 at the next Türkiye Bursları window, which is at or over its under-21 bachelor limit. That year opens Germany and the UK to you and closes a fully funded Turkish place in the same move. Both are real; which one is worth more is your decision, not ours"
+}

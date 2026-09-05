@@ -28,6 +28,14 @@ The finding the product is built around is this:
 Scope is **studying abroad**: Turkey, Germany, the United Kingdom, the USA, Poland, and China.
 Azerbaijani universities appear in exactly one role — the prep year that unlocks the others.
 
+### Two products in one repository
+
+AUSA deliberately houses **two distinct products** in one codebase, linked by a shared domain vocabulary and chatbot:
+1. **Abroad Routing & Funding Engine (`/plan`, `POST /routes/assess`)**: Computes reachable foreign study pathways, two-hop qualification conversions, State Programme quota eligibility (4,121 catalogue rows), and 10 external scholarship gates across 6 countries.
+2. **Azerbaijan DİM Cutoff Predictor (`/azerbaijan`)**: Predicts admission cutoffs for domestic Azerbaijani university programmes using historical DİM score cutoffs and gradient-boosted trees.
+
+Both products are connected by a conversational assistant (`/chat`) that explains *why* routes or programmes are blocked rather than merely reporting status.
+
 ---
 
 ## The two ideas worth reading the code for
@@ -197,8 +205,10 @@ a clear error rather than degraded output.
 ### Tests
 
 ```bash
-cd backend && python -m pytest -q      # 186 tests
-cd frontend && npm run build           # type check + production build
+cd backend && python -m pytest -q      # 301 backend tests passing
+cd frontend && npm test                 # 54 vitest tests across 8 suites passing
+cd frontend && npm run typecheck       # strict TypeScript check
+cd frontend && npm run build           # Next.js production build
 ```
 
 ---
@@ -230,18 +240,25 @@ assumed:
 
 ## Honest status
 
-**Working end to end:** route engine and two-hop composition · State Programme eligibility and the
-funded catalogue · `POST /routes/assess`, which now answers with the **named universities** each
-plan reaches and what each one asks · curated requirements for 12 universities across DE, GB, TR
-and CN · auth and access control · application tracker · admin review queue · PDF export ·
-233 passing tests.
+**Working end to end:**
+- Route engine and two-hop composition
+- State Programme eligibility (4,121 catalogue rows) and 10 external scholarship evaluations
+- `POST /routes/assess`, which returns classified routes (OPEN / UNLOCKABLE / BLOCKED), cost-to-degree rankings, and the named universities each plan reaches
+- Frontend RoutePlanner (`/plan`) with **Discovery** and **Target** modes, live profile refining, baseline fixtures (never empty before input), persistent "Your score goes further here" non-exclusion ranking, and explicit absence visibility (`unknown_fields`, `not_stated`, `provenance`, and `last_checked`)
+- Curated requirements for 12 universities across DE, GB, TR, and CN
+- Auth and access control · application tracker · admin review queue · PDF export
+- **301 backend tests** (`pytest`) + **54 frontend tests** (`vitest`) passing.
 
-**Built but not yet connected:** the frontend still shows demo programmes rather than calling the
-route engine · the agent's tools cannot see routes or the catalogue · the RAG store holds no
-curated university documents · the cutoff models have no serving path.
+**Built but not yet connected:**
+- The LangGraph agent's tools cannot see routes or the catalogue directly
+- The RAG store holds general documentation but not yet full curated university requirement pages
+- The cutoff models have no serving API path (analysis artifacts)
 
-**Not built:** per-programme deadlines · motivation-letter generation · application submission,
-which is deliberately out of scope and always will be.
+**Not built / Deliberately excluded:**
+- Per-programme exact deadlines beyond curated entries
+- Motivation-letter generation (deliberately out of scope)
+- Application submission (deliberately out of scope and always will be)
+- Speculative study plans (refused: no empirical data maps uncalibrated study hours to admissions score gains)
 
 ### How a plan finds its universities
 

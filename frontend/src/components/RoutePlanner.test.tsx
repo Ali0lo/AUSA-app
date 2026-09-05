@@ -395,4 +395,139 @@ describe("RoutePlanner", () => {
     expect(await screen.findByText(/Unexpected error/i)).toBeInTheDocument();
     expect(screen.queryByText(/routes, soonest first/i)).not.toBeInTheDocument();
   });
+
+  it("renders baseline discovery options on load so page is never empty before input (D1)", () => {
+    render(<RoutePlanner />);
+    // Initial options are visible before submitting
+    expect(screen.getByText(/baseline discovery options/i)).toBeInTheDocument();
+    expect(screen.getByText(/Open Routes/i)).toBeInTheDocument();
+    expect(screen.getByText(/Unlockable Routes/i)).toBeInTheDocument();
+  });
+
+  it("groups route plans into OPEN and UNLOCKABLE sections (D1.3)", async () => {
+    assessRoutes.mockResolvedValue(
+      response({
+        plans: [
+          {
+            ...response().plans[0],
+            status: "open",
+            destination_country: "TR"
+          },
+          {
+            ...response().plans[0],
+            status: "unlockable",
+            destination_country: "GB"
+          }
+        ]
+      })
+    );
+    render(<RoutePlanner />);
+    await submitForm();
+
+    expect(await screen.findByText(/Open Routes/i)).toBeInTheDocument();
+    expect(screen.getByText(/Unlockable Routes/i)).toBeInTheDocument();
+  });
+
+  it("sends annual budget and renders budget comparison feedback (D1.2, D1.5)", async () => {
+    assessRoutes.mockResolvedValue(
+      response({
+        plans: [
+          {
+            ...response().plans[0],
+            total_cost_azn_low: 5000,
+            total_cost_azn_high: 7000
+          }
+        ]
+      })
+    );
+    render(<RoutePlanner />);
+
+    await userEvent.type(screen.getByLabelText(/Annual budget/i), "8000");
+    await submitForm();
+
+    await waitFor(() => expect(assessRoutes).toHaveBeenCalled());
+    const payload = assessRoutes.mock.calls[0][0];
+    expect(payload.budget_azn_per_year).toBe(8000);
+    expect(await screen.findByText(/fits within your stated budget/i)).toBeInTheDocument();
+  });
+
+  it("ranks preferred destinations first and surfaces unselected in 'Your score goes further here' (D1.4)", async () => {
+    assessRoutes.mockResolvedValue(
+      response({
+        plans: [
+          {
+            ...response().plans[0],
+            destination_country: "DE",
+            status: "unlockable"
+          },
+          {
+            ...response().plans[0],
+            destination_country: "TR",
+            status: "open"
+          }
+        ]
+      })
+    );
+    render(<RoutePlanner />);
+
+    // Select Germany (DE)
+    await userEvent.click(screen.getByRole("button", { name: /\+ Germany/i }));
+    await submitForm();
+
+    await waitFor(() => expect(assessRoutes).toHaveBeenCalled());
+    expect(await screen.findByRole("heading", { name: /Your score goes further here/i })).toBeInTheDocument();
+  });
+
+  it("switches to Target mode and renders gap analysis, checklist, process, and alternatives (D2)", async () => {
+    render(<RoutePlanner />);
+
+    // Click mode switch to Target
+    await userEvent.click(screen.getByRole("button", { name: /Target: Check a university/i }));
+
+    // Should see target university heading (default Bogazici)
+    expect(screen.getByText(/^Target roadmap$/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Bogazici University/i })).toBeInTheDocument();
+    expect(screen.getByText(/1\. Gap Statement/i)).toBeInTheDocument();
+    expect(screen.getByText(/2\. Requirement Checklist/i)).toBeInTheDocument();
+    expect(screen.getByText(/3\. Process Checklist & Deadlines/i)).toBeInTheDocument();
+    expect(screen.getByText(/Target roadmap methodology notice/i)).toBeInTheDocument();
+  });
+
+  it("renders honest gap and country context for uncurated university without study plan (D2)", async () => {
+    render(<RoutePlanner />);
+
+    await userEvent.click(screen.getByRole("button", { name: /Target: Check a university/i }));
+
+    // Select uncurated university
+    const select = screen.getByLabelText(/Select or name a university to target/i);
+    await userEvent.selectOptions(select, "Harvard University");
+
+    expect(screen.getByText(/do not have curated admission requirements for this university yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/What we do hold for United States/i)).toBeInTheDocument();
+    expect(screen.getByText(/refuse to generate speculative study plans/i)).toBeInTheDocument();
+  });
+
+  it("displays provenance and last_checked on every university card (D3)", async () => {
+    assessRoutes.mockResolvedValue(
+      response({
+        plans: [
+          {
+            ...response().plans[0],
+            universities: [
+              university({
+                provenance: "claude-extracted",
+                last_checked: "2026-09-02T00:00:00Z"
+              })
+            ]
+          }
+        ]
+      })
+    );
+    render(<RoutePlanner />);
+    await submitForm();
+
+    expect(await screen.findByText(/Read from the source page, not yet checked by a person/i)).toBeInTheDocument();
+    expect(screen.getByText(/Last checked: 2026-09-02/i)).toBeInTheDocument();
+  });
 });
+

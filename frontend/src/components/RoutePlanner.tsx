@@ -1,8 +1,31 @@
 "use client";
 
-import { ArrowRight, ExternalLink, Loader2 } from "lucide-react";
-import { FormEvent, useState } from "react";
+import {
+  ArrowRight,
+  ExternalLink,
+  Loader2,
+  Compass,
+  Crosshair,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  HelpCircle,
+  Info,
+  Calendar,
+  DollarSign,
+  Clock,
+  BookOpen,
+  Sparkles
+} from "lucide-react";
+import { FormEvent, useMemo, useState } from "react";
 import { assessRoutes, getUserFacingError } from "@/lib/api";
+import baselineFixture from "@/lib/baseline-routes.json";
+import {
+  CURATED_UNIVERSITIES,
+  COUNTRY_FALLBACKS,
+  KNOWN_UNIVERSITY_COUNTRY,
+  CuratedUniversityDetail
+} from "@/lib/curated-requirements";
 import type {
   AssessRoutesPayload,
   AssessRoutesResponse,
@@ -29,9 +52,32 @@ const GRADE_SCALES: { value: GradeScaleKey; label: string }[] = [
   { value: "german", label: "German 1.0–4.0 — where 1.0 is best" }
 ];
 
+const DESTINATION_OPTIONS: { code: string; label: string }[] = [
+  { code: "TR", label: "Turkey (TR)" },
+  { code: "DE", label: "Germany (DE)" },
+  { code: "GB", label: "United Kingdom (GB)" },
+  { code: "US", label: "United States (US)" },
+  { code: "PL", label: "Poland (PL)" },
+  { code: "CN", label: "China (CN)" }
+];
+
+const FIELD_OPTIONS: { value: string; label: string; dimGroup?: number }[] = [
+  { value: "", label: "All fields / general" },
+  { value: "engineering", label: "Engineering & Technology (DİM Group 1)", dimGroup: 1 },
+  { value: "cs", label: "Computer Science & Information Technology (DİM Group 1)", dimGroup: 1 },
+  { value: "business", label: "Economics, Finance & Business (DİM Group 2)", dimGroup: 2 },
+  { value: "social", label: "Social Sciences & Law (DİM Group 3)", dimGroup: 3 },
+  { value: "natural_sciences", label: "Natural Sciences & Medicine (DİM Group 4)", dimGroup: 4 }
+];
+
 const COUNTRY_NAMES: Record<string, string> = {
-  AZ: "Azerbaijan", TR: "Turkey", DE: "Germany", GB: "United Kingdom",
-  US: "United States", PL: "Poland", CN: "China"
+  AZ: "Azerbaijan",
+  TR: "Turkey",
+  DE: "Germany",
+  GB: "United Kingdom",
+  US: "United States",
+  PL: "Poland",
+  CN: "China"
 };
 
 function countryName(code: string): string {
@@ -88,15 +134,30 @@ function GradeLine({ university }: { university: RouteUniversity }) {
   );
 }
 
-function UniversityCard({ university }: { university: RouteUniversity }) {
+function UniversityCard({
+  university,
+  onTarget
+}: {
+  university: RouteUniversity;
+  onTarget?: (name: string) => void;
+}) {
   const facts: [string, string][] = [];
+
   if (university.tuition_per_year !== null) {
     facts.push([
       "Tuition per year",
       `${university.tuition_per_year.toLocaleString("en-US")} ${university.currency ?? ""}`.trim()
     ]);
+  } else {
+    facts.push(["Tuition per year", "Not stated on source page (unknown, not free)"]);
   }
-  if (university.application_deadline) facts.push(["Deadline", university.application_deadline]);
+
+  if (university.application_deadline) {
+    facts.push(["Deadline", university.application_deadline]);
+  } else {
+    facts.push(["Deadline", "Not stated on source page"]);
+  }
+
   if (university.language_test) {
     facts.push([
       "Language",
@@ -104,7 +165,10 @@ function UniversityCard({ university }: { university: RouteUniversity }) {
         ? `${university.language_test} ${university.language_minimum_score}`
         : `${university.language_test} — no minimum stated`
     ]);
+  } else {
+    facts.push(["Language", "Not stated on source page (unknown, not 'none required')"]);
   }
+
   if (university.entrance_exam) {
     facts.push([
       "Entrance exam",
@@ -112,22 +176,42 @@ function UniversityCard({ university }: { university: RouteUniversity }) {
         ? `${university.entrance_exam} ${university.entrance_exam_minimum}`
         : `${university.entrance_exam} — no minimum stated`
     ]);
+  } else {
+    facts.push(["Entrance exam", "None stated on source page"]);
   }
+
   if (university.gpa_minimum !== null) {
     facts.push([
       "Minimum grade",
       `${university.gpa_minimum}${university.gpa_scale ? ` out of ${university.gpa_scale}` : ""}`
     ]);
   }
-  if (university.application_portal) facts.push(["Apply via", university.application_portal]);
+
+  if (university.application_portal) {
+    facts.push(["Apply via", university.application_portal]);
+  } else {
+    facts.push(["Apply via", "Not stated on source page"]);
+  }
 
   return (
     <article className="border-t border-quiet py-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h4 className="font-serif text-xl font-semibold">{university.university_name}</h4>
-        <span className="text-xs uppercase tracking-[0.12em] text-muted">
-          {countryName(university.country_code)} · {university.intake_year} intake
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs uppercase tracking-[0.12em] text-muted">
+            {countryName(university.country_code)} · {university.intake_year} intake
+          </span>
+          {onTarget && (
+            <button
+              type="button"
+              onClick={() => onTarget(university.university_name)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline ml-2"
+            >
+              <Crosshair size={12} aria-hidden="true" />
+              Target
+            </button>
+          )}
+        </div>
       </div>
       <p className="mt-1 text-sm text-muted">{university.program_name}</p>
 
@@ -148,7 +232,9 @@ function UniversityCard({ university }: { university: RouteUniversity }) {
           free and a blank language test reads as none required -- both wrong in
           the direction that costs a student an application. */}
       {university.not_stated && (
-        <p className="mt-3 text-xs leading-5 text-muted">{university.not_stated}</p>
+        <p className="mt-3 text-xs leading-5 text-muted border-l-2 border-warning pl-3">
+          {university.not_stated}
+        </p>
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
@@ -161,18 +247,32 @@ function UniversityCard({ university }: { university: RouteUniversity }) {
           Source page
           <ExternalLink size={12} aria-hidden="true" />
         </a>
-        <span>
+        <span className={university.provenance === "human-verified" ? "text-success font-medium" : "text-muted"}>
           {university.provenance === "human-verified"
-            ? "Checked by a person"
+            ? "✓ Checked by a person"
             : "Read from the source page, not yet checked by a person"}
         </span>
+        {university.last_checked && (
+          <span>Last checked: {university.last_checked.slice(0, 10)}</span>
+        )}
       </div>
     </article>
   );
 }
 
-function PlanCard({ plan, index }: { plan: RoutePlan; index: number }) {
+function PlanCard({
+  plan,
+  index,
+  budget,
+  onTargetUniversity
+}: {
+  plan: RoutePlan;
+  index: number;
+  budget?: number;
+  onTargetUniversity?: (name: string) => void;
+}) {
   const isOpen = plan.status === "open";
+  const hasPopulatedTuition = plan.universities.some((u) => u.tuition_per_year !== null);
 
   return (
     <section className="panel mt-6 p-5 sm:p-7">
@@ -222,7 +322,7 @@ function PlanCard({ plan, index }: { plan: RoutePlan; index: number }) {
           <dd className="font-semibold">{months(plan.total_months)}</dd>
         </div>
         <div>
-          <dt className="text-muted">Estimated cost</dt>
+          <dt className="text-muted">Estimated route cost</dt>
           <dd className="font-semibold">
             {money(plan.total_cost_azn_low, plan.total_cost_azn_high)}
           </dd>
@@ -232,6 +332,28 @@ function PlanCard({ plan, index }: { plan: RoutePlan; index: number }) {
           <dd className="font-semibold">{plan.qualification_delivered.replace(/_/g, " ")}</dd>
         </div>
       </dl>
+
+      {/* Tuition transparency notice (D1.5 / D3) */}
+      {!hasPopulatedTuition && (
+        <p className="mt-3 text-xs leading-5 text-muted border-l-2 border-quiet pl-3">
+          Route cost shown above. University tuition is not yet recorded for this country (unknown in our catalogue, not free) — total cost to degree will include tuition once curated.
+        </p>
+      )}
+
+      {/* Budget headroom check */}
+      {budget !== undefined && (
+        <div className="mt-3 text-xs">
+          {plan.total_cost_azn_high <= budget ? (
+            <span className="text-success font-semibold">
+              ✓ Route entry cost fits within your stated budget of {budget.toLocaleString("en-US")} AZN/year.
+            </span>
+          ) : (
+            <span className="text-warning font-semibold">
+              ⚠ Route entry cost ({plan.total_cost_azn_low.toLocaleString("en-US")}–{plan.total_cost_azn_high.toLocaleString("en-US")} AZN) exceeds your stated budget of {budget.toLocaleString("en-US")} AZN/year. Scholarships or funding will be needed.
+            </span>
+          )}
+        </div>
+      )}
 
       {plan.missing.length > 0 && (
         <div className="notice-warning mt-5">
@@ -257,14 +379,26 @@ function PlanCard({ plan, index }: { plan: RoutePlan; index: number }) {
               <UniversityCard
                 key={`${university.university_name}-${university.program_name}`}
                 university={university}
+                onTarget={onTargetUniversity}
               />
             ))}
           </div>
         ) : (
-          /* Never an unexplained empty list. "We have not collected this country"
-             and "we collected it and none of them accepts this qualification" are
-             different answers and only one of them is about the student. */
-          <p className="mt-2 text-sm leading-6 text-muted">{plan.universities_explanation}</p>
+          /* Never an unexplained empty list. Distinguishes "we have not collected this country"
+             from "we collected it and none of them accepts this qualification". */
+          <div className="mt-2 text-sm leading-6 text-muted">
+            {plan.universities_status === "no_requirements_collected_for_this_country_yet" && (
+              <span className="block font-semibold text-xs uppercase tracking-wider text-muted mb-1">
+                Catalogue gap (our data)
+              </span>
+            )}
+            {plan.universities_status === "no_curated_universities_accept_qualification" && (
+              <span className="block font-semibold text-xs uppercase tracking-wider text-muted mb-1">
+                Finding about this country
+              </span>
+            )}
+            <p>{plan.universities_explanation}</p>
+          </div>
         )}
       </div>
     </section>
@@ -327,9 +461,7 @@ function ScholarshipCard({ scholarship }: { scholarship: Scholarship }) {
 
       {/* Rendered apart from the list above, and labelled, because it asks something
           different of the reader. A missing gate is work they can go and do; an unknown
-          gate is a fact they can tell us, or a page nobody on this project has read.
-          Folding the two together would tell a student to act on a question we never
-          actually asked them. */}
+          gate is a fact they can tell us, or a page nobody on this project has read. */}
       {scholarship.gates_unknown.length > 0 && (
         <div className="mt-3 border-l-2 border-quiet pl-3">
           <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
@@ -361,7 +493,315 @@ function ScholarshipCard({ scholarship }: { scholarship: Scholarship }) {
   );
 }
 
+function TargetRoadmap({
+  targetUniversity,
+  userProfile,
+  onReset
+}: {
+  targetUniversity: string;
+  userProfile: {
+    level: string;
+    qualification: RouteQualification;
+    ielts?: number;
+    toefl?: number;
+    sat?: number;
+    dim?: number;
+    gpa?: number;
+    gpaScale?: GradeScaleKey;
+  };
+  onReset: () => void;
+}) {
+  const curatedMatch = CURATED_UNIVERSITIES.find(
+    (u) => u.name.toLowerCase() === targetUniversity.toLowerCase()
+  );
+
+  if (!curatedMatch) {
+    // Try to detect country from known lookup or name match
+    const countryCode = KNOWN_UNIVERSITY_COUNTRY[targetUniversity];
+    const detectedCountry = countryCode
+      ? COUNTRY_FALLBACKS[countryCode]
+      : Object.values(COUNTRY_FALLBACKS).find((c) =>
+          targetUniversity.toLowerCase().includes(c.name.toLowerCase())
+        );
+
+    return (
+      <div className="panel p-6 sm:p-8">
+        <div className="flex items-center justify-between border-b border-quiet pb-4">
+          <div>
+            <p className="eyebrow">Target university</p>
+            <h3 className="section-heading mt-1 text-2xl">{targetUniversity}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onReset}
+            className="text-xs font-semibold text-muted hover:text-ink underline"
+          >
+            Change target
+          </button>
+        </div>
+
+        <div className="notice-warning mt-6">
+          <p className="font-semibold">We do not have curated admission requirements for this university yet.</p>
+          <p className="mt-1 text-sm leading-6">
+            This is a gap in our curated catalogue, not a statement that this university rejects you.
+            AUSA never invents score thresholds, deadlines or admissions probabilities when source data has not been verified.
+          </p>
+        </div>
+
+        {detectedCountry && (
+          <div className="mt-6 border-t border-quiet pt-6">
+            <h4 className="font-serif text-lg font-semibold">
+              What we do hold for {detectedCountry.name} ({detectedCountry.code})
+            </h4>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              {detectedCountry.schoolingComparison}
+            </p>
+            <div className="mt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                Known entrance routes for Azerbaijani applicants:
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                {detectedCountry.commonUnlockRoutes.map((r) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+            </div>
+            {detectedCountry.curatedUniversitiesInRepo.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Curated universities available in this destination:
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {detectedCountry.curatedUniversitiesInRepo.map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => {
+                        const evt = new CustomEvent("ausa-target", { detail: name });
+                        window.dispatchEvent(evt);
+                      }}
+                      className="text-xs border border-line px-2.5 py-1 bg-paper hover:bg-quiet"
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-6 border-t border-quiet pt-4 text-xs text-muted">
+          <p>
+            Grounding rule: AUSA provides verified facts from official admissions pages. We refuse to generate speculative study plans.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Curated university gap calculation
+  const qualificationAccepted = curatedMatch.acceptedQualifications.includes(
+    userProfile.qualification
+  );
+
+  // Language gap
+  const ieltsRequirement = curatedMatch.languageMinima.find((l) => l.test === "IELTS");
+  let languageVerdict = "Not evaluated";
+  let languageTone = "text-muted";
+  if (ieltsRequirement && ieltsRequirement.minScore) {
+    if (userProfile.ielts !== undefined) {
+      if (userProfile.ielts >= ieltsRequirement.minScore) {
+        languageVerdict = `Your IELTS ${userProfile.ielts} clears the minimum requirement of ${ieltsRequirement.minScore}.`;
+        languageTone = "text-success";
+      } else {
+        const gap = (ieltsRequirement.minScore - userProfile.ielts).toFixed(1);
+        languageVerdict = `You are ${gap} points short on IELTS (${userProfile.ielts} entered, ${ieltsRequirement.minScore} required).`;
+        languageTone = "text-warning";
+      }
+    } else {
+      languageVerdict = `IELTS not entered. This programme asks for minimum ${ieltsRequirement.minScore}.`;
+      languageTone = "text-muted";
+    }
+  }
+
+  // Entrance exam gap
+  const entranceExamReq = curatedMatch.entranceExams[0];
+  let examVerdict = "None stated or not required";
+  let examTone = "text-muted";
+  if (entranceExamReq) {
+    if (entranceExamReq.test === "TR-YÖS" && entranceExamReq.minScore) {
+      examVerdict = `Requires ${entranceExamReq.test} score of ${entranceExamReq.minScore} or SAT.`;
+    } else if (entranceExamReq.test === "Feststellungsprüfung") {
+      examVerdict = "Requires passing the Feststellungsprüfung exit examination (via Studienkolleg).";
+    } else {
+      examVerdict = `${entranceExamReq.test}${entranceExamReq.minScore ? ` minimum ${entranceExamReq.minScore}` : ""}`;
+    }
+  }
+
+  return (
+    <div className="panel p-6 sm:p-8">
+      <div className="flex flex-wrap items-center justify-between border-b border-quiet pb-4 gap-4">
+        <div>
+          <p className="eyebrow">Target roadmap</p>
+          <h3 className="section-heading mt-1 text-2xl sm:text-3xl">{curatedMatch.name}</h3>
+          <span className="text-xs uppercase tracking-wider text-muted">
+            {curatedMatch.countryName} · 2026 Intake
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={onReset}
+          className="text-xs font-semibold text-muted hover:text-ink underline"
+        >
+          Change target
+        </button>
+      </div>
+
+      {/* 1. Gap statement */}
+      <section className="mt-6">
+        <h4 className="font-serif text-xl font-semibold">1. Gap Statement</h4>
+        <div className="mt-3 space-y-3 text-sm">
+          <div className="border-l-2 border-quiet pl-3">
+            <p className="font-semibold">Qualification:</p>
+            {qualificationAccepted ? (
+              <p className="text-success mt-1">
+                ✓ Your {userProfile.qualification.replace(/_/g, " ")} is accepted directly for undergraduate admission.
+              </p>
+            ) : (
+              <p className="text-warning mt-1">
+                ✕ Your {userProfile.qualification.replace(/_/g, " ")} is NOT accepted for direct undergraduate admission.
+                {" "}This university accepts: {curatedMatch.acceptedQualifications.map((q) => q.replace(/_/g, " ")).join(", ")}.
+              </p>
+            )}
+          </div>
+
+          <div className="border-l-2 border-quiet pl-3">
+            <p className="font-semibold">Language:</p>
+            <p className={`${languageTone} mt-1`}>{languageVerdict}</p>
+          </div>
+
+          {entranceExamReq && (
+            <div className="border-l-2 border-quiet pl-3">
+              <p className="font-semibold">Entrance exam:</p>
+              <p className={`${examTone} mt-1`}>{examVerdict}</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 2. Requirement checklist */}
+      <section className="mt-8 border-t border-quiet pt-6">
+        <h4 className="font-serif text-xl font-semibold">2. Requirement Checklist</h4>
+        <ul className="mt-4 space-y-2 text-sm">
+          <li className="flex items-start gap-2">
+            {qualificationAccepted ? (
+              <CheckCircle2 size={16} className="text-success mt-0.5" />
+            ) : (
+              <AlertTriangle size={16} className="text-warning mt-0.5" />
+            )}
+            <div>
+              <span className="font-semibold">Entry qualification: </span>
+              {curatedMatch.acceptedQualifications.map((q) => q.replace(/_/g, " ")).join(" or ")}
+            </div>
+          </li>
+          {curatedMatch.languageMinima.map((l) => (
+            <li key={l.test} className="flex items-start gap-2">
+              <Info size={16} className="text-muted mt-0.5" />
+              <div>
+                <span className="font-semibold">Language ({l.test}): </span>
+                {l.minScore ? `Minimum score ${l.minScore}. ` : ""}
+                {l.notes ?? ""}
+              </div>
+            </li>
+          ))}
+          {curatedMatch.entranceExams.map((e) => (
+            <li key={e.test} className="flex items-start gap-2">
+              <Info size={16} className="text-muted mt-0.5" />
+              <div>
+                <span className="font-semibold">Entrance exam ({e.test}): </span>
+                {e.minScore ? `Minimum score ${e.minScore}. ` : ""}
+                {e.notes ?? ""}
+              </div>
+            </li>
+          ))}
+          <li className="flex items-start gap-2">
+            <DollarSign size={16} className="text-muted mt-0.5" />
+            <div>
+              <span className="font-semibold">Tuition: </span>
+              {curatedMatch.tuition.amount !== undefined
+                ? `${curatedMatch.tuition.amount.toLocaleString("en-US")} ${curatedMatch.tuition.currency}/year. `
+                : ""}
+              {curatedMatch.tuition.notes}
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      {/* 3. Process checklist */}
+      <section className="mt-8 border-t border-quiet pt-6">
+        <h4 className="font-serif text-xl font-semibold">3. Process Checklist & Deadlines</h4>
+        <dl className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
+          {curatedMatch.portal && (
+            <div className="border-b border-quiet pb-2">
+              <dt className="text-muted">Application portal</dt>
+              <dd className="font-semibold mt-0.5">{curatedMatch.portal}</dd>
+            </div>
+          )}
+          <div className="border-b border-quiet pb-2">
+            <dt className="text-muted">Application deadline</dt>
+            <dd className="font-semibold mt-0.5">
+              {curatedMatch.deadline ? curatedMatch.deadline : "Not stated on source page"}
+            </dd>
+          </div>
+          {curatedMatch.applicationFee && (
+            <div className="border-b border-quiet pb-2">
+              <dt className="text-muted">Application fee</dt>
+              <dd className="font-semibold mt-0.5">
+                {curatedMatch.applicationFee.amount} {curatedMatch.applicationFee.currency}
+              </dd>
+            </div>
+          )}
+        </dl>
+        <div className="mt-4 text-xs leading-5 text-muted">
+          <p className="font-semibold text-ink">Documents required:</p>
+          <p className="mt-1">{curatedMatch.documentsRequired}</p>
+        </div>
+      </section>
+
+      {/* 4. Alternatives that close the gap */}
+      {!qualificationAccepted && (
+        <section className="mt-8 border-t border-quiet pt-6">
+          <h4 className="font-serif text-xl font-semibold">4. Alternatives that Close the Gap</h4>
+          <p className="mt-2 text-sm text-muted">
+            Your current qualification does not qualify for direct entry here. These verified routes convert or unlock access:
+          </p>
+          <div className="mt-4 space-y-3">
+            {curatedMatch.unlockRoutes.map((route, idx) => (
+              <div key={idx} className="panel-strong p-4">
+                <p className="font-semibold text-sm">{route.mechanism}</p>
+                <p className="mt-1 text-xs text-muted">Time cost: {months(route.timeMonths)}</p>
+                <p className="mt-2 text-xs leading-5">{route.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Exclude study plan rule */}
+      <div className="mt-8 border-t border-quiet pt-4 text-xs text-muted">
+        <p className="font-semibold text-ink">Target roadmap methodology notice:</p>
+        <p className="mt-1">
+          AUSA outputs objective gaps, deadlines, and alternative routes supported by published data.
+          We explicitly exclude speculative study plans (e.g. &ldquo;retake DİM in March and study maths 2 hours a day&rdquo;) because no empirical data reliably links uncalibrated effort to admissions score changes.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function RoutePlanner() {
+  const [mode, setMode] = useState<"discovery" | "target">("discovery");
   const [level, setLevel] = useState<"bachelor" | "master">("bachelor");
   const [qualification, setQualification] = useState<RouteQualification>("attestat");
   const [gpa, setGpa] = useState("");
@@ -372,15 +812,79 @@ export function RoutePlanner() {
   const [dimGroup, setDimGroup] = useState("");
   const [sat, setSat] = useState("");
   const [language, setLanguage] = useState("");
-  // The funding inputs. Nothing academic needs them; several scholarships are decided
-  // by them alone.
+  const [budget, setBudget] = useState("");
+  const [preferredDestinations, setPreferredDestinations] = useState<string[]>([]);
+  const [fieldOfStudy, setFieldOfStudy] = useState("");
+
+  // Funding inputs
   const [age, setAge] = useState("");
   const [workHours, setWorkHours] = useState("");
   const [employer, setEmployer] = useState("");
 
   const [result, setResult] = useState<AssessRoutesResponse | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [error, setError] = useState<{ title: string; message: string } | null>(null);
   const [pending, setPending] = useState(false);
+
+  // Target university selection
+  const [targetUniversity, setTargetUniversity] = useState("Bogazici University");
+
+  // Determine active dataset to display:
+  // If user submitted or loaded from API, use result.
+  // Otherwise, use baselineFixture so the page is never empty before input.
+  const activeResult: AssessRoutesResponse | null = useMemo(() => {
+    if (error) return null;
+    if (result) return result;
+    return baselineFixture as unknown as AssessRoutesResponse;
+  }, [result, error]);
+
+  // Destination filtering & ranking (D1.4: Destination ranks, never excludes)
+  const { mainPlans, outsidePlans } = useMemo(() => {
+    if (!activeResult) return { mainPlans: [], outsidePlans: [] };
+
+    if (preferredDestinations.length === 0) {
+      return { mainPlans: activeResult.plans, outsidePlans: [] };
+    }
+
+    const main = activeResult.plans.filter((p) =>
+      preferredDestinations.includes(p.destination_country)
+    );
+    const outside = activeResult.plans.filter(
+      (p) => !preferredDestinations.includes(p.destination_country)
+    );
+    return { mainPlans: main, outsidePlans: outside };
+  }, [activeResult, preferredDestinations]);
+
+  // Group plans by status: OPEN vs UNLOCKABLE (D1.3)
+  const openPlans = useMemo(() => mainPlans.filter((p) => p.status === "open"), [mainPlans]);
+  const unlockablePlans = useMemo(() => mainPlans.filter((p) => p.status === "unlockable"), [mainPlans]);
+
+  // Best outside plans for "Your score goes further here"
+  const topOutsidePlans = useMemo(() => {
+    const openOutside = outsidePlans.filter((p) => p.status === "open");
+    if (openOutside.length > 0) return openOutside;
+    return outsidePlans.slice(0, 3);
+  }, [outsidePlans]);
+
+  function handleDestinationToggle(code: string) {
+    setPreferredDestinations((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+    );
+  }
+
+  function handleSelectField(fieldValue: string) {
+    setFieldOfStudy(fieldValue);
+    const match = FIELD_OPTIONS.find((f) => f.value === fieldValue);
+    if (match?.dimGroup && !dimGroup) {
+      setDimGroup(String(match.dimGroup));
+    }
+  }
+
+  function handleTargetFromCard(uniName: string) {
+    setTargetUniversity(uniName);
+    setMode("target");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -400,11 +904,14 @@ export function RoutePlanner() {
       language_certificate_level: language || undefined,
       age: num(age),
       work_experience_hours: num(workHours),
-      employer: employer.trim() || undefined
+      employer: employer.trim() || undefined,
+      budget_azn_per_year: num(budget)
     };
 
     try {
-      setResult(await assessRoutes(payload));
+      const data = await assessRoutes(payload);
+      setResult(data);
+      setHasSubmitted(true);
     } catch (caught) {
       setError(getUserFacingError(caught, "Route planning"));
       setResult(null);
@@ -414,355 +921,568 @@ export function RoutePlanner() {
   }
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-14">
-      <form onSubmit={submit} className="panel-strong h-fit p-5 sm:p-6" noValidate>
-        <p className="eyebrow">Your profile</p>
-        <p className="mt-3 text-sm leading-6 text-muted">
-          Leave anything blank that you do not have. A blank is treated as unknown, never as
-          zero.
+    <div>
+      {/* Mode switcher: Discovery vs Target */}
+      <div className="flex border-b border-quiet pb-4 mb-8 items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("discovery")}
+            className={`button text-sm py-2 px-4 ${
+              mode === "discovery"
+                ? "border-accent bg-accent text-paper font-semibold"
+                : "border-quiet bg-paper text-muted hover:text-ink"
+            }`}
+          >
+            <Compass size={16} aria-hidden="true" />
+            Discovery: Explore all routes
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("target")}
+            className={`button text-sm py-2 px-4 ${
+              mode === "target"
+                ? "border-accent bg-accent text-paper font-semibold"
+                : "border-quiet bg-paper text-muted hover:text-ink"
+            }`}
+          >
+            <Crosshair size={16} aria-hidden="true" />
+            Target: Check a university
+          </button>
+        </div>
+
+        <p className="text-xs text-muted">
+          {mode === "discovery"
+            ? "Enter your credentials to see every reachable route."
+            : "Name a specific university to evaluate gaps, checklists, and alternatives."}
         </p>
+      </div>
 
-        <div className="mt-6">
-          <label className="field-label" htmlFor="level">I am applying for</label>
-          <select
-            id="level"
-            className="field"
-            value={level}
-            onChange={(event) => setLevel(event.target.value as "bachelor" | "master")}
-          >
-            <option value="bachelor">A bachelor&apos;s degree</option>
-            <option value="master">A master&apos;s degree</option>
-          </select>
-        </div>
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-14">
+        {/* Profile Sidebar */}
+        <form onSubmit={submit} className="panel-strong h-fit p-5 sm:p-6" noValidate>
+          <p className="eyebrow">Your profile</p>
+          <p className="mt-3 text-sm leading-6 text-muted">
+            Leave anything blank that you do not have. A blank is treated as unknown, never as zero.
+          </p>
 
-        <div className="mt-5">
-          <label className="field-label" htmlFor="qualification">What I hold now</label>
-          <select
-            id="qualification"
-            className="field"
-            value={qualification}
-            onChange={(event) => setQualification(event.target.value as RouteQualification)}
-          >
-            {QUALIFICATIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="mt-5">
-          <label className="field-label" htmlFor="gpa">Grade average</label>
-          <div className="grid gap-2 sm:grid-cols-[7rem_1fr]">
-            <input
-              id="gpa"
-              className="field"
-              inputMode="decimal"
-              value={gpa}
-              onChange={(event) => setGpa(event.target.value)}
-              placeholder="4.6"
-            />
+          {/* D1.1: Level first */}
+          <div className="mt-6">
+            <label className="field-label" htmlFor="level">I am applying for</label>
             <select
+              id="level"
               className="field"
-              aria-label="Grade scale"
-              value={gpaScale}
-              onChange={(event) => setGpaScale(event.target.value as GradeScaleKey)}
+              value={level}
+              onChange={(event) => setLevel(event.target.value as "bachelor" | "master")}
             >
-              {GRADE_SCALES.map((scale) => (
-                <option key={scale.value} value={scale.value}>{scale.label}</option>
+              <option value="bachelor">A bachelor&apos;s degree</option>
+              <option value="master">A master&apos;s degree</option>
+            </select>
+            <p className="field-help">
+              Level is asked first because findings invert between them: Germany and UK direct entry are closed on attestat but open to bachelor graduates.
+            </p>
+          </div>
+
+          <div className="mt-5">
+            <label className="field-label" htmlFor="qualification">What I hold now</label>
+            <select
+              id="qualification"
+              className="field"
+              value={qualification}
+              onChange={(event) => setQualification(event.target.value as RouteQualification)}
+            >
+              {QUALIFICATIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
           </div>
-          {/* The scale is not decoration. 4.5 is excellent out of 5 and impossible
-              out of 4.0, and nothing but the scale tells them apart. */}
-          <p className="field-help">
-            Pick the scale your grade is actually on. The same number means different things on
-            different scales, and a grade without its scale cannot be compared with anything.
-          </p>
-        </div>
 
-        <fieldset className="mt-6 border-t border-quiet pt-5">
-          <legend className="sr-only">Exam scores</legend>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-            Exams you have sat
-          </p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {[
-              ["ielts", "IELTS", ielts, setIelts, "7.0"],
-              ["toefl", "TOEFL", toefl, setToefl, "95"],
-              ["dim", "DİM", dim, setDim, "560"],
-              ["sat", "SAT", sat, setSat, "1350"]
-            ].map(([id, label, value, setter, placeholder]) => (
-              <div key={id as string}>
-                <label className="field-label" htmlFor={id as string}>{label as string}</label>
-                <input
-                  id={id as string}
-                  className="field"
-                  inputMode="decimal"
-                  value={value as string}
-                  onChange={(event) => (setter as (v: string) => void)(event.target.value)}
-                  placeholder={placeholder as string}
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* Only asked when it can change an answer. The Dövlət Proqramı's DİM bar is 400
-              for Group 1 and 550 for every other field, so without this a score between the
-              two cannot be decided either way. */}
-          {dim.trim() !== "" && (
-            <div className="mt-4">
-              <label className="field-label" htmlFor="dim-group">DİM ixtisas qrupu</label>
-              <select
-                id="dim-group"
+          <div className="mt-5">
+            <label className="field-label" htmlFor="gpa">Grade average</label>
+            <div className="grid gap-2 sm:grid-cols-[7rem_1fr]">
+              <input
+                id="gpa"
                 className="field"
-                value={dimGroup}
-                onChange={(event) => setDimGroup(event.target.value)}
+                inputMode="decimal"
+                value={gpa}
+                onChange={(event) => setGpa(event.target.value)}
+                placeholder="4.6"
+              />
+              <select
+                className="field"
+                aria-label="Grade scale"
+                value={gpaScale}
+                onChange={(event) => setGpaScale(event.target.value as GradeScaleKey)}
               >
-                <option value="">Not sure</option>
-                <option value="1">Group 1 — engineering and technology</option>
-                <option value="2">Group 2</option>
-                <option value="3">Group 3</option>
-                <option value="4">Group 4</option>
+                {GRADE_SCALES.map((scale) => (
+                  <option key={scale.value} value={scale.value}>{scale.label}</option>
+                ))}
               </select>
-              <p className="field-help">
-                The state programme asks 400 of Group 1 and 550 of every other field. Leave
-                this blank and any score between the two stays undecided.
-              </p>
             </div>
-          )}
-
-          <div className="mt-4">
-            <label className="field-label" htmlFor="language">Language certificate</label>
-            <select
-              id="language"
-              className="field"
-              value={language}
-              onChange={(event) => setLanguage(event.target.value)}
-            >
-              <option value="">None or not sure</option>
-              <option value="B2">B2</option>
-              <option value="C1">C1</option>
-              <option value="C2">C2</option>
-            </select>
             <p className="field-help">
-              The Dövlət Proqramı requires C1 or above.
+              Pick the scale your grade is actually on. The same number means different things on
+              different scales, and a grade without its scale cannot be compared with anything.
             </p>
           </div>
-        </fieldset>
 
-        {/* Funding asks for things nothing academic needs, so they sit in their own
-            block with the reason attached. A student who does not see why we want their
-            age will assume we are profiling them, and leave it blank. */}
-        <fieldset className="mt-7 border-t border-quiet pt-6">
-          <legend className="eyebrow">For funding</legend>
-          <p className="mt-3 text-sm leading-6 text-muted">
-            Several scholarships are decided by things that have nothing to do with your
-            grades. Leave any of these blank and we will say the gate went unchecked —
-            never that you cleared it.
-          </p>
-
-          <div className="mt-4">
-            <label className="field-label" htmlFor="age">Age</label>
+          {/* D1.2: Annual Budget in AZN */}
+          <div className="mt-5">
+            <label className="field-label" htmlFor="budget">Annual budget (AZN)</label>
             <input
-              id="age"
+              id="budget"
               className="field"
               inputMode="numeric"
-              value={age}
-              onChange={(event) => setAge(event.target.value)}
-              placeholder="e.g. 18"
+              value={budget}
+              onChange={(event) => setBudget(event.target.value)}
+              placeholder="e.g. 8000"
             />
             <p className="field-help">
-              {level === "bachelor"
-                ? "Türkiye Bursları funds bachelor study only for applicants under 21, and it is one of just two scholarships that reach this level at all."
-                : "SOCAR's programme sets an upper age limit; most others do not publish one we have read."}
+              Used to rank total cost to degree and check whether routes fit without scholarships.
             </p>
           </div>
 
-          {/* Only asked at master's level, where the awards that use them exist. */}
-          {level === "master" && (
-            <>
-              <div className="mt-4">
-                <label className="field-label" htmlFor="work-hours">
-                  Documented work experience
-                </label>
-                <input
-                  id="work-hours"
-                  className="field"
-                  inputMode="numeric"
-                  value={workHours}
-                  onChange={(event) => setWorkHours(event.target.value)}
-                  placeholder="hours, e.g. 3000"
-                />
-                <p className="field-help">
-                  In hours, not years — Chevening asks for 2,800 documented hours and
-                  counts part-time and overlapping work against that figure.
-                </p>
-              </div>
-
-              <div className="mt-4">
-                <label className="field-label" htmlFor="employer">Employer</label>
-                <input
-                  id="employer"
-                  className="field"
-                  value={employer}
-                  onChange={(event) => setEmployer(event.target.value)}
-                  placeholder="if you are working"
-                />
-                <p className="field-help">
-                  SOCAR&apos;s scholarship is open only to SOCAR group employees. No
-                  academic record opens it, so this is the only way we can tell whether it
-                  applies to you.
-                </p>
-              </div>
-            </>
-          )}
-        </fieldset>
-
-        <button type="submit" className="button-primary mt-7 w-full" disabled={pending}>
-          {pending ? (
-            <>
-              <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-              Checking routes
-            </>
-          ) : (
-            <>
-              Show my options
-              <ArrowRight size={16} aria-hidden="true" />
-            </>
-          )}
-        </button>
-      </form>
-
-      <div aria-live="polite">
-        {error && (
-          <div className="notice-error">
-            <p className="font-semibold">{error.title}</p>
-            <p className="mt-1">{error.message}</p>
-          </div>
-        )}
-
-        {!result && !error && (
-          <div className="panel p-6 sm:p-8">
-            <p className="body-large">
-              Enter what you hold and what you have scored. You will get every route this
-              qualification opens, what each one costs in time and money, and the universities
-              that document accepting it.
+          {/* D1.2: Destination Preferences (never excludes) */}
+          <div className="mt-5">
+            <p className="field-label">Preferred destinations</p>
+            <p className="text-xs text-muted mb-2">
+              Destination ranks, it never excludes. Chosen countries fill main results; others appear under &ldquo;Your score goes further here&rdquo;.
             </p>
-            <p className="mt-4 text-sm leading-6 text-muted">
-              Nothing here is a prediction of whether you will be admitted. Every requirement
-              shown is quoted from a university&apos;s own page and linked back to it.
-            </p>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {DESTINATION_OPTIONS.map((dest) => {
+                const isSelected = preferredDestinations.includes(dest.code);
+                return (
+                  <button
+                    type="button"
+                    key={dest.code}
+                    onClick={() => handleDestinationToggle(dest.code)}
+                    className={`text-xs p-2 text-left border transition-colors ${
+                      isSelected
+                        ? "border-accent bg-accent/10 font-semibold text-accent"
+                        : "border-quiet bg-paper text-muted hover:border-line"
+                    }`}
+                  >
+                    {isSelected ? "✓ " : "+ "}
+                    {dest.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        )}
 
-        {result && (
-          <>
-            <div className="panel-strong p-5 sm:p-6">
-              <p className="eyebrow">Dövlət Proqramı</p>
-              <h2 className="section-heading mt-2 text-2xl">
-                {result.dp.status === "open"
-                  ? "You clear the published requirements"
-                  : "Not yet clearing the published requirements"}
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-muted">{result.dp.note}</p>
+          {/* D1.2: Field of study */}
+          <div className="mt-5">
+            <label className="field-label" htmlFor="field-of-study">Field of study</label>
+            <select
+              id="field-of-study"
+              className="field"
+              value={fieldOfStudy}
+              onChange={(e) => handleSelectField(e.target.value)}
+            >
+              {FIELD_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              {result.dp.gates_met.length > 0 && (
-                <ul className="mt-4 space-y-1 text-sm text-success">
-                  {result.dp.gates_met.map((gate) => <li key={gate}>✓ {gate}</li>)}
-                </ul>
-              )}
-              {result.dp.gates_missing.length > 0 && (
-                <ul className="mt-2 space-y-1 text-sm text-warning">
-                  {result.dp.gates_missing.map((gate) => <li key={gate}>· {gate}</li>)}
-                </ul>
-              )}
-
-              {/* Not gates, and deliberately shown whether or not the gates are cleared.
-                  A student who clears everything still needs to know they are joining a
-                  queue of 125 places, signing a five-year return contract, and applying
-                  for an academic year that is not the one they assumed. */}
-              <dl className="mt-5 space-y-3 border-t border-quiet pt-4 text-xs leading-5">
-                <div>
-                  <dt className="font-semibold uppercase tracking-[0.1em] text-muted">Places</dt>
-                  <dd className="mt-1">{result.dp.quota_note}</dd>
+          <fieldset className="mt-6 border-t border-quiet pt-5">
+            <legend className="sr-only">Exam scores</legend>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              Exams you have sat
+            </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {[
+                ["ielts", "IELTS", ielts, setIelts, "7.0"],
+                ["toefl", "TOEFL", toefl, setToefl, "95"],
+                ["dim", "DİM", dim, setDim, "560"],
+                ["sat", "SAT", sat, setSat, "1350"]
+              ].map(([id, label, value, setter, placeholder]) => (
+                <div key={id as string}>
+                  <label className="field-label" htmlFor={id as string}>{label as string}</label>
+                  <input
+                    id={id as string}
+                    className="field"
+                    inputMode="decimal"
+                    value={value as string}
+                    onChange={(event) => (setter as (v: string) => void)(event.target.value)}
+                    placeholder={placeholder as string}
+                  />
                 </div>
-                <div>
-                  <dt className="font-semibold uppercase tracking-[0.1em] text-muted">When</dt>
-                  <dd className="mt-1">{result.dp.window_note}</dd>
-                </div>
-                <div>
-                  <dt className="font-semibold uppercase tracking-[0.1em] text-muted">
-                    What you commit to
-                  </dt>
-                  <dd className="mt-1">{result.dp.obligation_note}</dd>
-                </div>
-              </dl>
-
-              {result.dp.funded_programmes.length > 0 ? (
-                <p className="mt-4 text-sm">
-                  <span className="font-semibold">
-                    {result.dp.funded_programmes.length} funded programmes
-                  </span>{" "}
-                  <span className="text-muted">
-                    in the countries your routes reach.
-                  </span>
-                </p>
-              ) : (
-                <p className="mt-4 text-sm leading-6 text-muted">
-                  {result.dp.funded_programmes_explanation}
-                </p>
-              )}
+              ))}
             </div>
 
-            {result.plans.length === 0 ? (
-              <div className="notice-warning mt-6">
-                <p>
-                  No route in our list is currently reachable with that qualification at this
-                  level. That is not a statement that no path exists — only that none of the
-                  routes we hold opens on it.
+            {dim.trim() !== "" && (
+              <div className="mt-4">
+                <label className="field-label" htmlFor="dim-group">DİM ixtisas qrupu</label>
+                <select
+                  id="dim-group"
+                  className="field"
+                  value={dimGroup}
+                  onChange={(event) => setDimGroup(event.target.value)}
+                >
+                  <option value="">Not sure</option>
+                  <option value="1">Group 1 — engineering and technology</option>
+                  <option value="2">Group 2</option>
+                  <option value="3">Group 3</option>
+                  <option value="4">Group 4</option>
+                </select>
+                <p className="field-help">
+                  The state programme asks 400 of Group 1 and 550 of every other field. Leave
+                  this blank and any score between the two stays undecided.
                 </p>
               </div>
-            ) : (
+            )}
+
+            <div className="mt-4">
+              <label className="field-label" htmlFor="language">Language certificate</label>
+              <select
+                id="language"
+                className="field"
+                value={language}
+                onChange={(event) => setLanguage(event.target.value)}
+              >
+                <option value="">None or not sure</option>
+                <option value="B2">B2</option>
+                <option value="C1">C1</option>
+                <option value="C2">C2</option>
+              </select>
+              <p className="field-help">
+                The Dövlət Proqramı requires C1 or above.
+              </p>
+            </div>
+          </fieldset>
+
+          <fieldset className="mt-7 border-t border-quiet pt-6">
+            <legend className="eyebrow">For funding</legend>
+            <p className="mt-3 text-sm leading-6 text-muted">
+              Several scholarships are decided by things that have nothing to do with your
+              grades. Leave any of these blank and we will say the gate went unchecked —
+              never that you cleared it.
+            </p>
+
+            <div className="mt-4">
+              <label className="field-label" htmlFor="age">Age</label>
+              <input
+                id="age"
+                className="field"
+                inputMode="numeric"
+                value={age}
+                onChange={(event) => setAge(event.target.value)}
+                placeholder="e.g. 18"
+              />
+              <p className="field-help">
+                {level === "bachelor"
+                  ? "Türkiye Bursları funds bachelor study only for applicants under 21, and it is one of just two scholarships that reach this level at all."
+                  : "SOCAR's programme sets an upper age limit; most others do not publish one we have read."}
+              </p>
+            </div>
+
+            {level === "master" && (
               <>
-                <p className="mt-8 text-sm text-muted">
-                  {result.plans.length} routes, soonest first.
-                </p>
-                {result.plans.map((plan, index) => (
-                  <PlanCard key={plan.hops.map((h) => h.key).join(">")} plan={plan} index={index} />
-                ))}
+                <div className="mt-4">
+                  <label className="field-label" htmlFor="work-hours">
+                    Documented work experience
+                  </label>
+                  <input
+                    id="work-hours"
+                    className="field"
+                    inputMode="numeric"
+                    value={workHours}
+                    onChange={(event) => setWorkHours(event.target.value)}
+                    placeholder="hours, e.g. 3000"
+                  />
+                  <p className="field-help">
+                    In hours, not years — Chevening asks for 2,800 documented hours and
+                    counts part-time and overlapping work against that figure.
+                  </p>
+                </div>
+
+                <div className="mt-4">
+                  <label className="field-label" htmlFor="employer">Employer</label>
+                  <input
+                    id="employer"
+                    className="field"
+                    value={employer}
+                    onChange={(event) => setEmployer(event.target.value)}
+                    placeholder="if you are working"
+                  />
+                  <p className="field-help">
+                    SOCAR&apos;s scholarship is open only to SOCAR group employees. No
+                    academic record opens it, so this is the only way we can tell whether it
+                    applies to you.
+                  </p>
+                </div>
               </>
             )}
+          </fieldset>
 
-            {/* The one thing on this page that needs two models at once: the prep year
-                opens Germany and the UK, and spends the twelve months that can push a
-                student past Türkiye Bursları' under-21 bachelor limit. Placed between
-                the routes and the funding because it belongs to both. */}
-            {result.prep_year_warning && (
-              <div className="notice-warning mt-8">
-                <p className="font-semibold">One route costs you another option</p>
-                <p className="mt-2 leading-6">{result.prep_year_warning}</p>
+          <button type="submit" className="button-primary mt-7 w-full" disabled={pending}>
+            {pending ? (
+              <>
+                <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                Checking routes
+              </>
+            ) : (
+              <>
+                Show my options
+                <ArrowRight size={16} aria-hidden="true" />
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Main Content Area */}
+        <div aria-live="polite">
+          {error && (
+            <div className="notice-error">
+              <p className="font-semibold">{error.title}</p>
+              <p className="mt-1">{error.message}</p>
+            </div>
+          )}
+
+          {/* TARGET MODE VIEW */}
+          {mode === "target" && !error && (
+            <div>
+              <div className="panel p-5 mb-6">
+                <label className="field-label font-serif text-lg" htmlFor="target-uni-select">
+                  Select or name a university to target
+                </label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <select
+                    id="target-uni-select"
+                    className="field flex-1 min-w-[15rem]"
+                    value={targetUniversity}
+                    onChange={(e) => setTargetUniversity(e.target.value)}
+                  >
+                    <optgroup label="Curated Universities in AUSA">
+                      {CURATED_UNIVERSITIES.map((u) => (
+                        <option key={u.name} value={u.name}>
+                          {u.name} ({u.countryName})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Uncurated Examples">
+                      <option value="Harvard University">Harvard University (USA)</option>
+                      <option value="University of Oxford">University of Oxford (UK)</option>
+                      <option value="University of Warsaw">University of Warsaw (Poland)</option>
+                      <option value="Bilkent University">Bilkent University (Turkey)</option>
+                    </optgroup>
+                  </select>
+                </div>
               </div>
-            )}
 
-            <section className="mt-10 border-t border-line pt-6">
-              <p className="eyebrow">Funding beyond the state programme</p>
-              <p className="mt-3 text-sm leading-6 text-muted">
-                {result.scholarships_note}
+              <TargetRoadmap
+                targetUniversity={targetUniversity}
+                userProfile={{
+                  level,
+                  qualification,
+                  ielts: num(ielts),
+                  toefl: num(toefl),
+                  sat: num(sat),
+                  dim: num(dim),
+                  gpa: num(gpa),
+                  gpaScale: gpa.trim() ? gpaScale : undefined
+                }}
+                onReset={() => setTargetUniversity("Bogazici University")}
+              />
+            </div>
+          )}
+
+          {/* DISCOVERY MODE VIEW */}
+          {mode === "discovery" && activeResult && !error && (
+            <>
+              {/* Baseline hint if user has not performed a custom submit yet */}
+              {!hasSubmitted && (
+                <div className="panel p-4 mb-6 border-l-4 border-accent">
+                  <p className="body-large text-sm font-semibold text-ink">
+                    Showing baseline discovery options for school-leaver (Attestat, Bachelor).
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    Enter what you hold and what you have scored. You will get every route this
+                    qualification opens, what each one costs in time and money, and the universities
+                    that document accepting it. Nothing here is a prediction of whether you will be admitted.
+                    Every requirement shown is quoted from a university&apos;s own page and linked back to it.
+                  </p>
+                </div>
+              )}
+
+              {/* Dövlət Proqramı */}
+              <div className="panel-strong p-5 sm:p-6">
+                <p className="eyebrow">Dövlət Proqramı</p>
+                <h2 className="section-heading mt-2 text-2xl">
+                  {activeResult.dp.status === "open"
+                    ? "You clear the published requirements"
+                    : "Not yet clearing the published requirements"}
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-muted">{activeResult.dp.note}</p>
+
+                {activeResult.dp.gates_met.length > 0 && (
+                  <ul className="mt-4 space-y-1 text-sm text-success">
+                    {activeResult.dp.gates_met.map((gate) => <li key={gate}>✓ {gate}</li>)}
+                  </ul>
+                )}
+                {activeResult.dp.gates_missing.length > 0 && (
+                  <ul className="mt-2 space-y-1 text-sm text-warning">
+                    {activeResult.dp.gates_missing.map((gate) => <li key={gate}>· {gate}</li>)}
+                  </ul>
+                )}
+
+                <dl className="mt-5 space-y-3 border-t border-quiet pt-4 text-xs leading-5">
+                  <div>
+                    <dt className="font-semibold uppercase tracking-[0.1em] text-muted">Places</dt>
+                    <dd className="mt-1">{activeResult.dp.quota_note}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold uppercase tracking-[0.1em] text-muted">When</dt>
+                    <dd className="mt-1">{activeResult.dp.window_note}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold uppercase tracking-[0.1em] text-muted">
+                      What you commit to
+                    </dt>
+                    <dd className="mt-1">{activeResult.dp.obligation_note}</dd>
+                  </div>
+                </dl>
+
+                {activeResult.dp.funded_programmes.length > 0 ? (
+                  <p className="mt-4 text-sm">
+                    <span className="font-semibold">
+                      {activeResult.dp.funded_programmes.length} funded programmes
+                    </span>{" "}
+                    <span className="text-muted">
+                      in the countries your routes reach.
+                    </span>
+                  </p>
+                ) : (
+                  <p className="mt-4 text-sm leading-6 text-muted">
+                    {activeResult.dp.funded_programmes_explanation}
+                  </p>
+                )}
+              </div>
+
+              {/* D1.3: Results grouped in three groups: OPEN, UNLOCKABLE, BLOCKED */}
+              <p className="mt-8 text-sm text-muted">
+                {activeResult.plans.length} routes, soonest first.
               </p>
-              {result.scholarships.map((scholarship) => (
-                <ScholarshipCard key={scholarship.key} scholarship={scholarship} />
-              ))}
-            </section>
 
-            {result.blocked.length > 0 && (
-              <section className="mt-10 border-t border-line pt-6">
-                <p className="eyebrow">Closed to you right now</p>
-                <ul className="mt-4 space-y-2 text-sm leading-6 text-muted">
-                  {result.blocked.map((entry) => <li key={entry}>{entry}</li>)}
-                </ul>
+              {/* Group 1: OPEN routes */}
+              <section className="mt-6">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-serif text-2xl font-semibold">Open Routes</h3>
+                  <span className="status-tag status-available text-xs">Direct entry</span>
+                </div>
+                <p className="text-xs text-muted mt-1">
+                  Routes reachable right now with your current qualifications.
+                </p>
+
+                {openPlans.length === 0 ? (
+                  <div className="panel p-4 mt-3 text-sm text-muted">
+                    No direct entry routes in your selected destinations are open on this qualification alone.
+                    See the unlockable pathways below to open these destinations.
+                  </div>
+                ) : (
+                  openPlans.map((plan, idx) => (
+                    <PlanCard
+                      key={`open-${plan.hops.map((h) => h.key).join(">")}`}
+                      plan={plan}
+                      index={idx}
+                      budget={num(budget)}
+                      onTargetUniversity={handleTargetFromCard}
+                    />
+                  ))
+                )}
               </section>
-            )}
-          </>
-        )}
+
+              {/* Group 2: UNLOCKABLE routes */}
+              <section className="mt-10">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-serif text-2xl font-semibold">Unlockable Routes</h3>
+                  <span className="status-tag status-experimental text-xs">Pathways available</span>
+                </div>
+                <p className="text-xs text-muted mt-1">
+                  Routes that unlock with a preparatory year, foundation programme, or examination.
+                </p>
+
+                {unlockablePlans.length === 0 ? (
+                  <div className="panel p-4 mt-3 text-sm text-muted">
+                    No unlockable two-hop pathways recorded for these criteria.
+                  </div>
+                ) : (
+                  unlockablePlans.map((plan, idx) => (
+                    <PlanCard
+                      key={`unlockable-${plan.hops.map((h) => h.key).join(">")}`}
+                      plan={plan}
+                      index={openPlans.length + idx}
+                      budget={num(budget)}
+                      onTargetUniversity={handleTargetFromCard}
+                    />
+                  ))
+                )}
+              </section>
+
+              {/* D1.4: Persistent "Your score goes further here" section */}
+              {preferredDestinations.length > 0 && topOutsidePlans.length > 0 && (
+                <section className="mt-12 panel p-5 sm:p-7 border-l-4 border-accent">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={18} className="text-accent" />
+                    <h3 className="font-serif text-xl sm:text-2xl font-semibold">
+                      Your score goes further here
+                    </h3>
+                  </div>
+                  <p className="mt-1 text-sm text-muted">
+                    Destinations you didn&apos;t select where your qualification and scores already clear the bar or unlock pathways.
+                    AUSA never excludes options to prevent agency steering.
+                  </p>
+                  <div className="mt-4 space-y-4">
+                    {topOutsidePlans.map((plan, idx) => (
+                      <PlanCard
+                        key={`outside-${plan.hops.map((h) => h.key).join(">")}`}
+                        plan={plan}
+                        index={idx}
+                        budget={num(budget)}
+                        onTargetUniversity={handleTargetFromCard}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Prep year trade-off warning */}
+              {activeResult.prep_year_warning && (
+                <div className="notice-warning mt-8">
+                  <p className="font-semibold">One route costs you another option</p>
+                  <p className="mt-2 leading-6">{activeResult.prep_year_warning}</p>
+                </div>
+              )}
+
+              {/* Funding beyond state programme */}
+              <section className="mt-10 border-t border-line pt-6">
+                <p className="eyebrow">Funding beyond the state programme</p>
+                <p className="mt-3 text-sm leading-6 text-muted">
+                  {activeResult.scholarships_note}
+                </p>
+                {activeResult.scholarships.map((scholarship) => (
+                  <ScholarshipCard key={scholarship.key} scholarship={scholarship} />
+                ))}
+              </section>
+
+              {/* Group 3: BLOCKED routes */}
+              {activeResult.blocked.length > 0 && (
+                <section className="mt-10 border-t border-line pt-6">
+                  <p className="eyebrow">Closed to you right now</p>
+                  <ul className="mt-4 space-y-2 text-sm leading-6 text-muted">
+                    {activeResult.blocked.map((entry) => (
+                      <li key={entry} className="border-l-2 border-quiet pl-3 py-1">
+                        {entry}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
