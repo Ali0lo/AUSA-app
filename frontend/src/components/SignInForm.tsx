@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import { Notice } from "@/components/Notice";
 import { ServiceStatus } from "@/components/ServiceStatus";
 
 function safeDestination(value: string): string {
-  return value.startsWith("/") && !value.startsWith("//") ? value : "/match";
+  return value.startsWith("/") && !value.startsWith("//") ? value : "/plan";
 }
 
 function resultDestination(value: string | null, fallback: string): string {
@@ -25,7 +25,7 @@ function resultDestination(value: string | null, fallback: string): string {
 
 export function SignInForm({
   initialEmail = "",
-  callbackUrl = "/match",
+  callbackUrl = "/plan",
   initialError
 }: {
   initialEmail?: string;

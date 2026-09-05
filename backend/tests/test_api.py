@@ -40,34 +40,22 @@ async def test_health_check_endpoints():
 
 
 @pytest.mark.asyncio
-async def test_matching_evaluate_endpoint():
-    payload = {
-        "student": {
-            "gpa": 3.8,
-            "budget": 20000.0,
-            "ielts": 7.5,
-            "degree_level": "master",
-            "field_of_study": "Computer Science"
-        },
-        "program": {
-            "university_name": "TU Munich",
-            "program_name": "M.Sc. Informatics",
-            "degree_level": "master",
-            "min_gpa": 3.0,
-            "tuition_fee": 15000.0,
-            "currency": "EUR",
-            "min_ielts": 6.5
-        }
-    }
+async def test_the_weighted_match_percentage_endpoint_is_gone():
+    """`/matching/evaluate` returned an `overall_match_percentage` from hand-set weights
+    (0.50 academic / 0.30 budget / 0.20 language). Nobody could say where those weights
+    came from, which is what ADR-0001 removed and what the route engine replaced.
 
+    This asserts the absence rather than merely deleting the old test, because the failure
+    mode is re-introduction: a percentage is the obvious thing to add back when someone
+    wants a single number to sort by, and it would look like a feature rather than a
+    regression."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        res = await client.post("/api/v1/matching/evaluate", json=payload)
-        assert res.status_code == 200
-        data = res.json()
-        assert data["is_eligible"] is True
-        assert data["overall_match_percentage"] == 100.0
-        assert data["program_name"] == "M.Sc. Informatics"
-        assert "breakdown" in data
+        res = await client.post("/api/v1/matching/evaluate", json={})
+        assert res.status_code == 404
+
+    # Not every entry in app.routes carries a `path` -- an included sub-router does not.
+    paths = {getattr(route, "path", "") for route in app.routes}
+    assert not any("/matching" in path for path in paths)
 
 
 @pytest.mark.asyncio

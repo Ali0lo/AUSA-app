@@ -1,4 +1,4 @@
-import { ArrowLeft, Scale } from "lucide-react";
+import { ArrowLeft, Route } from "lucide-react";
 import Link from "next/link";
 
 export default function NotFound() {
@@ -10,7 +10,7 @@ export default function NotFound() {
         <p className="body-large mt-5">The link may be outdated. No hidden or unfinished page is available at this address.</p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link className="button-primary" href="/"><ArrowLeft size={17} aria-hidden="true" />Return home</Link>
-          <Link className="button-secondary" href="/match"><Scale size={17} aria-hidden="true" />Open matching</Link>
+          <Link className="button-secondary" href="/plan"><Route size={17} aria-hidden="true" />Plan my route</Link>
         </div>
       </div>
     </div>

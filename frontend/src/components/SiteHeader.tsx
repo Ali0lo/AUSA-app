@@ -7,10 +7,10 @@ import { useState } from "react";
 import { NavAuthButton } from "@/components/NavAuthButton";
 
 const navigation = [
-  // First, and deliberately. This is the one surface backed by the real route engine and
-  // real curated requirements; everything after it is the earlier prototype.
+  // First, and deliberately. This is the surface backed by the real route engine and real
+  // curated requirements, and since the weighted-score prototype was deleted it is also
+  // the only place a student gets an answer about universities.
   { href: "/plan", label: "Plan my route" },
-  { href: "/match", label: "Match" },
   { href: "/advisor", label: "AI advisor" },
   { href: "/application", label: "Application" },
   { href: "/applications", label: "My Tracker" }

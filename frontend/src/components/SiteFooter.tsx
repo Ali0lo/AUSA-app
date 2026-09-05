@@ -16,7 +16,7 @@ export function SiteFooter() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#d8d7d2]">Product</p>
           <div className="mt-4 flex flex-col items-start gap-3 text-sm">
-            <Link className="hover:text-[#e5a27e]" href="/match">Prototype matching</Link>
+            <Link className="hover:text-[#e5a27e]" href="/plan">Route planning</Link>
             <Link className="hover:text-[#e5a27e]" href="/advisor">AI advisor</Link>
             <Link className="hover:text-[#e5a27e]" href="/application">Application assistant</Link>
           </div>
