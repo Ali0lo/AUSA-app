@@ -6,18 +6,20 @@ supersedes the old one rather than editing it.
 
 | # | Decision | Status |
 |---|---|---|
-| [0001](0001-cutoff-prediction-replaces-weighted-scoring.md) | Cutoff prediction replaces weighted scoring | Accepted |
-| [0002](0002-per-country-models-and-normalization.md) | One model per country, normalize after prediction | Accepted |
+| [0001](0001-cutoff-prediction-replaces-weighted-scoring.md) | Cutoff prediction replaces weighted scoring | Accepted, **amended by 0008** |
+| [0002](0002-per-country-models-and-normalization.md) | One model per country, normalize after prediction | Accepted, **amended by 0008** |
 | [0003](0003-evaluation-protocol.md) | Temporal + cold-start evaluation against a persistence baseline | Accepted |
 | [0004](0004-batch-serving-and-explainability.md) | Batch-precomputed predictions, two-audience explanations | Accepted |
 | [0005](0005-scholarship-pass-precedes-budget-filter.md) | Scholarship matching runs before the budget filter | Accepted |
 | [0006](0006-admission-routes.md) | Programs accept several qualifications, not one | Accepted |
-| [0007](0007-three-number-model-and-honesty-tiers.md) | Three numbers, honesty tiers, and the LLM/ML contract | Accepted |
+| [0007](0007-three-number-model-and-honesty-tiers.md) | Three numbers, honesty tiers, and the LLM/ML contract | Accepted, **amended by 0008** |
+| [0008](0008-selectivity-replaces-cutoff-prediction.md) | Published cutoffs describe the domestic route, not our student | Accepted, **narrowed the same day** — the ML is Azerbaijan-only |
 
-**Start with [0001](0001-cutoff-prediction-replaces-weighted-scoring.md) for the central
-reframe and [0007](0007-three-number-model-and-honesty-tiers.md) for what the product
-actually is.** 0007 is the current spec; the five before it are the reasoning that
-produced it.
+**The current product spec is not an ADR.** It is
+[`../superpowers/specs/2026-08-31-route-first-advisor-design.md`](../superpowers/specs/2026-08-31-route-first-advisor-design.md),
+which supersedes 0007 §3–§4 and 0008 §1 and §4. These eight records are the reasoning trail
+that produced it — read them as history, not as instructions. Current status, and which
+document governs what, is in [`../PROJECT-STATE.md`](../PROJECT-STATE.md).
 
 ## Background
 
