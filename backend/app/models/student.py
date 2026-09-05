@@ -10,6 +10,11 @@ class Student(Base):
     email = Column(String(255), unique=True, index=True, nullable=True)
     hashed_password = Column(String(255), nullable=True)
     gpa = Column(Float, nullable=True)
+    # Stored as a pair with `gpa`, never alone: an attestat 4.5 is excellent out of 5 and
+    # impossible out of 4, and nothing but this column tells them apart. NULL means the
+    # scale is unknown, which `domain.grades.check_grade` reports as not-comparable rather
+    # than guessing one (ADR-0004).
+    gpa_scale = Column(String(10), nullable=True)
     ielts = Column(Float, nullable=True)
     toefl = Column(Integer, nullable=True)
     degree_level = Column(String(20), nullable=True)

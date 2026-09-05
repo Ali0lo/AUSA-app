@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -13,7 +13,8 @@ import { DegreeLevel, RegisterPayload } from "@/types";
 const initialProfile: RegisterPayload = {
   email: "",
   password: "",
-  gpa: 3.5,
+  gpa: 4.5,
+  gpa_scale: "5.0",
   budget: 15000,
   ielts: 7,
   toefl: 95,
@@ -36,7 +37,7 @@ export function RegisterForm() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (status === "authenticated") router.replace("/match");
+    if (status === "authenticated") router.replace("/plan");
   }, [router, status]);
 
   function update<K extends keyof RegisterPayload>(key: K, value: RegisterPayload[K]) {
@@ -68,7 +69,7 @@ export function RegisterForm() {
       const result = await signIn("credentials", {
         email: profile.email.trim(),
         password: profile.password,
-        callbackUrl: "/match",
+        callbackUrl: "/plan",
         redirect: false
       });
 
@@ -80,7 +81,7 @@ export function RegisterForm() {
         return;
       }
 
-      router.push("/match");
+      router.push("/plan");
       router.refresh();
     } catch (submitError) {
       setError(getUserFacingError(submitError, "Account creation"));
@@ -134,8 +135,20 @@ export function RegisterForm() {
           <legend className="font-serif text-2xl font-semibold">Academic profile</legend>
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
             <div>
-              <label className="field-label" htmlFor="register-gpa">GPA on a 4.0 scale</label>
-              <input id="register-gpa" className="field" type="number" required min="0" max="4" step="0.01" value={profile.gpa} onChange={(event) => update("gpa", Number(event.target.value))} />
+              <label className="field-label" htmlFor="register-gpa">Grade average</label>
+              <input id="register-gpa" className="field" type="number" required min="0" step="0.01" value={profile.gpa} onChange={(event) => update("gpa", Number(event.target.value))} />
+            </div>
+            <div>
+              {/* Asked, never assumed. The form used to hardcode "GPA on a 4.0 scale" and
+                  cap the input at 4, which rejected the 4.5-out-of-5 attestat most of our
+                  users actually hold. */}
+              <label className="field-label" htmlFor="register-gpa-scale">Which scale is that on?</label>
+              <select id="register-gpa-scale" className="field" required value={profile.gpa_scale} onChange={(event) => update("gpa_scale", event.target.value)}>
+                <option value="5.0">Out of 5 — Azerbaijani attestat</option>
+                <option value="100">Out of 100 — Azerbaijani or Turkish university</option>
+                <option value="4.0">Out of 4.0 — US-style GPA</option>
+                <option value="german">German 1.0–4.0 — lower is better</option>
+              </select>
             </div>
             <div>
               <label className="field-label" htmlFor="register-budget">Annual tuition budget</label>

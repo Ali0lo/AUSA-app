@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.security import create_access_token, get_password_hash, verify_password
+from app.domain.grades import KNOWN_SCALE_KEYS, resolve_scale
 from app.models.student import Student
-from app.schemas.matching import DegreeLevel, StudentProfile
+from app.schemas.common import DegreeLevel
 
 router = APIRouter(prefix="/auth", tags=["Authentication & User Management"])
 
@@ -40,8 +41,49 @@ class RegisterRequest(BaseModel):
     """
     email: str = Field(..., description="Student email address")
     password: str = Field(..., description="Password (min 6 characters)")
-    gpa: Optional[float] = Field(default=None, ge=0.0, le=4.0)
+    # No `le=4.0`. That bound was an assumption about which country the student went to
+    # school in, and it rejected the grade our own users hold: an Azerbaijani attestat
+    # average is out of 5, so a real 4.5 was refused as invalid at registration. The scale
+    # is what decides the valid range, so it is validated against `gpa_scale` below rather
+    # than against a hardcoded ceiling. Same rule `/routes/assess` already follows.
+    gpa: Optional[float] = Field(default=None, ge=0.0)
+    gpa_scale: Optional[str] = Field(
+        default=None,
+        description=f"Which scale the grade is on. One of: {', '.join(KNOWN_SCALE_KEYS)}. "
+                    f"Required whenever a grade is given -- a grade without its scale is "
+                    f"not a number.",
+    )
     budget: Optional[float] = Field(default=None, ge=0.0)
+
+    @model_validator(mode="after")
+    def grade_and_scale_travel_together(self) -> "RegisterRequest":
+        """A grade with no scale, and a scale with no grade, are both rejected.
+
+        Storing 4.5 with no scale would leave a row nobody can interpret later: is it an
+        excellent attestat or an impossible US GPA? And a value outside its own scale's
+        range is a typo or the wrong scale picked, which is worth saying now rather than
+        letting it silently fail every comparison downstream.
+        """
+        if self.gpa is not None and self.gpa_scale is None:
+            raise ValueError(
+                "gpa_scale is required when gpa is given. A grade without its scale cannot "
+                f"be compared to anything. One of: {', '.join(KNOWN_SCALE_KEYS)}."
+            )
+        if self.gpa_scale is not None:
+            scale = resolve_scale(self.gpa_scale)
+            if scale is None:
+                raise ValueError(
+                    f"gpa_scale {self.gpa_scale!r} is not a scale we know. "
+                    f"One of: {', '.join(KNOWN_SCALE_KEYS)}."
+                )
+            if self.gpa is None:
+                raise ValueError("gpa_scale was given without a gpa.")
+            if not scale.floor <= self.gpa <= scale.ceiling:
+                raise ValueError(
+                    f"gpa {self.gpa} is outside the {scale.key} scale "
+                    f"({scale.floor}-{scale.ceiling}): {scale.description}."
+                )
+        return self
     ielts: Optional[float] = Field(default=None, ge=0.0, le=9.0)
     toefl: Optional[int] = Field(default=None, ge=0, le=120)
     degree_level: Optional[DegreeLevel] = Field(default=None)
@@ -59,6 +101,9 @@ class StudentUserResponse(BaseModel):
     id: int
     email: Optional[str] = None
     gpa: Optional[float] = None
+    # Always sent beside the grade. A client that renders 4.5 without knowing it is out of
+    # 5 will draw it against a 4.0 bar and show the student a failure they do not have.
+    gpa_scale: Optional[str] = None
     budget: Optional[float] = None
     ielts: Optional[float] = None
     toefl: Optional[int] = None
@@ -141,6 +186,7 @@ async def register(
             email=payload.email,
             hashed_password=hashed_pwd,
             gpa=payload.gpa,
+            gpa_scale=payload.gpa_scale,
             budget=str(payload.budget) if payload.budget is not None else None,
             ielts=payload.ielts,
             toefl=payload.toefl,
@@ -192,6 +238,7 @@ async def get_me(
         id=current_student.id,
         email=current_student.email,
         gpa=current_student.gpa,
+        gpa_scale=current_student.gpa_scale,
         budget=budget_val,
         ielts=current_student.ielts,
         toefl=current_student.toefl,

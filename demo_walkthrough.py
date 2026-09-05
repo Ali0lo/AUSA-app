@@ -28,6 +28,10 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 from app.core.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models.dp_catalogue import DPCatalogueEntry  # noqa: E402
+from app.models.qualifications import ProgramRequirement  # noqa: E402
+from scripts.load_program_requirements import load_program_requirements  # noqa: E402
+
+CURATED_REQUIREMENTS = REPO / "data" / "curation" / "program_requirements_2026.csv"
 
 COUNTRY = {
     "Türkiyə Respublikası": "TR",
@@ -86,11 +90,15 @@ async def main():
         poolclass=StaticPool,
     )
     async with engine.begin() as conn:
-        # Only the table this endpoint reads. Creating all of Base.metadata would pull in
+        # Both tables this endpoint reads. Creating all of Base.metadata would pull in
         # Document, whose JSONB and Vector(1536) columns SQLite cannot render -- the same
-        # reason the test suite passes an explicit `tables=` list.
+        # reason the test suite passes an explicit `tables=` list. Every table the endpoint
+        # touches must be named here: /routes/assess queries program_requirements to answer
+        # WHICH universities a plan reaches, so omitting it is not a thinner demo, it is an
+        # OperationalError.
         await conn.run_sync(
-            Base.metadata.create_all, tables=[DPCatalogueEntry.__table__]
+            Base.metadata.create_all,
+            tables=[DPCatalogueEntry.__table__, ProgramRequirement.__table__],
         )
     Session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -104,6 +112,16 @@ async def main():
     print(f"  {in_scope:,} in our six target countries")
     print(f"  {len(rows) - in_scope:,} in the other 27 countries "
           f"{DIM}(country_code NULL -- not guessed){OFF}")
+
+    # The curated requirements, through the production loader rather than a demo-only
+    # parser -- so a row this demo shows is a row the real load would have written.
+    if not CURATED_REQUIREMENTS.exists():
+        print(f"{RED}Missing {CURATED_REQUIREMENTS}{OFF}")
+        sys.exit(1)
+    async with Session() as s:
+        summary = await load_program_requirements(s, CURATED_REQUIREMENTS)
+    print(f"  {summary['total']} curated university requirement rows "
+          f"{DIM}(hand-read from official pages; none human-verified yet){OFF}")
 
     async def override():
         async with Session() as s:
@@ -152,6 +170,23 @@ async def main():
     for key in data["blocked"]:
         print(f"  {RED}BLOCKED{OFF}     {key}")
 
+    # The join the product's claim rests on: a plan does not stop at a country, it lands on
+    # named universities whose own pages document accepting the qualification that plan
+    # delivers. Two plans can end in the same country and reach DIFFERENT universities.
+    rule("Which universities each open plan actually reaches")
+    for plan in data["plans"]:
+        if plan["status"] != "open":
+            continue
+        path = " → ".join(h["key"] for h in plan["hops"])
+        unis = plan["universities"]
+        print(f"  {BOLD}{path}{OFF}  {DIM}delivers {plan['qualification_delivered']}{OFF}")
+        if unis:
+            for u in unis:
+                print(f"      {GREEN}•{OFF} {u['university_name'][:46]:<46} "
+                      f"{DIM}{u['provenance']}{OFF}")
+        else:
+            print(f"      {AMBER}—{OFF} {DIM}{plan['universities_explanation']}{OFF}")
+
     rule("State Programme funding")
     dp = data["dp"]
     tint = GREEN if dp["status"] == "open" else AMBER
@@ -180,7 +215,16 @@ async def main():
     print(f"  answered with an invented number.{OFF}\n")
     print(f"  admission_probability   {BOLD}null{OFF}  {DIM}— never estimated where admission is not mechanical{OFF}")
     print(f"  per-programme deadline  {BOLD}absent{OFF}  {DIM}— no verified source is wired in{OFF}")
-    print(f"  requirements for 5 of 6 countries  {BOLD}unknown{OFF}  {DIM}— curation has not started{OFF}")
+    # Counted from the response, not asserted. A hardcoded count goes stale the moment a
+    # curator adds a country, and then this section -- the one about honesty -- is the
+    # inaccurate one.
+    uncollected = sorted({
+        plan["destination_country"] for plan in data["plans"]
+        if plan["universities_status"] == "no_requirements_collected_for_this_country_yet"
+    })
+    if uncollected:
+        print(f"  requirements for {', '.join(uncollected)}  {BOLD}unknown{OFF}  "
+              f"{DIM}— not collected yet, which is our gap and not their answer{OFF}")
     print(f"\n  {DIM}An unknown never reads as permission. A blank is a labelled")
     print(f"  absence and is never filled by estimation.{OFF}")
 

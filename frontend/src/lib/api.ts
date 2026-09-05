@@ -4,11 +4,8 @@ import type {
   AssessRoutesResponse,
   ChatMessageResponse,
   DocumentSourceInfo,
-  FactorScoreDetail,
   FlaggedProgram,
   HealthResponse,
-  MatchResult,
-  ProgramRequirements,
   RegisterPayload,
   RoutePlan,
   RouteUniversity,
@@ -140,17 +137,6 @@ function authHeaders(token?: string): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function isFactor(value: unknown): value is FactorScoreDetail {
-  return (
-    isRecord(value) &&
-    isNumber(value.score) &&
-    isNumber(value.weight) &&
-    isNumber(value.weighted_score) &&
-    typeof value.passed_hard_filter === "boolean" &&
-    typeof value.explanation === "string"
-  );
-}
-
 function isSource(value: unknown): value is DocumentSourceInfo {
   return (
     isRecord(value) &&
@@ -192,24 +178,6 @@ function assertStudent(data: unknown): asserts data is StudentAccountProfile {
 function assertToken(data: unknown): asserts data is { access_token: string; token_type: string } {
   if (!isRecord(data) || typeof data.access_token !== "string" || typeof data.token_type !== "string") {
     invalidResponse("account registration");
-  }
-}
-
-function assertMatch(data: unknown): asserts data is MatchResult {
-  if (
-    !isRecord(data) ||
-    typeof data.program_name !== "string" ||
-    typeof data.university_name !== "string" ||
-    !isNumber(data.overall_match_percentage) ||
-    typeof data.is_eligible !== "boolean" ||
-    !isStringArray(data.ineligibility_reasons) ||
-    !isRecord(data.breakdown) ||
-    !isFactor(data.breakdown.degree_level) ||
-    !isFactor(data.breakdown.academic) ||
-    !isFactor(data.breakdown.budget) ||
-    !isFactor(data.breakdown.language)
-  ) {
-    invalidResponse("prototype matching");
   }
 }
 
@@ -453,23 +421,6 @@ export async function registerStudent(payload: RegisterPayload): Promise<{ acces
     body: JSON.stringify(payload)
   });
   assertToken(data);
-  return data;
-}
-
-export async function fetchMatchScore(
-  student: StudentProfile,
-  program: ProgramRequirements,
-  token?: string
-): Promise<MatchResult> {
-  const data = await request<unknown>("/matching/evaluate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(token)
-    },
-    body: JSON.stringify({ student, program })
-  });
-  assertMatch(data);
   return data;
 }
 

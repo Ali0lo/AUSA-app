@@ -1,8 +1,7 @@
-import { ArrowRight, BookOpenText, FileCheck2, Route, Scale } from "lucide-react";
+import { ArrowRight, BookOpenText, FileCheck2, Route } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FeatureTag } from "@/components/FeatureTag";
-import { LandingSearch } from "@/components/LandingSearch";
 
 const capabilities = [
   {
@@ -11,13 +10,6 @@ const capabilities = [
     href: "/plan",
     state: "available" as const,
     icon: Route
-  },
-  {
-    title: "Prototype matching",
-    description: "Enter a student profile, select one of the existing demo programmes, and receive the backend's current compatibility breakdown.",
-    href: "/match",
-    state: "demo" as const,
-    icon: Scale
   },
   {
     title: "Grounded AI advisor",
@@ -70,17 +62,6 @@ export default function HomePage() {
               <span className="text-sm text-[#deddd8]">Free, and no account needed.</span>
             </div>
 
-            <div className="mt-9 border-t border-[#5d5f59] pt-7">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#c7c6c1]">
-                Or search the earlier demo catalogue
-              </p>
-              <div className="mt-4">
-                <LandingSearch />
-              </div>
-              <p className="mt-3 text-xs leading-5 text-[#c7c6c1]">
-                Search covers three frontend demo programmes. Route planning above uses the real curated catalogue.
-              </p>
-            </div>
           </div>
         </div>
       </section>
