@@ -8,7 +8,7 @@ request that omits the two required fields is rejected by FastAPI's validation b
 function runs at all -- there is no profile to invent it from.
 """
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.domain.routes import StudentRouteProfile
+from app.services.agent.intake import intake_as_dict, parse_intake
 from app.services.dp_eligibility import (
     any_funded_programmes_at_level,
     assess_dp_eligibility,
@@ -88,6 +89,50 @@ class AssessRoutesPayload(BaseModel):
         description="One of: 5.0 (Azerbaijani attestat), 100, 4.0, german. "
                     "A grade sent without one is reported as not comparable, never assumed.",
     )
+
+
+class ParseMessagePayload(BaseModel):
+    message: str = Field(
+        ..., min_length=1, max_length=4000,
+        description="What the student wrote, in Azerbaijani or English, verbatim.",
+    )
+
+
+class HeardField(BaseModel):
+    """One field read out of the message, and the words it was read from.
+
+    The quote is the point. A student who is told "I understood your DİM score as 520"
+    beside their own sentence can correct a misreading; one handed a filled-in form cannot
+    see there was a reading at all.
+    """
+    field: str
+    value: Any
+    quote: str
+
+
+class ParseMessageResponse(BaseModel):
+    """A reading, not a decision.
+
+    `fields` holds only what the message supports and is fed straight to `/routes/assess`
+    once `ready_to_assess` is true. Everything else on this model exists so the caller can
+    ask instead of assume: `conflicts` for a value stated twice, `still_needed` for the two
+    fields the engine requires, `worth_asking` for gates that stay unknown without them, and
+    `not_parsed` for fields no pattern here reads at all.
+    """
+    fields: Dict[str, Any]
+    heard: List[HeardField]
+    conflicts: List[str]
+    # The subject the student named, carried through uninterpreted. It is not a DİM ixtisas
+    # qrupu and must not be turned into one: the Dövlət Proqramı threshold is 400 for Group
+    # 1 and 550 otherwise, so deriving the group from the word "robotics" would move a real
+    # gate by 150 points on the strength of a guess.
+    interest: Optional[str]
+    ready_to_assess: bool
+    still_needed: List[str]
+    worth_asking: List[str]
+    not_parsed: List[str]
+    notes: List[str]
+    instruction: str
 
 
 class ProofOfFundsResponse(BaseModel):
@@ -300,6 +345,24 @@ def _reachable_countries(plans: List[RoutePlanResponse]) -> tuple[str, ...]:
     its DP-funded programmes silently vanish from the response with no error and no test
     noticing (see the review report's mutation M3, and test_routes_reachable.py)."""
     return tuple({hop.country_code for plan in plans for hop in plan.hops})
+
+
+@router.post(
+    "/parse",
+    response_model=ParseMessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Read a student's own sentence into the fields /assess takes",
+)
+async def parse(payload: ParseMessagePayload) -> ParseMessageResponse:
+    """Free text in, a partial `/assess` payload out.
+
+    Deliberately a separate call rather than a `message` field on `/assess`: reading and
+    assessing are two decisions and the student gets to see the first before we act on it.
+    `fields` is partial by design -- when `ready_to_assess` is false it is missing something
+    only the student can supply, and the caller must ask for `still_needed` rather than fill
+    it in. No database, no session, no state.
+    """
+    return ParseMessageResponse(**intake_as_dict(parse_intake(payload.message)))
 
 
 @router.post(

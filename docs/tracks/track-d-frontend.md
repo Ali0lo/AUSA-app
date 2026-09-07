@@ -44,6 +44,11 @@ One profile step, results refining live, never empty before input.
 5. Rank by **total cost to degree** — `total_cost_azn_low/high` plus `time_cost_months`. Note
    this only becomes meaningful once Track A fills tuition in; until then show the route cost
    and label what is missing rather than showing a total that omits tuition silently.
+6. **A sentence is a valid way in.** `POST /routes/parse` turns *"robototexnika oxumaq
+   istəyirəm, DİM balım 520, IELTS 7"* into the same fields the form collects, with no API
+   key and no language model. Render `heard` — each value beside the student's own words —
+   as a form they can correct, never as a silent prefill; then ask for `still_needed` and
+   `worth_asking`. `conflicts` and `notes` are questions to put to the student, not errors.
 
 **Done when:** the spec's walkthrough profile — attestat, DİM 520, IELTS 7.0, bachelor,
 8,000 AZN/year — renders Turkey and Poland OPEN, Germany and the UK BLOCKED with both

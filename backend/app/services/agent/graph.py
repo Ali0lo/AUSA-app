@@ -3,6 +3,7 @@ from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
+from app.services.agent.intake import intake_tools
 from app.services.agent.route_tools import route_tools
 from app.services.agent.state import AgentState
 from app.services.agent.tools import extract_and_update_profile, tools as document_tools
@@ -10,7 +11,7 @@ from app.services.agent.tools import extract_and_update_profile, tools as docume
 # The route tools come first in the list because they answer the product's actual question.
 # Until they were added the assistant could see documents and nothing else -- not a route,
 # not a funding gate, not the catalogue -- so it could not answer "where can I go" at all.
-tools = route_tools + document_tools
+tools = route_tools + intake_tools + document_tools
 
 SYSTEM_PROMPT = (
     "You are AUSA, an advisor for Azerbaijani students who want to study abroad. You answer "
@@ -19,8 +20,16 @@ SYSTEM_PROMPT = (
     "TOOLS. `assess_student_routes` finds which routes are open, unlockable or blocked. "
     "`describe_route_requirements` says what one route needs and where that was read. "
     "`list_funding_options` checks every funder's published gates. `explain_funding_gate` "
-    "explains one award. You also have document tools for uploaded transcripts; whenever a "
-    "user provides document text you MUST invoke `extract_and_update_profile`.\n"
+    "explains one award. `read_student_message` reads a student's own sentence into those "
+    "tools' fields and quotes the words each value came from. You also have document tools "
+    "for uploaded transcripts; whenever a user provides document text you MUST invoke "
+    "`extract_and_update_profile`.\n"
+    "\n"
+    "READ BACK BEFORE YOU ASSESS. When a student describes themselves in prose, call "
+    "`read_student_message` first, tell them what you understood using its quotes, and ask "
+    "for whatever is in `still_needed`. Its `interest` field is the subject they named, "
+    "carried through as plain text: it is not a DİM ixtisas qrupu and you must never turn it "
+    "into one, because the Dövlət Proqramı threshold moves 150 points between groups.\n"
     "\n"
     "PASS ONLY WHAT THE STUDENT TOLD YOU. Never fill a score, an age or a grade from "
     "context, from what is typical, or from an earlier different student. A field you omit "
