@@ -1,5 +1,5 @@
-from typing import List
-from pydantic import Field, model_validator
+from typing import Any, List
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Committed development-only key. Safe for local work, never for a deployment --
@@ -15,6 +15,16 @@ class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug(cls, v: Any) -> bool:
+        if isinstance(v, str):
+            if v.lower() in {"release", "prod", "production", "0", "false", "no", "off"}:
+                return False
+            if v.lower() in {"debug", "dev", "development", "1", "true", "yes", "on"}:
+                return True
+        return bool(v)
 
     # JWT Authentication Security
     SECRET_KEY: str = Field(

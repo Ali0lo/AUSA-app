@@ -49,7 +49,7 @@ async def get_current_user(
     # invented profile that then drove matching.
     try:
         result = await db.execute(stmt)
-    except SQLAlchemyError as exc:
+    except (SQLAlchemyError, OSError) as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Authentication is temporarily unavailable.",
