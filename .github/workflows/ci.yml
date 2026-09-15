@@ -47,7 +47,7 @@ jobs:
 
       - name: Run Pytest Test Suite
         env:
-          PYTHONPATH: backend
+          PYTHONPATH: .
           DEBUG: "true"
           ENVIRONMENT: "testing"
           SECRET_KEY: "testing_secret_key_ci_cd_pipeline_2026"
