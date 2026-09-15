@@ -12,6 +12,7 @@
 | **C3** | The weighted match score deleted front to back | `367b22a` |
 | **C4** | `students.gpa` carries its scale; a 4.5/5 attestat can register | `e0dd0cd` |
 | **C2.1** | Four tools over the route engine and the funding catalogue | `907e8b4` |
+| **C2.2** | Free-text intake, plus `POST /routes/parse` | *this branch* |
 | **C2.3** | The numeral guard | `907e8b4` |
 | **C2.4** | System prompt rewritten around the contract and the DİM boundary | `907e8b4` |
 
@@ -19,7 +20,7 @@ C1 surfaced a finding now carried as Track A's first task: the prep-year path to
 resolves to **zero universities**, because all three curated German rows are
 `feststellungspruefung`.
 
-**Still open in C2: step 2 (free-text intake) and step 5 (the process library).**
+**Still open in C2: step 5 (the process library).**
 `services/agent/route_tools.py` also does not reach the universities a plan lands on —
 `university_requirements` needs a database session and those tools are deliberately sync
 and I/O-free, so a caller that needs universities calls `POST /routes/assess`.
@@ -62,24 +63,48 @@ computes anything new; that is the point.
 | Tool | Wraps | Answers |
 |---|---|---|
 | `assess_student_routes` | `services/route_engine.assess_routes` + `compose_two_hop` | *"Where can I go?"* |
-| `explain_blocked_route` | the `missing` list on a blocked route | *"Why is Germany closed to me?"* |
+| `describe_route_requirements` | one `Route` in `domain/route_definitions` | *"Why is Germany closed to me?"* |
 | `list_funding_options` | `services/scholarship_eligibility` + `services/dp_eligibility` | *"What can I get funded?"* |
 | `explain_funding_gate` | one scholarship's `gates_missing` / `gates_blocked` / `gates_unknown` | *"Why not Chevening?"* |
-| `universities_on_route` | `services/university_requirements` | *"Which universities, and what do they want?"* |
+
+A fifth, `universities_on_route` over `services/university_requirements`, is **not built**:
+that service needs a database session and these tools are deliberately sync and I/O-free.
+`POST /routes/assess` already returns the universities, so that is the call to make.
 
 **Keep `gates_unknown` separate from `gates_missing` in every rendering.** A missing gate is
 work the student can do; an unknown gate is a fact they can tell us or a source we have to
 read. Merging them in prose is the same error as merging them in the API, and neither ever
 counts as open.
 
-**2 · Free-text intake** ← **next** — *"I want to study robotics, I have DİM 520 and IELTS 7"*
+**2 · Free-text intake** ✅ — `backend/app/services/agent/intake.py`, `POST /routes/parse`
 
 Maps free text onto the `AssessRoutesPayload` fields. This is the "based on own interest"
 half of the product: there is no field taxonomy a 17-year-old knows.
 
 **Anything the student did not say stays `None`.** Not a default, not an inference from
 context. This is the exact site where `extract_and_update_profile` used to invent GPA 3.8 and
-IELTS 7.5 from an unparseable transcript and report success.
+IELTS 7.5 from an unparseable transcript and report success — so this is deliberately regular
+expressions, not a model: **every value is anchored to a token naming its field.** `520`
+becomes a DİM score because the word DİM is beside it, never because 520 looks like one, and
+a message of bare numerals yields nothing.
+
+Four places a helpful parser would lie, and what this one does instead:
+
+| Input | It does not | It does |
+|---|---|---|
+| "robotics" | infer `dim_field_group=1` | carry `interest` as text and ask for the group |
+| "IELTS 6.5 … then 7" | take the higher | report `conflicts`, set nothing |
+| "my GPA is 4.5" | assume a 4.0 scale | note the missing scale and ask |
+| "8000 AZN saved" | read it as a yearly budget | require "per year" beside it |
+
+The subject → field group one is the load-bearing case: the Dövlət Proqramı threshold is 400
+for Group 1 and 550 otherwise, so guessing the group from a word moves a real gate by 150
+points.
+
+`POST /routes/parse` exists so this is reachable with **no API key and no language model** —
+which is what lets Track D ship a paste-a-paragraph entry instead of a form. It returns
+`heard`, quoting the student's own words behind each value, so a misreading is correctable
+before it is acted on.
 
 **3 · The numeral guard** ✅ — `backend/app/services/agent/numerals.py`
 

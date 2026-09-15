@@ -5,6 +5,7 @@
 - [x] **D2: Target Flow** — Name university, objective gap statements, requirement checklist, process checklist, deadlines, alternatives closing gap, honest uncurated fallback, speculative study plan excluded.
 - [x] **D3: Make Absence Visible** — `unknown_fields` + `not_stated`, distinguish catalogue gap vs country finding, separate `gates_unknown` vs `gates_missing`, `provenance` + `last_checked` on every row, warn on `grade_exact: false`.
 - [x] **D4: Report & README Pass** — Update `README.md`, create `docs/PROJECT-REPORT.md` quoting the four verified limitations verbatim.
+- [ ] **D5: Free-text entry** — `POST /routes/parse` shipped after this brief was closed; the page for it has not been built.
 
 ---
 
@@ -44,10 +45,25 @@ One profile step, results refining live, never empty before input.
 5. Rank by **total cost to degree** — `total_cost_azn_low/high` plus `time_cost_months`. Note
    this only becomes meaningful once Track A fills tuition in; until then show the route cost
    and label what is missing rather than showing a total that omits tuition silently.
-
 **Done when:** the spec's walkthrough profile — attestat, DİM 520, IELTS 7.0, bachelor,
 8,000 AZN/year — renders Turkey and Poland OPEN, Germany and the UK BLOCKED with both
 unlocks named and costed, and the funded programme set with the band that decided it.
+
+### D5 · A sentence is a valid way in — half a day, **not started**
+
+Arrived after this brief was closed, so it is a new step rather than part of D1.
+`POST /routes/parse` turns *"robototexnika oxumaq istəyirəm, DİM balım 520, IELTS 7"* into
+the same fields the discovery form collects — **with no API key and no language model**, so
+it is an ordinary fetch, not a chat feature.
+
+Render `heard` as a filled form the student can correct, each value beside the words it was
+read from; never as a silent prefill, because a misreading nobody can see is worse than a
+blank field. Then ask for `still_needed` and `worth_asking`. `conflicts` and `notes` are
+questions to put to the student, not errors to show as failures.
+
+`interest` is the subject they named, carried through as plain text. Display it, do not map
+it: it is not a DİM ixtisas qrupu, and the Dövlət Proqramı threshold moves 150 points between
+groups.
 
 ### D2 · Target — 1.5 days
 
