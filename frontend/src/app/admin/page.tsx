@@ -1,6 +1,7 @@
 "use client";
+import { CatalogueReview } from "@/components/CatalogueReview";
 
-import { CheckCircle2, Edit3, ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
+import { CheckCircle2, Edit3, ExternalLink, RefreshCw } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { FeatureTag } from "@/components/FeatureTag";
@@ -36,7 +37,13 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    void loadData();
+    let active = true;
+    fetchFlaggedPrograms(token).then((data) => {
+      if (active) { setPrograms(data); setError(null); }
+    }).catch((err) => {
+      if (active) { setPrograms([]); setError(getUserFacingError(err, "Admin flagged programs curation")); }
+    }).finally(() => { if (active) setIsLoading(false); });
+    return () => { active = false; };
   }, [token]);
 
   function openEditModal(program: FlaggedProgram) {
@@ -47,10 +54,10 @@ export default function AdminPage() {
       degree_level: program.degree_level || "master",
       field: program.field || "",
       country: program.country || "",
-      min_gpa: program.min_gpa ?? 3.0,
-      min_ielts: program.min_ielts ?? 6.5,
-      tuition_fee: program.tuition_fee ?? 0,
-      currency: program.currency || "USD",
+      min_gpa: program.min_gpa ?? undefined,
+      min_ielts: program.min_ielts ?? undefined,
+      tuition_fee: program.tuition_fee ?? undefined,
+      currency: program.currency || undefined,
       dim_score_required: program.dim_score_required ?? undefined,
       requires_studienkolleg: program.requires_studienkolleg ?? false,
     });
@@ -84,7 +91,7 @@ export default function AdminPage() {
           </div>
           <h1 className="page-heading mt-4">Review and verify low-confidence scraped programs.</h1>
           <p className="body-large mt-5">
-            Automated ingestion scripts flag any scraped record with a confidence score under 85%. Human verification guarantees data accuracy before publication.
+            Automated ingestion scripts flag any scraped record with a confidence score under 85%. Source review records who checked the data and when.
           </p>
         </div>
         <ServiceStatus />
@@ -92,7 +99,7 @@ export default function AdminPage() {
 
       <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
         <Notice title="Human Verification Guardrail Enabled" tone="warning">
-          Unverified low-confidence data is kept hidden from student matching until an administrator checks and approves the record.
+          Admission catalogue rows show their review status. Approve only facts you have checked against the cited sources.
         </Notice>
         <button
           type="button"
@@ -104,6 +111,8 @@ export default function AdminPage() {
           {isLoading ? "Refreshing" : "Refresh queue"}
         </button>
       </div>
+
+      <CatalogueReview token={token} />
 
       {successMessage && (
         <div className="mt-6 flex items-center gap-3 border border-success bg-[#f2f9f4] p-4 text-sm font-semibold text-success" role="status">

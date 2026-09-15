@@ -8,10 +8,12 @@ request that omits the two required fields is rejected by FastAPI's validation b
 function runs at all -- there is no profile to invent it from.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Literal
+from dataclasses import replace
+import json
 
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -39,17 +41,18 @@ router = APIRouter(prefix="/routes", tags=["Route Planning"])
 
 
 class AssessRoutesPayload(BaseModel):
-    level_sought: str = Field(..., description="'bachelor' or 'master'")
-    qualification_held: str = Field(..., description="attestat, one_year_university, bachelor_degree, a_level, ib")
-    dim_score: Optional[float] = None
-    ielts: Optional[float] = None
-    toefl: Optional[int] = None
-    sat: Optional[int] = None
-    act: Optional[int] = None
-    tr_yos: Optional[float] = None
-    test_as: Optional[float] = None
-    csca: Optional[float] = None
-    hsk: Optional[int] = None
+    model_config = ConfigDict(allow_inf_nan=False)
+    level_sought: Literal["bachelor", "master"]
+    qualification_held: Literal["attestat", "one_year_university", "bachelor_degree", "a_level", "ib", "foundation_year", "feststellungspruefung"]
+    dim_score: Optional[float] = Field(None, ge=0, le=700)
+    ielts: Optional[float] = Field(None, ge=0, le=9)
+    toefl: Optional[int] = Field(None, ge=0, le=120)
+    sat: Optional[int] = Field(None, ge=0, le=1600)
+    act: Optional[int] = Field(None, ge=0, le=36)
+    tr_yos: Optional[float] = Field(None, ge=0, le=500)
+    test_as: Optional[float] = Field(None, ge=0)
+    csca: Optional[float] = Field(None, ge=0)
+    hsk: Optional[int] = Field(None, ge=0, le=9)
     language_certificate_level: Optional[str] = None
     has_international_olympiad_medal: Optional[bool] = None
     # 1-4. The Dövlət Proqramı's DİM threshold is 400 for Group 1 and 550 for every other
@@ -75,7 +78,7 @@ class AssessRoutesPayload(BaseModel):
         description="Your employer, if any. Only used to check employment-gated awards "
                     "such as SOCAR's, which is closed to everyone outside the group.",
     )
-    budget_azn_per_year: Optional[float] = None
+    budget_azn_per_year: Optional[float] = Field(None, ge=0)
     # The grade average of the qualification named in `qualification_held`: the attestat for
     # a school-leaver, the bachelor's degree for a master's applicant. Deliberately NOT
     # bounded to 0-4.0 the way `students.gpa` is -- that bound rejects an Azerbaijani
@@ -152,6 +155,15 @@ class UniversityResponse(BaseModel):
     provenance: str
     source_url: str
     last_checked: Optional[str]
+    id: Optional[int] = None
+    level: Optional[str] = None
+    requirement_scope: str = "general"
+    language_of_instruction: Optional[str] = None
+    living_cost_estimate_per_year: Optional[float] = None
+    evidence: List[dict] = Field(default_factory=list)
+    checks: List[str] = Field(default_factory=list)
+    application_status: str = "needs_review"
+    verified_at: Optional[str] = None
 
 
 class RoutePlanResponse(BaseModel):
@@ -179,6 +191,7 @@ class FundedProgrammeResponse(BaseModel):
     university_name: str
     program_name: str
     source_url: str
+    intake_year: Optional[int] = None
 
 
 class DPEligibilityResponse(BaseModel):
@@ -280,7 +293,7 @@ def _university_response(match) -> UniversityResponse:
             row.application_deadline.isoformat() if row.application_deadline else None
         ),
         application_portal=row.application_portal,
-        notes=row.documents_required,
+        notes="\n".join(v for v in (row.notes, row.documents_required) if v) or None,
         unknown_fields=list(match.unknown_fields),
         not_stated=missing_requirement_note(match.unknown_fields),
         grade_verdict=match.grade.verdict,
@@ -289,6 +302,15 @@ def _university_response(match) -> UniversityResponse:
         provenance=row.provenance,
         source_url=row.source_url,
         last_checked=row.last_checked.isoformat() if row.last_checked else None,
+        id=row.id,
+        level=row.level,
+        requirement_scope=row.requirement_scope or "general",
+        language_of_instruction=row.language_of_instruction,
+        living_cost_estimate_per_year=row.living_cost_estimate_per_year,
+        evidence=json.loads(row.evidence) if row.evidence else [],
+        checks=list(match.checks),
+        application_status=match.application_status,
+        verified_at=row.verified_at.isoformat() if row.verified_at else None,
     )
 
 
@@ -323,13 +345,14 @@ async def assess(
     # One lookup per distinct (country, qualification) pair rather than one per plan.
     # Several plans routinely end in the same place -- the direct UK route and the prep-year
     # UK route both finish in GB -- and they would each issue the same two queries.
-    seen_destinations: dict[tuple[str, str], tuple[list, str, str]] = {}
+    seen_destinations: dict[tuple[str, str, str | None], tuple[list, str, str]] = {}
     plans: List[RoutePlanResponse] = []
 
     for plan in compose_two_hop(profile):
         destination = plan.hops[-1].country_code
         delivered = qualification_delivered(plan, profile)
-        cache_key = (destination, delivered)
+        language = "Chinese" if any(h.key == "cn-bachelor-csc" for h in plan.hops) else None
+        cache_key = (destination, delivered, language)
 
         if cache_key not in seen_destinations:
             matches = await universities_accepting(
@@ -339,6 +362,8 @@ async def assess(
                 qualification=delivered,
                 student_gpa=profile.gpa,
                 student_gpa_scale=profile.gpa_scale,
+                profile=replace(profile, qualification_held=delivered),
+                language=language,
             )
             # Only ask the existence question when it can change the answer.
             any_curated = (
@@ -417,6 +442,9 @@ async def assess(
         else False
     )
     funded_status, funded_explanation = describe_funded_programmes(funded, reachable, any_at_level)
+    if not funded and reachable and not any_at_level:
+        funded_status = "catalogue_unavailable"
+        funded_explanation = "The DP catalogue for this level has not been loaded. Funding coverage is unavailable; an empty store does not mean that the programme funds nothing."
 
     # The other nine funders. Given the same `reachable` set the DP catalogue query uses, so
     # an award is never offered for a country this profile has no way to enter -- and so
@@ -462,6 +490,7 @@ async def assess(
                     university_name=row.university_name,
                     program_name=row.program_name,
                     source_url=row.source_url,
+                    intake_year=row.intake_year,
                 )
                 for row in funded
             ],

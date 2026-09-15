@@ -147,7 +147,7 @@ def _natural_key(level, country_source, university_name, program_name, intake_ye
     )
 
 
-async def load_csv(session: AsyncSession, path: Path, source_url: str) -> int:
+async def load_csv(session: AsyncSession, path: Path, source_url: str, *, commit: bool = True) -> int:
     """Insert rows not already present. Returns the number inserted."""
     rows = rows_from_csv(path, source_url)
 
@@ -178,7 +178,10 @@ async def load_csv(session: AsyncSession, path: Path, source_url: str) -> int:
         existing.add(key)
         inserted += 1
 
-    await session.commit()
+    if commit:
+        await session.commit()
+    else:
+        await session.flush()
     return inserted
 
 

@@ -105,7 +105,7 @@ export function ApplicationTracker({ initialApplications, token, onRefresh }: Ap
 
                       {app.notes && (
                         <p className="mt-2 text-xs italic leading-5 text-muted border-l-2 border-accent/50 pl-2">
-                          "{app.notes}"
+                          &quot;{app.notes}&quot;
                         </p>
                       )}
 

@@ -78,7 +78,7 @@ test("the deleted matching page is a 404 with a working exit, not a blank screen
   await page.goto("/match");
 
   await expect(page.getByRole("heading", { name: "This route does not exist." })).toBeVisible();
-  await page.getByRole("link", { name: "Plan my route" }).click();
+  await page.locator("#main-content").getByRole("link", { name: "Plan my route" }).click();
   await expect(page).toHaveURL(/\/plan$/);
   expect(errors).toEqual([]);
 });

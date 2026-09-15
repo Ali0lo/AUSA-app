@@ -5,9 +5,11 @@ import { RoutePlanner } from "@/components/RoutePlanner";
 import type { AssessRoutesResponse, RouteUniversity, Scholarship } from "@/types";
 
 const assessRoutes = vi.fn();
+const assessCatalogue = vi.fn().mockResolvedValue({ status: "not_collected", total: 0, items: [] });
+const fetchCatalogue = vi.fn().mockResolvedValue({ status: "not_collected", total: 0, items: [] });
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return { ...actual, assessRoutes: (...args: unknown[]) => assessRoutes(...args) };
+  return { ...actual, assessCatalogue: (...args: unknown[]) => assessCatalogue(...args), fetchCatalogue: (...args: unknown[]) => fetchCatalogue(...args), assessRoutes: (...args: unknown[]) => assessRoutes(...args) };
 });
 
 function university(overrides: Partial<RouteUniversity> = {}): RouteUniversity {
@@ -129,6 +131,8 @@ async function submitForm() {
 
 beforeEach(() => {
   assessRoutes.mockReset();
+  fetchCatalogue.mockResolvedValue({ status: "not_collected", total: 0, items: [] });
+  assessCatalogue.mockResolvedValue({ status: "not_collected", total: 0, items: [] });
 });
 
 describe("RoutePlanner", () => {
@@ -399,7 +403,7 @@ describe("RoutePlanner", () => {
   it("renders baseline discovery options on load so page is never empty before input (D1)", () => {
     render(<RoutePlanner />);
     // Initial options are visible before submitting
-    expect(screen.getByText(/baseline discovery options/i)).toBeInTheDocument();
+    expect(screen.getByText(/Showing an example for a school-leaver/i)).toBeInTheDocument();
     expect(screen.getByText(/Open Routes/i)).toBeInTheDocument();
     expect(screen.getByText(/Unlockable Routes/i)).toBeInTheDocument();
   });
@@ -500,11 +504,11 @@ describe("RoutePlanner", () => {
 
     // Select uncurated university
     const select = screen.getByLabelText(/Select or name a university to target/i);
-    await userEvent.selectOptions(select, "Harvard University");
+    await userEvent.clear(select);
+    await userEvent.type(select, "Harvard University");
 
-    expect(screen.getByText(/do not have curated admission requirements for this university yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/What we do hold for United States/i)).toBeInTheDocument();
-    expect(screen.getByText(/refuse to generate speculative study plans/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Requirements for this university and level have not been collected/i)).toBeInTheDocument();
+    expect(screen.getByText(/missing catalogue entry means requirements remain unavailable/i)).toBeInTheDocument();
   });
 
   it("displays provenance and last_checked on every university card (D3)", async () => {

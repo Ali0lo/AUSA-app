@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Text,
-    UniqueConstraint, func,
+    UniqueConstraint, Index, func,
 )
 from app.core.database import Base
 
@@ -125,6 +125,10 @@ class ProgramRequirement(Base):
     application_deadline = Column(Date, nullable=True)
     application_portal = Column(String(60), nullable=True)
     documents_required = Column(Text, nullable=True)
+    # Field-scoped evidence and caveats are kept with the row, not in a parallel UI list.
+    notes = Column(Text, nullable=True)
+    evidence = Column(Text, nullable=True)  # canonical JSON list; validated by the loader
+    requirement_scope = Column(String(20), nullable=False, default="general", server_default="general")
 
     # 'seed' | 'claude-extracted' | 'human-verified' (ADR-0007 §5).
     # server_default as well as default: the ORM fills this before the row reaches the
@@ -142,10 +146,13 @@ class ProgramRequirement(Base):
     # page without re-extracting it (spec §5.4).
     source_text_hash = Column(String(64), nullable=True)
     verified_by = Column(String(100), nullable=True)
+    verified_at = Column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
-        UniqueConstraint(
-            "university_name", "program_name", "level", "intake_year",
-            name="uq_program_requirement_entry",
+        Index(
+            "uq_program_requirement_entry",
+            country_code, university_name, program_name, level, intake_year,
+            func.coalesce(entry_qualification_accepted, ""),
+            unique=True,
         ),
     )

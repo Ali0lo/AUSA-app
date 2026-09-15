@@ -76,14 +76,13 @@ class LevelGate:
 class AgeGate:
     """You must be UNDER `maximum_age` at application, at the levels named.
 
-    `unverified_at_other_levels` is not boilerplate. Türkiye Bursları' under-21 limit is
-    verified at bachelor level only; the programme plainly has limits at other levels and we
-    have not read them. Reporting "no age limit applies" at master's would be an invention,
-    so the gate returns UNKNOWN with this text instead.
+    Level-specific overrides apply where the source publishes different thresholds.
+    Unlisted levels stay unknown instead of silently having no limit.
     """
     maximum_age: int
     applies_to_levels: tuple[str, ...]
     unverified_at_other_levels: str
+    maximum_age_by_level: tuple[tuple[str, int], ...] = ()
 
 
 @dataclass(frozen=True)

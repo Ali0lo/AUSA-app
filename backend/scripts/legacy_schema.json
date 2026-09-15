@@ -1,0 +1,660 @@
+{
+  "student_applications": {
+    "columns": {
+      "id": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "student_id": {
+        "type": "VARCHAR(100)",
+        "nullable": false
+      },
+      "program_id": {
+        "type": "INTEGER",
+        "nullable": true
+      },
+      "university_name": {
+        "type": "VARCHAR(200)",
+        "nullable": false
+      },
+      "program_name": {
+        "type": "VARCHAR(300)",
+        "nullable": false
+      },
+      "degree_level": {
+        "type": "VARCHAR(20)",
+        "nullable": true
+      },
+      "country": {
+        "type": "VARCHAR(50)",
+        "nullable": true
+      },
+      "deadline": {
+        "type": "DATE",
+        "nullable": true
+      },
+      "stage": {
+        "type": "VARCHAR(50)",
+        "nullable": false
+      },
+      "notes": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "created_at": {
+        "type": "TIMESTAMP WITH TIME ZONE",
+        "nullable": true
+      }
+    },
+    "pk": [
+      "id"
+    ],
+    "unique": []
+  },
+  "program_cutoff_history": {
+    "columns": {
+      "id": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "country": {
+        "type": "VARCHAR(2)",
+        "nullable": false
+      },
+      "source_program_code": {
+        "type": "VARCHAR(300)",
+        "nullable": false
+      },
+      "variant_index": {
+        "type": "INTEGER",
+        "nullable": true
+      },
+      "variant_discriminator_known": {
+        "type": "BOOLEAN",
+        "nullable": true
+      },
+      "intake_year": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "cutoff_value": {
+        "type": "FLOAT",
+        "nullable": false
+      },
+      "cutoff_unit": {
+        "type": "VARCHAR(50)",
+        "nullable": false
+      },
+      "lower_is_better": {
+        "type": "BOOLEAN",
+        "nullable": false
+      },
+      "university_name": {
+        "type": "VARCHAR(300)",
+        "nullable": false
+      },
+      "department_name": {
+        "type": "VARCHAR(300)",
+        "nullable": true
+      },
+      "score_type": {
+        "type": "VARCHAR(100)",
+        "nullable": true
+      },
+      "scholarship_type": {
+        "type": "VARCHAR(100)",
+        "nullable": true
+      },
+      "is_undergraduate": {
+        "type": "BOOLEAN",
+        "nullable": true
+      },
+      "source_url": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "verified_by": {
+        "type": "VARCHAR(100)",
+        "nullable": true
+      }
+    },
+    "pk": [
+      "id"
+    ],
+    "unique": [
+      [
+        "country",
+        "source_program_code",
+        "intake_year"
+      ]
+    ]
+  },
+  "university_documents": {
+    "columns": {
+      "id": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "university_id": {
+        "type": "INTEGER",
+        "nullable": true
+      },
+      "program_id": {
+        "type": "INTEGER",
+        "nullable": true
+      },
+      "content": {
+        "type": "TEXT",
+        "nullable": false
+      },
+      "embedding": {
+        "type": "VECTOR(1536)",
+        "nullable": true
+      },
+      "metadata": {
+        "type": "JSONB",
+        "nullable": true
+      },
+      "created_at": {
+        "type": "TIMESTAMP WITH TIME ZONE",
+        "nullable": true
+      }
+    },
+    "pk": [
+      "id"
+    ],
+    "unique": []
+  },
+  "dp_catalogue": {
+    "columns": {
+      "id": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "level": {
+        "type": "VARCHAR(20)",
+        "nullable": false
+      },
+      "country_source": {
+        "type": "VARCHAR(120)",
+        "nullable": false
+      },
+      "country_code": {
+        "type": "VARCHAR(2)",
+        "nullable": true
+      },
+      "university_name": {
+        "type": "VARCHAR(300)",
+        "nullable": false
+      },
+      "program_name": {
+        "type": "VARCHAR(500)",
+        "nullable": false
+      },
+      "intake_year": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "source_url": {
+        "type": "TEXT",
+        "nullable": false
+      },
+      "retrieved_at": {
+        "type": "TIMESTAMP WITH TIME ZONE",
+        "nullable": false
+      },
+      "verified_by": {
+        "type": "VARCHAR(100)",
+        "nullable": true
+      }
+    },
+    "pk": [
+      "id"
+    ],
+    "unique": [
+      [
+        "level",
+        "country_source",
+        "university_name",
+        "program_name",
+        "intake_year"
+      ]
+    ]
+  },
+  "programs": {
+    "columns": {
+      "id": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "university_name": {
+        "type": "VARCHAR(200)",
+        "nullable": false
+      },
+      "program_name": {
+        "type": "VARCHAR(300)",
+        "nullable": false
+      },
+      "degree_level": {
+        "type": "VARCHAR(20)",
+        "nullable": true
+      },
+      "field": {
+        "type": "VARCHAR(100)",
+        "nullable": true
+      },
+      "country": {
+        "type": "VARCHAR(50)",
+        "nullable": true
+      },
+      "min_gpa": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "min_ielts": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "min_toefl": {
+        "type": "INTEGER",
+        "nullable": true
+      },
+      "tuition_fee": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "currency": {
+        "type": "VARCHAR(10)",
+        "nullable": true
+      },
+      "deadline": {
+        "type": "DATE",
+        "nullable": true
+      },
+      "requirements_text": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "source_url": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "confidence_score": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "verification_status": {
+        "type": "VARCHAR(50)",
+        "nullable": true
+      },
+      "verified_by": {
+        "type": "VARCHAR(100)",
+        "nullable": true
+      },
+      "last_updated": {
+        "type": "DATE",
+        "nullable": true
+      },
+      "is_active": {
+        "type": "BOOLEAN",
+        "nullable": true
+      }
+    },
+    "pk": [
+      "id"
+    ],
+    "unique": []
+  },
+  "student_qualifications": {
+    "columns": {
+      "id": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "student_id": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "level_sought": {
+        "type": "VARCHAR(20)",
+        "nullable": false
+      },
+      "qualification_held": {
+        "type": "VARCHAR(50)",
+        "nullable": false
+      },
+      "dim_score": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "ielts": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "toefl": {
+        "type": "INTEGER",
+        "nullable": true
+      },
+      "sat": {
+        "type": "INTEGER",
+        "nullable": true
+      },
+      "act": {
+        "type": "INTEGER",
+        "nullable": true
+      },
+      "tr_yos": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "test_as": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "csca": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "hsk": {
+        "type": "INTEGER",
+        "nullable": true
+      },
+      "language_certificate_level": {
+        "type": "VARCHAR(10)",
+        "nullable": true
+      },
+      "has_international_olympiad_medal": {
+        "type": "BOOLEAN",
+        "nullable": true
+      },
+      "gpa": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "gpa_scale": {
+        "type": "VARCHAR(10)",
+        "nullable": true
+      },
+      "budget_azn_per_year": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "field_of_interest": {
+        "type": "VARCHAR(120)",
+        "nullable": true
+      },
+      "created_at": {
+        "type": "TIMESTAMP WITH TIME ZONE",
+        "nullable": true
+      }
+    },
+    "pk": [
+      "id"
+    ],
+    "unique": [
+      [
+        "student_id",
+        "level_sought"
+      ]
+    ]
+  },
+  "program_requirements": {
+    "columns": {
+      "id": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "university_name": {
+        "type": "VARCHAR(300)",
+        "nullable": false
+      },
+      "program_name": {
+        "type": "VARCHAR(500)",
+        "nullable": false
+      },
+      "level": {
+        "type": "VARCHAR(20)",
+        "nullable": false
+      },
+      "intake_year": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "country_code": {
+        "type": "VARCHAR(2)",
+        "nullable": false
+      },
+      "entry_qualification_accepted": {
+        "type": "VARCHAR(50)",
+        "nullable": true
+      },
+      "foundation_required": {
+        "type": "BOOLEAN",
+        "nullable": true
+      },
+      "foundation_providers": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "language_test": {
+        "type": "VARCHAR(30)",
+        "nullable": true
+      },
+      "language_minimum_score": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "language_of_instruction": {
+        "type": "VARCHAR(50)",
+        "nullable": true
+      },
+      "entrance_exam": {
+        "type": "VARCHAR(30)",
+        "nullable": true
+      },
+      "entrance_exam_minimum": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "gpa_minimum": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "gpa_scale": {
+        "type": "VARCHAR(10)",
+        "nullable": true
+      },
+      "tuition_per_year": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "currency": {
+        "type": "VARCHAR(10)",
+        "nullable": true
+      },
+      "living_cost_estimate_per_year": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "application_fee": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "application_deadline": {
+        "type": "DATE",
+        "nullable": true
+      },
+      "application_portal": {
+        "type": "VARCHAR(60)",
+        "nullable": true
+      },
+      "documents_required": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "provenance": {
+        "type": "VARCHAR(30)",
+        "nullable": false
+      },
+      "source_url": {
+        "type": "TEXT",
+        "nullable": false
+      },
+      "retrieved_at": {
+        "type": "TIMESTAMP WITH TIME ZONE",
+        "nullable": false
+      },
+      "last_checked": {
+        "type": "TIMESTAMP WITH TIME ZONE",
+        "nullable": true
+      },
+      "source_text_hash": {
+        "type": "VARCHAR(64)",
+        "nullable": true
+      },
+      "verified_by": {
+        "type": "VARCHAR(100)",
+        "nullable": true
+      }
+    },
+    "pk": [
+      "id"
+    ],
+    "unique": [
+      [
+        "university_name",
+        "program_name",
+        "level",
+        "intake_year"
+      ]
+    ]
+  },
+  "scholarships": {
+    "columns": {
+      "id": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "name": {
+        "type": "VARCHAR(300)",
+        "nullable": false
+      },
+      "provider": {
+        "type": "VARCHAR(200)",
+        "nullable": true
+      },
+      "country": {
+        "type": "VARCHAR(50)",
+        "nullable": true
+      },
+      "degree_level": {
+        "type": "VARCHAR(20)",
+        "nullable": true
+      },
+      "min_gpa": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "min_ielts": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "eligibility_text": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "amount": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "deadline": {
+        "type": "DATE",
+        "nullable": true
+      },
+      "source_url": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "last_updated": {
+        "type": "DATE",
+        "nullable": true
+      }
+    },
+    "pk": [
+      "id"
+    ],
+    "unique": []
+  },
+  "students": {
+    "columns": {
+      "id": {
+        "type": "INTEGER",
+        "nullable": false
+      },
+      "email": {
+        "type": "VARCHAR(255)",
+        "nullable": true
+      },
+      "hashed_password": {
+        "type": "VARCHAR(255)",
+        "nullable": true
+      },
+      "gpa": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "gpa_scale": {
+        "type": "VARCHAR(10)",
+        "nullable": true
+      },
+      "ielts": {
+        "type": "FLOAT",
+        "nullable": true
+      },
+      "toefl": {
+        "type": "INTEGER",
+        "nullable": true
+      },
+      "degree_level": {
+        "type": "VARCHAR(20)",
+        "nullable": true
+      },
+      "field_of_study": {
+        "type": "VARCHAR(100)",
+        "nullable": true
+      },
+      "country": {
+        "type": "VARCHAR(50)",
+        "nullable": true
+      },
+      "research_experience": {
+        "type": "BOOLEAN",
+        "nullable": true
+      },
+      "projects": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "budget": {
+        "type": "VARCHAR(50)",
+        "nullable": true
+      },
+      "goals": {
+        "type": "TEXT",
+        "nullable": true
+      },
+      "created_at": {
+        "type": "TIMESTAMP WITH TIME ZONE",
+        "nullable": true
+      }
+    },
+    "pk": [
+      "id"
+    ],
+    "unique": [
+      [
+        "email"
+      ]
+    ]
+  }
+}
