@@ -37,7 +37,13 @@ export default function ApplicationsTrackerPage() {
   }
 
   useEffect(() => {
-    void loadTracker();
+    let active = true;
+    fetchMyApplications("std_demo", token).then((data) => {
+      if (active) { setApplications(data); setError(null); }
+    }).catch((err) => {
+      if (active) { setApplications([]); setError(getUserFacingError(err, "Application tracker loading")); }
+    }).finally(() => { if (active) setIsLoading(false); });
+    return () => { active = false; };
   }, [token]);
 
   async function handleAddProgram(e: React.FormEvent) {

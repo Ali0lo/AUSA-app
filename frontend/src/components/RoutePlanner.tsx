@@ -6,26 +6,12 @@ import {
   Loader2,
   Compass,
   Crosshair,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  HelpCircle,
-  Info,
-  Calendar,
-  DollarSign,
-  Clock,
-  BookOpen,
   Sparkles
 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { assessRoutes, getUserFacingError } from "@/lib/api";
 import baselineFixture from "@/lib/baseline-routes.json";
-import {
-  CURATED_UNIVERSITIES,
-  COUNTRY_FALLBACKS,
-  KNOWN_UNIVERSITY_COUNTRY,
-  CuratedUniversityDetail
-} from "@/lib/curated-requirements";
+import { CatalogueTarget } from "@/components/CatalogueTarget";
 import type {
   AssessRoutesPayload,
   AssessRoutesResponse,
@@ -41,6 +27,7 @@ const QUALIFICATIONS: { value: RouteQualification; label: string }[] = [
   { value: "one_year_university", label: "One completed year at an Azerbaijani university" },
   { value: "bachelor_degree", label: "A completed bachelor's degree" },
   { value: "foundation_year", label: "A completed international foundation year" },
+  { value: "feststellungspruefung", label: "Feststellungsprüfung (completed Studienkolleg exam)" },
   { value: "a_level", label: "A Levels" },
   { value: "ib", label: "International Baccalaureate" }
 ];
@@ -143,19 +130,19 @@ function UniversityCard({
 }) {
   const facts: [string, string][] = [];
 
-  if (university.tuition_per_year !== null) {
+  if (university.tuition_per_year != null) {
     facts.push([
       "Tuition per year",
       `${university.tuition_per_year.toLocaleString("en-US")} ${university.currency ?? ""}`.trim()
     ]);
   } else {
-    facts.push(["Tuition per year", "Not stated on source page (unknown, not free)"]);
+    facts.push(["Tuition per year", "Not recorded in the catalogue (unknown, not free)"]);
   }
 
   if (university.application_deadline) {
     facts.push(["Deadline", university.application_deadline]);
   } else {
-    facts.push(["Deadline", "Not stated on source page"]);
+    facts.push(["Deadline", "Not recorded in the catalogue"]);
   }
 
   if (university.language_test) {
@@ -163,10 +150,10 @@ function UniversityCard({
       "Language",
       university.language_minimum_score !== null
         ? `${university.language_test} ${university.language_minimum_score}`
-        : `${university.language_test} — no minimum stated`
+        : `${university.language_test} — minimum not recorded`
     ]);
   } else {
-    facts.push(["Language", "Not stated on source page (unknown, not 'none required')"]);
+    facts.push(["Language", "Not recorded in the catalogue (unknown, not 'none required')"]);
   }
 
   if (university.entrance_exam) {
@@ -174,10 +161,10 @@ function UniversityCard({
       "Entrance exam",
       university.entrance_exam_minimum !== null
         ? `${university.entrance_exam} ${university.entrance_exam_minimum}`
-        : `${university.entrance_exam} — no minimum stated`
+        : `${university.entrance_exam} — minimum not recorded`
     ]);
   } else {
-    facts.push(["Entrance exam", "None stated on source page"]);
+    facts.push(["Entrance exam", "Not recorded; check the source"]);
   }
 
   if (university.gpa_minimum !== null) {
@@ -190,7 +177,7 @@ function UniversityCard({
   if (university.application_portal) {
     facts.push(["Apply via", university.application_portal]);
   } else {
-    facts.push(["Apply via", "Not stated on source page"]);
+    facts.push(["Apply via", "Not recorded in the catalogue"]);
   }
 
   return (
@@ -227,6 +214,12 @@ function UniversityCard({
       )}
 
       <GradeLine university={university} />
+      {university.application_status && university.application_status !== "needs_review" && <p className="mt-3 font-semibold text-warning">{university.application_status.replace(/_/g, " ")}</p>}
+      {university.checks?.length ? <ul className="mt-3 list-disc pl-5 text-sm text-muted">{university.checks.map((check) => <li key={check}>{check}</li>)}</ul> : null}
+      {university.notes && <p className="mt-3 whitespace-pre-line text-sm text-muted">{university.notes}</p>}
+      {university.living_cost_estimate_per_year != null && <p className="mt-2 text-sm">Annual living estimate: {university.living_cost_estimate_per_year.toLocaleString("en-US")} {university.currency}</p>}
+      {university.application_fee != null && <p className="mt-2 text-sm">Application fee: {university.application_fee} {university.currency}</p>}
+      {university.evidence?.length ? <details className="mt-3 text-sm"><summary>Evidence and scope</summary><ul className="mt-2 space-y-2">{university.evidence.map((item, index) => <li key={index}><a className="text-link" href={/^https?:\/\//i.test(item.url) ? item.url : undefined} target="_blank" rel="noreferrer noopener">{item.fields.map((field) => field.replace(/_/g, " ")).join(", ")}</a>: {item.note} (Read {item.checked_at})</li>)}</ul></details> : null}
 
       {/* The unknowns, said out loud. A blank tuition rendered in a list reads as
           free and a blank language test reads as none required -- both wrong in
@@ -272,7 +265,7 @@ function PlanCard({
   onTargetUniversity?: (name: string) => void;
 }) {
   const isOpen = plan.status === "open";
-  const hasPopulatedTuition = plan.universities.some((u) => u.tuition_per_year !== null);
+
 
   return (
     <section className="panel mt-6 p-5 sm:p-7">
@@ -334,9 +327,9 @@ function PlanCard({
       </dl>
 
       {/* Tuition transparency notice (D1.5 / D3) */}
-      {!hasPopulatedTuition && (
+      {(
         <p className="mt-3 text-xs leading-5 text-muted border-l-2 border-quiet pl-3">
-          Route cost shown above. University tuition is not yet recorded for this country (unknown in our catalogue, not free) — total cost to degree will include tuition once curated.
+          Route estimates are rough planning figures. Full cost to degree is unavailable: programme duration, tuition changes, living expenses and currency conversion have not all been assessed. Unknown tuition is not free.
         </p>
       )}
 
@@ -493,313 +486,6 @@ function ScholarshipCard({ scholarship }: { scholarship: Scholarship }) {
   );
 }
 
-function TargetRoadmap({
-  targetUniversity,
-  userProfile,
-  onReset
-}: {
-  targetUniversity: string;
-  userProfile: {
-    level: string;
-    qualification: RouteQualification;
-    ielts?: number;
-    toefl?: number;
-    sat?: number;
-    dim?: number;
-    gpa?: number;
-    gpaScale?: GradeScaleKey;
-  };
-  onReset: () => void;
-}) {
-  const curatedMatch = CURATED_UNIVERSITIES.find(
-    (u) => u.name.toLowerCase() === targetUniversity.toLowerCase()
-  );
-
-  if (!curatedMatch) {
-    // Try to detect country from known lookup or name match
-    const countryCode = KNOWN_UNIVERSITY_COUNTRY[targetUniversity];
-    const detectedCountry = countryCode
-      ? COUNTRY_FALLBACKS[countryCode]
-      : Object.values(COUNTRY_FALLBACKS).find((c) =>
-          targetUniversity.toLowerCase().includes(c.name.toLowerCase())
-        );
-
-    return (
-      <div className="panel p-6 sm:p-8">
-        <div className="flex items-center justify-between border-b border-quiet pb-4">
-          <div>
-            <p className="eyebrow">Target university</p>
-            <h3 className="section-heading mt-1 text-2xl">{targetUniversity}</h3>
-          </div>
-          <button
-            type="button"
-            onClick={onReset}
-            className="text-xs font-semibold text-muted hover:text-ink underline"
-          >
-            Change target
-          </button>
-        </div>
-
-        <div className="notice-warning mt-6">
-          <p className="font-semibold">We do not have curated admission requirements for this university yet.</p>
-          <p className="mt-1 text-sm leading-6">
-            This is a gap in our curated catalogue, not a statement that this university rejects you.
-            AUSA never invents score thresholds, deadlines or admissions probabilities when source data has not been verified.
-          </p>
-        </div>
-
-        {detectedCountry && (
-          <div className="mt-6 border-t border-quiet pt-6">
-            <h4 className="font-serif text-lg font-semibold">
-              What we do hold for {detectedCountry.name} ({detectedCountry.code})
-            </h4>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              {detectedCountry.schoolingComparison}
-            </p>
-            <div className="mt-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                Known entrance routes for Azerbaijani applicants:
-              </p>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
-                {detectedCountry.commonUnlockRoutes.map((r) => (
-                  <li key={r}>{r}</li>
-                ))}
-              </ul>
-            </div>
-            {detectedCountry.curatedUniversitiesInRepo.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Curated universities available in this destination:
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {detectedCountry.curatedUniversitiesInRepo.map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => {
-                        const evt = new CustomEvent("ausa-target", { detail: name });
-                        window.dispatchEvent(evt);
-                      }}
-                      className="text-xs border border-line px-2.5 py-1 bg-paper hover:bg-quiet"
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mt-6 border-t border-quiet pt-4 text-xs text-muted">
-          <p>
-            Grounding rule: AUSA provides verified facts from official admissions pages. We refuse to generate speculative study plans.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Curated university gap calculation
-  const qualificationAccepted = curatedMatch.acceptedQualifications.includes(
-    userProfile.qualification
-  );
-
-  // Language gap
-  const ieltsRequirement = curatedMatch.languageMinima.find((l) => l.test === "IELTS");
-  let languageVerdict = "Not evaluated";
-  let languageTone = "text-muted";
-  if (ieltsRequirement && ieltsRequirement.minScore) {
-    if (userProfile.ielts !== undefined) {
-      if (userProfile.ielts >= ieltsRequirement.minScore) {
-        languageVerdict = `Your IELTS ${userProfile.ielts} clears the minimum requirement of ${ieltsRequirement.minScore}.`;
-        languageTone = "text-success";
-      } else {
-        const gap = (ieltsRequirement.minScore - userProfile.ielts).toFixed(1);
-        languageVerdict = `You are ${gap} points short on IELTS (${userProfile.ielts} entered, ${ieltsRequirement.minScore} required).`;
-        languageTone = "text-warning";
-      }
-    } else {
-      languageVerdict = `IELTS not entered. This programme asks for minimum ${ieltsRequirement.minScore}.`;
-      languageTone = "text-muted";
-    }
-  }
-
-  // Entrance exam gap
-  const entranceExamReq = curatedMatch.entranceExams[0];
-  let examVerdict = "None stated or not required";
-  let examTone = "text-muted";
-  if (entranceExamReq) {
-    if (entranceExamReq.test === "TR-YÖS" && entranceExamReq.minScore) {
-      examVerdict = `Requires ${entranceExamReq.test} score of ${entranceExamReq.minScore} or SAT.`;
-    } else if (entranceExamReq.test === "Feststellungsprüfung") {
-      examVerdict = "Requires passing the Feststellungsprüfung exit examination (via Studienkolleg).";
-    } else {
-      examVerdict = `${entranceExamReq.test}${entranceExamReq.minScore ? ` minimum ${entranceExamReq.minScore}` : ""}`;
-    }
-  }
-
-  return (
-    <div className="panel p-6 sm:p-8">
-      <div className="flex flex-wrap items-center justify-between border-b border-quiet pb-4 gap-4">
-        <div>
-          <p className="eyebrow">Target roadmap</p>
-          <h3 className="section-heading mt-1 text-2xl sm:text-3xl">{curatedMatch.name}</h3>
-          <span className="text-xs uppercase tracking-wider text-muted">
-            {curatedMatch.countryName} · 2026 Intake
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={onReset}
-          className="text-xs font-semibold text-muted hover:text-ink underline"
-        >
-          Change target
-        </button>
-      </div>
-
-      {/* 1. Gap statement */}
-      <section className="mt-6">
-        <h4 className="font-serif text-xl font-semibold">1. Gap Statement</h4>
-        <div className="mt-3 space-y-3 text-sm">
-          <div className="border-l-2 border-quiet pl-3">
-            <p className="font-semibold">Qualification:</p>
-            {qualificationAccepted ? (
-              <p className="text-success mt-1">
-                ✓ Your {userProfile.qualification.replace(/_/g, " ")} is accepted directly for undergraduate admission.
-              </p>
-            ) : (
-              <p className="text-warning mt-1">
-                ✕ Your {userProfile.qualification.replace(/_/g, " ")} is NOT accepted for direct undergraduate admission.
-                {" "}This university accepts: {curatedMatch.acceptedQualifications.map((q) => q.replace(/_/g, " ")).join(", ")}.
-              </p>
-            )}
-          </div>
-
-          <div className="border-l-2 border-quiet pl-3">
-            <p className="font-semibold">Language:</p>
-            <p className={`${languageTone} mt-1`}>{languageVerdict}</p>
-          </div>
-
-          {entranceExamReq && (
-            <div className="border-l-2 border-quiet pl-3">
-              <p className="font-semibold">Entrance exam:</p>
-              <p className={`${examTone} mt-1`}>{examVerdict}</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* 2. Requirement checklist */}
-      <section className="mt-8 border-t border-quiet pt-6">
-        <h4 className="font-serif text-xl font-semibold">2. Requirement Checklist</h4>
-        <ul className="mt-4 space-y-2 text-sm">
-          <li className="flex items-start gap-2">
-            {qualificationAccepted ? (
-              <CheckCircle2 size={16} className="text-success mt-0.5" />
-            ) : (
-              <AlertTriangle size={16} className="text-warning mt-0.5" />
-            )}
-            <div>
-              <span className="font-semibold">Entry qualification: </span>
-              {curatedMatch.acceptedQualifications.map((q) => q.replace(/_/g, " ")).join(" or ")}
-            </div>
-          </li>
-          {curatedMatch.languageMinima.map((l) => (
-            <li key={l.test} className="flex items-start gap-2">
-              <Info size={16} className="text-muted mt-0.5" />
-              <div>
-                <span className="font-semibold">Language ({l.test}): </span>
-                {l.minScore ? `Minimum score ${l.minScore}. ` : ""}
-                {l.notes ?? ""}
-              </div>
-            </li>
-          ))}
-          {curatedMatch.entranceExams.map((e) => (
-            <li key={e.test} className="flex items-start gap-2">
-              <Info size={16} className="text-muted mt-0.5" />
-              <div>
-                <span className="font-semibold">Entrance exam ({e.test}): </span>
-                {e.minScore ? `Minimum score ${e.minScore}. ` : ""}
-                {e.notes ?? ""}
-              </div>
-            </li>
-          ))}
-          <li className="flex items-start gap-2">
-            <DollarSign size={16} className="text-muted mt-0.5" />
-            <div>
-              <span className="font-semibold">Tuition: </span>
-              {curatedMatch.tuition.amount !== undefined
-                ? `${curatedMatch.tuition.amount.toLocaleString("en-US")} ${curatedMatch.tuition.currency}/year. `
-                : ""}
-              {curatedMatch.tuition.notes}
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      {/* 3. Process checklist */}
-      <section className="mt-8 border-t border-quiet pt-6">
-        <h4 className="font-serif text-xl font-semibold">3. Process Checklist & Deadlines</h4>
-        <dl className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
-          {curatedMatch.portal && (
-            <div className="border-b border-quiet pb-2">
-              <dt className="text-muted">Application portal</dt>
-              <dd className="font-semibold mt-0.5">{curatedMatch.portal}</dd>
-            </div>
-          )}
-          <div className="border-b border-quiet pb-2">
-            <dt className="text-muted">Application deadline</dt>
-            <dd className="font-semibold mt-0.5">
-              {curatedMatch.deadline ? curatedMatch.deadline : "Not stated on source page"}
-            </dd>
-          </div>
-          {curatedMatch.applicationFee && (
-            <div className="border-b border-quiet pb-2">
-              <dt className="text-muted">Application fee</dt>
-              <dd className="font-semibold mt-0.5">
-                {curatedMatch.applicationFee.amount} {curatedMatch.applicationFee.currency}
-              </dd>
-            </div>
-          )}
-        </dl>
-        <div className="mt-4 text-xs leading-5 text-muted">
-          <p className="font-semibold text-ink">Documents required:</p>
-          <p className="mt-1">{curatedMatch.documentsRequired}</p>
-        </div>
-      </section>
-
-      {/* 4. Alternatives that close the gap */}
-      {!qualificationAccepted && (
-        <section className="mt-8 border-t border-quiet pt-6">
-          <h4 className="font-serif text-xl font-semibold">4. Alternatives that Close the Gap</h4>
-          <p className="mt-2 text-sm text-muted">
-            Your current qualification does not qualify for direct entry here. These verified routes convert or unlock access:
-          </p>
-          <div className="mt-4 space-y-3">
-            {curatedMatch.unlockRoutes.map((route, idx) => (
-              <div key={idx} className="panel-strong p-4">
-                <p className="font-semibold text-sm">{route.mechanism}</p>
-                <p className="mt-1 text-xs text-muted">Time cost: {months(route.timeMonths)}</p>
-                <p className="mt-2 text-xs leading-5">{route.description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Exclude study plan rule */}
-      <div className="mt-8 border-t border-quiet pt-4 text-xs text-muted">
-        <p className="font-semibold text-ink">Target roadmap methodology notice:</p>
-        <p className="mt-1">
-          AUSA outputs objective gaps, deadlines, and alternative routes supported by published data.
-          We explicitly exclude speculative study plans (e.g. &ldquo;retake DİM in March and study maths 2 hours a day&rdquo;) because no empirical data reliably links uncalibrated effort to admissions score changes.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export function RoutePlanner() {
   const [mode, setMode] = useState<"discovery" | "target">("discovery");
   const [level, setLevel] = useState<"bachelor" | "master">("bachelor");
@@ -811,6 +497,10 @@ export function RoutePlanner() {
   const [dim, setDim] = useState("");
   const [dimGroup, setDimGroup] = useState("");
   const [sat, setSat] = useState("");
+  const [trYos, setTrYos] = useState("");
+  const [testAs, setTestAs] = useState("");
+  const [csca, setCsca] = useState("");
+  const [hsk, setHsk] = useState("");
   const [language, setLanguage] = useState("");
   const [budget, setBudget] = useState("");
   const [preferredDestinations, setPreferredDestinations] = useState<string[]>([]);
@@ -901,6 +591,7 @@ export function RoutePlanner() {
       dim_score: num(dim),
       dim_field_group: num(dimGroup),
       sat: num(sat),
+      tr_yos: num(trYos), test_as: num(testAs), csca: num(csca), hsk: num(hsk),
       language_certificate_level: language || undefined,
       age: num(age),
       work_experience_hours: num(workHours),
@@ -954,7 +645,7 @@ export function RoutePlanner() {
         <p className="text-xs text-muted">
           {mode === "discovery"
             ? "Enter your credentials to see every reachable route."
-            : "Name a specific university to evaluate gaps, checklists, and alternatives."}
+            : "Name a university to check its recorded requirements and application steps."}
         </p>
       </div>
 
@@ -1037,7 +728,7 @@ export function RoutePlanner() {
               placeholder="e.g. 8000"
             />
             <p className="field-help">
-              Used to rank total cost to degree and check whether routes fit without scholarships.
+              Recorded for planning. Complete degree-cost ranking remains unavailable while tuition and living-cost data are incomplete.
             </p>
           </div>
 
@@ -1094,7 +785,7 @@ export function RoutePlanner() {
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {[
                 ["ielts", "IELTS", ielts, setIelts, "7.0"],
-                ["toefl", "TOEFL", toefl, setToefl, "95"],
+                ["toefl", "TOEFL (0–120 scale)", toefl, setToefl, "95"],
                 ["dim", "DİM", dim, setDim, "560"],
                 ["sat", "SAT", sat, setSat, "1350"]
               ].map(([id, label, value, setter, placeholder]) => (
@@ -1111,6 +802,8 @@ export function RoutePlanner() {
                 </div>
               ))}
             </div>
+
+            <p className="text-xs text-muted mt-2">For a TOEFL result reported on the 1–6 scale, leave TOEFL blank; this planner does not yet compare that scale.</p>
 
             {dim.trim() !== "" && (
               <div className="mt-4">
@@ -1151,6 +844,18 @@ export function RoutePlanner() {
                 The Dövlət Proqramı requires C1 or above.
               </p>
             </div>
+          </fieldset>
+
+          <fieldset className="mt-7 border-t border-quiet pt-6">
+            <legend className="eyebrow">Other admission tests</legend>
+            <p className="field-help">Leave tests you have not taken blank. Check the university’s accepted test format and subscores.</p>
+            {([
+              ["tr-yos", "TR-YÖS", trYos, setTrYos], ["test-as", "TestAS", testAs, setTestAs],
+              ["csca", "CSCA", csca, setCsca], ["hsk", "HSK level", hsk, setHsk]
+            ] as const).map(([id, label, value, setter]) => <div className="mt-3" key={id}>
+              <label className="field-label" htmlFor={id}>{label}</label>
+              <input id={id} className="field" inputMode="decimal" value={value} onChange={(event) => setter(event.target.value)} />
+            </div>)}
           </fieldset>
 
           <fieldset className="mt-7 border-t border-quiet pt-6">
@@ -1242,51 +947,13 @@ export function RoutePlanner() {
           )}
 
           {/* TARGET MODE VIEW */}
-          {mode === "target" && !error && (
-            <div>
-              <div className="panel p-5 mb-6">
-                <label className="field-label font-serif text-lg" htmlFor="target-uni-select">
-                  Select or name a university to target
-                </label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <select
-                    id="target-uni-select"
-                    className="field flex-1 min-w-[15rem]"
-                    value={targetUniversity}
-                    onChange={(e) => setTargetUniversity(e.target.value)}
-                  >
-                    <optgroup label="Curated Universities in AUSA">
-                      {CURATED_UNIVERSITIES.map((u) => (
-                        <option key={u.name} value={u.name}>
-                          {u.name} ({u.countryName})
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Uncurated Examples">
-                      <option value="Harvard University">Harvard University (USA)</option>
-                      <option value="University of Oxford">University of Oxford (UK)</option>
-                      <option value="University of Warsaw">University of Warsaw (Poland)</option>
-                      <option value="Bilkent University">Bilkent University (Turkey)</option>
-                    </optgroup>
-                  </select>
-                </div>
-              </div>
-
-              <TargetRoadmap
-                targetUniversity={targetUniversity}
-                userProfile={{
-                  level,
-                  qualification,
-                  ielts: num(ielts),
-                  toefl: num(toefl),
-                  sat: num(sat),
-                  dim: num(dim),
-                  gpa: num(gpa),
-                  gpaScale: gpa.trim() ? gpaScale : undefined
-                }}
-                onReset={() => setTargetUniversity("Bogazici University")}
-              />
-            </div>
+          {mode === "target" && (
+            <CatalogueTarget university={targetUniversity} onUniversity={setTargetUniversity}
+              profile={{level_sought: level, qualification_held: qualification,
+                ielts: num(ielts), toefl: num(toefl), sat: num(sat), dim_score: num(dim),
+                tr_yos: num(trYos), test_as: num(testAs), csca: num(csca), hsk: num(hsk),
+                gpa: num(gpa), gpa_scale: gpa.trim() ? gpaScale : undefined}}
+              renderUniversity={(row) => <UniversityCard university={row} />} />
           )}
 
           {/* DISCOVERY MODE VIEW */}
@@ -1296,13 +963,13 @@ export function RoutePlanner() {
               {!hasSubmitted && (
                 <div className="panel p-4 mb-6 border-l-4 border-accent">
                   <p className="body-large text-sm font-semibold text-ink">
-                    Showing baseline discovery options for school-leaver (Attestat, Bachelor).
+                    Showing an example for a school-leaver (Attestat, Bachelor), generated 15 September 2026.
                   </p>
                   <p className="mt-1 text-xs text-muted">
                     Enter what you hold and what you have scored. You will get every route this
                     qualification opens, what each one costs in time and money, and the universities
                     that document accepting it. Nothing here is a prediction of whether you will be admitted.
-                    Every requirement shown is quoted from a university&apos;s own page and linked back to it.
+                    Requirements are linked to their sources; recognition inferences and unverified facts are labelled.
                   </p>
                 </div>
               )}
@@ -1351,7 +1018,7 @@ export function RoutePlanner() {
                       {activeResult.dp.funded_programmes.length} funded programmes
                     </span>{" "}
                     <span className="text-muted">
-                      in the countries your routes reach.
+                      in the countries your routes reach. Catalogue years: {[...new Set(activeResult.dp.funded_programmes.map((p) => p.intake_year).filter(Boolean))].join(", ") || "not recorded"}. These entries are not award allocations; funding for another intake needs confirmation.
                     </span>
                   </p>
                 ) : (

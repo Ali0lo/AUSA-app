@@ -23,7 +23,11 @@ import argparse
 import asyncio
 import csv
 import io
+import json
+import math
+import re
 import sys
+from urllib.parse import urlparse
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -35,6 +39,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings  # noqa: E402
 from app.models.qualifications import ProgramRequirement  # noqa: E402
+from app.services.catalogue_evidence import content_fingerprint  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FILE = REPO_ROOT / "data" / "curation" / "program_requirements_2026.csv"
@@ -63,9 +68,16 @@ TEXT_FIELDS = (
     "currency",
     "application_portal",
     "documents_required",
+    "notes",
+    "source_text_hash",
 )
 # The natural key. The same university publishes different requirements per level and year.
-KEY_FIELDS = ("university_name", "program_name", "level", "intake_year")
+KEY_FIELDS = ("country_code", "university_name", "program_name", "level", "intake_year", "entry_qualification_accepted")
+QUALIFICATIONS = {"attestat", "one_year_university", "a_level", "ib", "foundation_year", "feststellungspruefung", "bachelor_degree"}
+ALLOWED_COLUMNS = set(KEY_FIELDS + TEXT_FIELDS + FLOAT_FIELDS) | {
+    "foundation_required", "application_deadline", "provenance", "source_url",
+    "retrieved_at", "last_checked", "verified_by", "evidence", "requirement_scope",
+}
 
 
 class CuratedRowError(ValueError):
@@ -90,7 +102,10 @@ def _number(value: Optional[str], field: str) -> Optional[float]:
     if _blank(value):
         return None
     try:
-        return float(value.strip())
+        number = float(value.strip())
+        if not math.isfinite(number) or number < 0:
+            raise ValueError("must be finite and nonnegative")
+        return number
     except ValueError as exc:
         raise CuratedRowError(f"{field}: {value!r} is not a number") from exc
 
@@ -117,7 +132,9 @@ def _date(value: Optional[str], field: str) -> Optional[date]:
     if _blank(value):
         return None
     try:
-        return datetime.strptime(value.strip()[:10], "%Y-%m-%d").date()
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value.strip()):
+            raise ValueError("use a complete ISO date")
+        return date.fromisoformat(value.strip())
     except ValueError as exc:
         raise CuratedRowError(
             f"{field}: {value!r} is not an ISO date. If the source states no exact date, "
@@ -157,6 +174,8 @@ def _check_provenance(raw: Dict[str, str]) -> str:
 
 def parse_row(raw: Dict[str, str]) -> Dict[str, Any]:
     """Turn one CSV row into column values, or raise CuratedRowError."""
+    if set(raw) - ALLOWED_COLUMNS:
+        raise CuratedRowError(f"Unknown CSV columns: {set(raw) - ALLOWED_COLUMNS}")
     if not _blank(raw.get("verified_by")):
         raise CuratedRowError(
             "verified_by must be empty in a curated file. It records that a named person "
@@ -181,6 +200,8 @@ def parse_row(raw: Dict[str, str]) -> Dict[str, Any]:
     intake = _number(raw.get("intake_year"), "intake_year")
     if intake is None:
         raise CuratedRowError("intake_year is required and was empty")
+    if not intake.is_integer() or not 2000 <= intake <= 2100:
+        raise CuratedRowError("intake_year must be a whole year between 2000 and 2100")
 
     retrieved = _timestamp(raw.get("retrieved_at"), "retrieved_at")
     if retrieved is None:
@@ -208,24 +229,100 @@ def parse_row(raw: Dict[str, str]) -> Dict[str, Any]:
     for field in FLOAT_FIELDS:
         parsed[field] = _number(raw.get(field), field)
 
+    if not re.fullmatch(r"[A-Z]{2}", parsed["country_code"]):
+        raise CuratedRowError("country_code must be a two-letter country code")
+    if parsed["entry_qualification_accepted"] not in QUALIFICATIONS | {None}:
+        raise CuratedRowError("entry_qualification_accepted is not a supported qualification")
+    if parsed["gpa_scale"] not in {None, "4.0", "5.0", "100", "german"}:
+        raise CuratedRowError("gpa_scale must be 4.0, 5.0, 100 or german")
+    if parsed["gpa_minimum"] is not None:
+        scale = parsed["gpa_scale"]
+        if scale is None:
+            raise CuratedRowError("gpa_minimum requires gpa_scale")
+        maximum = 6.0 if scale == "german" else float(scale)
+        if parsed["gpa_minimum"] > maximum or (scale == "german" and parsed["gpa_minimum"] < 1):
+            raise CuratedRowError("gpa_minimum is outside its scale")
+    if any(parsed[f] is not None for f in ("tuition_per_year", "application_fee", "living_cost_estimate_per_year")) and not parsed["currency"]:
+        raise CuratedRowError("A monetary amount requires currency")
+    if parsed["currency"] and parsed["currency"] not in {"EUR", "GBP", "USD", "CNY", "TRY", "PLN", "AZN"}:
+        raise CuratedRowError("currency is not a supported ISO currency code")
+    for score, label in (("language_minimum_score", "language_test"), ("entrance_exam_minimum", "entrance_exam")):
+        if parsed[score] is not None and not parsed[label]:
+            raise CuratedRowError(f"{score} requires {label}")
+    if parsed["language_test"] == "IELTS" and parsed["language_minimum_score"] is not None and parsed["language_minimum_score"] > 9:
+        raise CuratedRowError("IELTS must be between 0 and 9")
+    scope = _text(raw.get("requirement_scope")) or "general"
+    if scope not in {"general", "degree", "foundation"}:
+        raise CuratedRowError("requirement_scope must be general, degree or foundation")
+    parsed["requirement_scope"] = scope
+    validate_url(parsed["source_url"])
+    if parsed["source_text_hash"] and not re.fullmatch(r"[a-f0-9]{64}", parsed["source_text_hash"]):
+        raise CuratedRowError("source_text_hash must be a lowercase SHA-256 digest")
+    parsed["evidence"] = None
+    if not _blank(raw.get("evidence")):
+        try:
+            evidence = json.loads(raw["evidence"])
+            if not isinstance(evidence, list) or not evidence:
+                raise ValueError("expected a nonempty list")
+            for item in evidence:
+                if not isinstance(item, dict) or set(item) != {"url", "fields", "checked_at", "note"}:
+                    raise ValueError("evidence requires url, fields, checked_at and note")
+                validate_url(item["url"])
+                if not isinstance(item["fields"], list) or not item["fields"] or any(f not in ALLOWED_COLUMNS for f in item["fields"]):
+                    raise ValueError("evidence fields must name catalogue columns")
+                if _date(item["checked_at"], "evidence.checked_at") is None or not isinstance(item["note"], str) or not item["note"].strip():
+                    raise ValueError("evidence requires a date and an explanatory note")
+            parsed["evidence"] = json.dumps(evidence, sort_keys=True, ensure_ascii=False)
+        except (ValueError, TypeError, AttributeError) as exc:
+            raise CuratedRowError(f"evidence: {exc}") from exc
+    for column in ProgramRequirement.__table__.columns:
+        maximum = getattr(column.type, "length", None)
+        value = parsed.get(column.name)
+        if maximum and isinstance(value, str) and len(value) > maximum:
+            raise CuratedRowError(f"{column.name} exceeds {maximum} characters")
+
     return parsed
 
 
-async def load_program_requirements(
-    session: AsyncSession, path: Path, dry_run: bool = False
-) -> Dict[str, int]:
-    """Load a curated CSV. Idempotent on the natural key; aborts whole on a bad row."""
-    with io.open(path, encoding="utf-8-sig", newline="") as handle:
-        rows = list(csv.DictReader(handle))
+def validate_url(url):
+    if not isinstance(url, str):
+        raise CuratedRowError("source URL must be text")
+    parts = urlparse(url)
+    if parts.scheme not in {"http", "https"} or not parts.hostname or parts.username or parts.password or any(c.isspace() for c in url):
+        raise CuratedRowError("source URL must be an absolute HTTP(S) URL without credentials")
+    host = parts.hostname.lower()
+    if host == "qebulai.az" or host.endswith(".qebulai.az") or (host.endswith("hochschulstart.de") and "/fileadmin" in parts.path.lower()) or (host.endswith("daad.de") and any(x in parts.path.lower() for x in ("scholarship-database", "stipendiendatenbank"))):
+        raise CuratedRowError("Source is prohibited by the project's data-sourcing policy")
 
-    # Parse everything before writing anything. A file that fails halfway leaves the table
-    # in a state nobody chose, and the curator cannot tell which half landed.
+
+def read_rows(path: Path) -> list[dict]:
+    with io.open(path, encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or len(set(reader.fieldnames)) != len(reader.fieldnames):
+            raise CuratedRowError(f"{path.name}: missing or duplicate headers")
+        required = {"university_name", "program_name", "level", "country_code", "intake_year", "source_url", "retrieved_at"}
+        missing = required - set(reader.fieldnames)
+        unknown = set(reader.fieldnames) - ALLOWED_COLUMNS
+        if missing or unknown:
+            raise CuratedRowError(f"{path.name}: invalid headers; missing={sorted(missing)}, unknown={sorted(unknown)}")
+        rows = list(reader)
     parsed = []
-    for number, raw in enumerate(rows, start=2):  # row 1 is the header
+    for number, raw in enumerate(rows, start=2):
         try:
             parsed.append(parse_row(raw))
         except CuratedRowError as exc:
             raise CuratedRowError(f"{path.name} line {number}: {exc}") from exc
+    keys = [tuple(row[f] for f in KEY_FIELDS) for row in parsed]
+    if len(keys) != len(set(keys)):
+        raise CuratedRowError(f"{path.name}: two rows share the natural key")
+    return parsed
+
+
+async def load_program_requirements(
+    session: AsyncSession, path: Path, dry_run: bool = False, *, commit: bool = True
+) -> Dict[str, int]:
+    """Load a curated CSV. Idempotent on the natural key; aborts whole on a bad row."""
+    parsed = read_rows(path)
 
     seen = set()
     for row in parsed:
@@ -243,7 +340,7 @@ async def load_program_requirements(
             await session.execute(
                 select(ProgramRequirement).where(
                     *[getattr(ProgramRequirement, f) == row[f] for f in KEY_FIELDS]
-                )
+                ).with_for_update()
             )
         ).scalar_one_or_none()
 
@@ -251,17 +348,24 @@ async def load_program_requirements(
             session.add(ProgramRequirement(**row))
             inserted += 1
         else:
+            unchanged = content_fingerprint(existing) == content_fingerprint(row)
             # Every column is assigned, including the blanks. Skipping blanks would mean a
             # curator could never withdraw a value they found to be wrong -- only replace
             # it with another value.
             for column, value in row.items():
+                if unchanged and column in {"provenance", "verified_by"}:
+                    continue
                 setattr(existing, column, value)
+            if not unchanged:
+                existing.verified_at = None
             updated += 1
 
     if dry_run:
         await session.rollback()
-    else:
+    elif commit:
         await session.commit()
+    else:
+        await session.flush()
 
     return {"inserted": inserted, "updated": updated, "total": len(parsed)}
 
@@ -270,12 +374,16 @@ async def _main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--file", type=Path, default=DEFAULT_FILE)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--validate-only", action="store_true", help="Validate offline without contacting the database")
     args = parser.parse_args()
 
     if not args.file.exists():
         print(f"No such file: {args.file}", file=sys.stderr)
         return 1
 
+    if args.validate_only:
+        print(f"{args.file.name}: {len(read_rows(args.file))} valid rows (no database writes)")
+        return 0
     engine = create_async_engine(settings.DATABASE_URL)
     factory = async_sessionmaker(engine, expire_on_commit=False)
     try:
@@ -288,7 +396,7 @@ async def _main() -> int:
     print(
         f"{args.file.name}: {verb} {summary['total']} rows "
         f"({summary['inserted']} new, {summary['updated']} updated). "
-        f"All rows are unverified until a person checks them in /admin."
+        f"New or changed facts need review in /admin; unchanged reviews are retained."
     )
     return 0
 

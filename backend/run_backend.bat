@@ -1,5 +1,6 @@
 @echo off
 setlocal EnableExtensions
+set "PYTHONUTF8=1"
 
 set "AUSA_DB_HOST=127.0.0.1"
 set "AUSA_DB_PORT=5432"
@@ -21,6 +22,13 @@ if exist "%AUSA_SCRIPT_DIR%backend\requirements.txt" (
 )
 
 cd /d "%AUSA_BACKEND_DIR%"
+
+rem Respect an explicit connection string instead of provisioning the default local database.
+if defined DATABASE_URL goto :database_ready
+if exist ".env" (
+    findstr /R /C:"^[ ]*DATABASE_URL[ ]*=" ".env" >nul 2>&1
+    if not errorlevel 1 goto :database_ready
+)
 
 set "AUSA_PSQL="
 
@@ -67,12 +75,12 @@ if not defined AUSA_DATABASE_READY (
 )
 
 :database_ready
-echo PostgreSQL database and pgvector are ready.
+echo Preparing the backend Python environment. The catalogue bootstrap will verify the configured database.
 
 call :select_python
 
 if errorlevel 1 (
-    echo ERROR: No working CPython 3.10 through 3.13 installation was found.
+    echo ERROR: No working CPython 3.12 through 3.13 installation was found.
     echo The Windows Python Launcher may contain a stale or incomplete Python registration.
     echo Run "py -0p" to inspect registered interpreters.
     echo Recommended download: https://www.python.org/downloads/windows/
@@ -115,7 +123,7 @@ if errorlevel 1 (
 )
 
 echo Installing backend dependencies...
-"%AUSA_VENV_PYTHON%" -m pip install --disable-pip-version-check -r requirements.txt
+"%AUSA_VENV_PYTHON%" -m pip install --disable-pip-version-check -r requirements.txt -c constraints-tested.txt
 
 if errorlevel 1 (
     echo ERROR: Backend dependencies could not be installed.
@@ -137,7 +145,7 @@ set /p "AUSA_SECRET="<"%AUSA_SECRET_FILE%"
 del /Q "%AUSA_SECRET_FILE%"
 
 > ".env" echo ENVIRONMENT=development
->> ".env" echo DEBUG=true
+>> ".env" echo DEBUG=false
 >> ".env" echo SECRET_KEY=%AUSA_SECRET%
 >> ".env" echo POSTGRES_USER=%AUSA_DB_USER%
 >> ".env" echo POSTGRES_PASSWORD=%AUSA_DB_PASSWORD%
@@ -150,11 +158,11 @@ echo Created backend\.env with local development settings.
 
 :environment_ready
 
-echo Initializing and seeding the database...
-"%AUSA_VENV_PYTHON%" -m scripts.seed_db
+echo Migrating the database and loading the admission catalogue...
+"%AUSA_VENV_PYTHON%" -m scripts.bootstrap_catalogue
 
 if errorlevel 1 (
-    echo ERROR: Database initialization or seeding failed.
+    echo ERROR: Database migration or catalogue loading failed.
     echo Check the error above and the values in backend\.env.
     goto :failure
 )
@@ -185,7 +193,7 @@ set "AUSA_SYSTEM_PYTHON="
 set "AUSA_VENV_PYTHON="
 
 if exist ".venv\Scripts\python.exe" (
-    ".venv\Scripts\python.exe" -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 10)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
+    ".venv\Scripts\python.exe" -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 12)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
     if not errorlevel 1 (
         set "AUSA_VENV_PYTHON=%CD%\.venv\Scripts\python.exe"
         exit /b 0
@@ -194,34 +202,23 @@ if exist ".venv\Scripts\python.exe" (
 
 where py.exe >nul 2>&1
 if not errorlevel 1 (
-    py -3.12 -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 10)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
+    py -3.12 -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 12)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
     if not errorlevel 1 (
         set "AUSA_SYSTEM_PYTHON=py -3.12"
         exit /b 0
     )
 
-    py -3.11 -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 10)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
-    if not errorlevel 1 (
-        set "AUSA_SYSTEM_PYTHON=py -3.11"
-        exit /b 0
-    )
-
-    py -3.13 -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 10)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
+    py -3.13 -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 12)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
     if not errorlevel 1 (
         set "AUSA_SYSTEM_PYTHON=py -3.13"
         exit /b 0
     )
 
-    py -3.10 -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 10)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
-    if not errorlevel 1 (
-        set "AUSA_SYSTEM_PYTHON=py -3.10"
-        exit /b 0
-    )
 )
 
 where python.exe >nul 2>&1
 if not errorlevel 1 (
-    python -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 10)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
+    python -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 12)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
     if not errorlevel 1 (
         set "AUSA_SYSTEM_PYTHON=python"
         exit /b 0
@@ -230,7 +227,7 @@ if not errorlevel 1 (
 
 where python3.exe >nul 2>&1
 if not errorlevel 1 (
-    python3 -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 10)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
+    python3 -c "import sys; raise SystemExit(not (sys.version_info[:2].__ge__((3, 12)) and sys.version_info[:2].__lt__((3, 14))))" >nul 2>&1
     if not errorlevel 1 (
         set "AUSA_SYSTEM_PYTHON=python3"
         exit /b 0

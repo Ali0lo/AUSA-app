@@ -108,7 +108,8 @@ def test_unknown_gates_stay_separate_from_missing_ones():
     turkiye_aged = next(
         s for s in with_age["scholarships"] if s["key"] == "turkiye-burslari"
     )
-    assert not turkiye_aged["gates_unknown"]
+    assert not any("Tell us your age" in gate for gate in turkiye_aged["gates_unknown"])
+    assert any("academic achievement" in gate for gate in turkiye_aged["gates_unknown"])
 
 
 def test_every_funder_is_offered_not_just_the_state_programme():

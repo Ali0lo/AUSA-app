@@ -1,5 +1,38 @@
 # Data — how to get it
 
+## Track A release status — 15 September 2026
+
+This patch supplies the official 2026 DP programme lists (1,214 bachelor and 2,907
+master entries) and the curated admission CSVs required by Track A. These are
+programme counts, not scholarship allocations. The older collection instructions
+below describe other research datasets; their quoted counts have not been revalidated
+for this release and their remote sources may change.
+
+**A6 DİM spot-check: unfinished — dataset/publication evidence unavailable.** The uploaded
+project did not include `processed/azerbaijan_cutoff_history.csv` or the relevant DİM
+publication pages. The earlier claim of 2,576 rows cannot be audited from that upload.
+**Rows checked: 0 of the requested 30. Match rate: unavailable.** No reviewer name or
+verified training-data label has been invented.
+
+When the team supplies the actual CSV and authorised publication access, prepare the
+sample from `backend`:
+
+```bash
+python -m scripts.prepare_dim_spotcheck --file ../data/processed/azerbaijan_cutoff_history.csv --output dim_review.csv
+```
+
+The method sorts by source programme code, intake year and original CSV line, then
+samples 30 distinct rows without replacement using `random.Random(20260915)`. Each
+sample records the source CSV's SHA-256, seed and line. Review columns begin empty.
+For every sampled row, record the official publication URL, page, published value,
+match/mismatch/unresolved result, reviewer and date. Check the language and study-mode
+variant as well as the score. Report matched/mismatched/unresolved counts and reasons
+here after that work actually occurs. Do not mark unsampled rows verified.
+
+The sampler deliberately fails on a missing dataset; it does not create a plausible
+replacement. Forecast training or prediction quality is outside this patch's verified
+scope. See `../TRACK_A_HANDOVER.md`.
+
 **This directory is empty in git on purpose.** `.gitignore` excludes `data/raw/*`,
 `data/processed/*` and all `*.csv` / `*.zip`, because the collected data is ~700 MB and
 git is the wrong place for it.
