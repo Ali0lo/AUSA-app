@@ -115,7 +115,7 @@ def test_release_data_has_distinct_masters_and_preserves_german_paths():
     german = [r for r in rows if r['country_code'] == 'DE' and r['level'] == 'bachelor']
     assert len({r['university_name'] for r in german if r['entry_qualification_accepted'] == 'one_year_university'}) >= 2
     assert len([r for r in german if r['entry_qualification_accepted'] == 'feststellungspruefung']) == 3
-    assert all(r['tuition_per_year'] is not None and r['currency'] or r['notes'] for r in rows)
+    assert all(r['tuition_per_year'] is None or r['currency'] for r in rows)
     assert all(r['provenance'] != 'human-verified' and r['verified_by'] is None for r in rows)
 
 
