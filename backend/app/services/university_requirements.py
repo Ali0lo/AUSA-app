@@ -21,6 +21,7 @@ requirement is not recorded" and never as a silent blank that reads like "no Eng
 """
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Optional
 
 from sqlalchemy import select
@@ -47,6 +48,7 @@ REPORTED_FIELDS = (
     "gpa_minimum",
     "tuition_per_year",
     "application_deadline",
+    "living_cost_estimate_per_year",
 )
 
 
@@ -57,6 +59,8 @@ class UniversityMatch:
     unknown_fields: tuple[str, ...]
     # Advisory only. A grade never changes a route's status -- see app/domain/grades.py.
     grade: GradeCheck
+    checks: tuple[str, ...] = ()
+    application_status: str = "needs_review"
 
 
 def qualification_delivered(plan: RoutePlan, profile: StudentRouteProfile) -> str:
@@ -95,12 +99,53 @@ def _latest_intake_only(rows: list[ProgramRequirement]) -> list[ProgramRequireme
     every curated row is 2026 and this changes nothing; it is here so that the first time a
     second year is loaded, the read stays correct without anyone remembering to fix it.
     """
-    newest: dict[tuple[str, str], ProgramRequirement] = {}
+    newest = {}
     for row in rows:
-        key = (row.university_name, row.program_name)
-        if key not in newest or row.intake_year > newest[key].intake_year:
-            newest[key] = row
-    return sorted(newest.values(), key=lambda r: (r.university_name, r.program_name))
+        key = (row.country_code, row.university_name, row.program_name, row.level)
+        newest[key] = max(newest.get(key, 0), row.intake_year)
+    return sorted([
+        row for row in rows if row.intake_year == newest[(row.country_code, row.university_name, row.program_name, row.level)]
+    ], key=lambda r: (r.university_name, r.program_name, r.entry_qualification_accepted or ""))
+
+
+def assess_requirement(row: ProgramRequirement, profile: Optional[StudentRouteProfile] = None,
+                       student_gpa=None, student_gpa_scale=None, today=None) -> UniversityMatch:
+    """Advisory checks of the recorded facts, never an admission decision.
+
+    Language alternatives, subscores, document recognition and selection are not fully
+    structured. Even passing all recorded numeric checks remains needs_review.
+    """
+    today = today or date.today()
+    grade = check_grade(profile.gpa if profile else student_gpa,
+                        profile.gpa_scale if profile else student_gpa_scale,
+                        row.gpa_minimum, row.gpa_scale)
+    checks = []
+    status = "needs_review"
+    if row.application_deadline and row.application_deadline < today:
+        status = "deadline_passed"
+        checks.append(f"The recorded deadline ({row.application_deadline.isoformat()}) has passed. Check the next intake.")
+    if row.intake_year < today.year:
+        status = "historical_intake"
+        checks.append(f"These requirements describe the {row.intake_year} intake, not the current cycle.")
+    if row.requirement_scope == "foundation":
+        checks.append("These are foundation-entry requirements; degree progression and degree-level language requirements need separate confirmation.")
+    if profile:
+        if row.entry_qualification_accepted != profile.qualification_held:
+            checks.append(f"This row describes entry with {row.entry_qualification_accepted or 'an unrecorded qualification'}; your current qualification differs.")
+        score_fields = {"IELTS": "ielts", "TOEFL": "toefl", "SAT": "sat", "ACT": "act", "TR-YOS": "tr_yos", "TR-YÖS": "tr_yos", "TestAS": "test_as", "CSCA": "csca", "HSK": "hsk"}
+        for label, minimum in ((row.language_test, row.language_minimum_score), (row.entrance_exam, row.entrance_exam_minimum)):
+            if label in score_fields and minimum is not None:
+                actual = getattr(profile, score_fields[label])
+                if actual is None:
+                    checks.append(f"{label} {minimum:g} is recorded; your {label} score is missing. Check accepted alternatives in the source.")
+                elif actual < minimum:
+                    checks.append(f"Your {label} {actual:g} is below the recorded {minimum:g}. Check accepted alternatives in the source.")
+                else:
+                    checks.append(f"Your {label} meets the recorded overall minimum; subscores, validity and exemptions still need checking.")
+    if row.provenance != "human-verified":
+        checks.append("The source has been collected but this row still awaits human review.")
+    checks.append("A qualification match is a possible application pathway. Subject prerequisites, certificate recognition and selection remain the university's decision.")
+    return UniversityMatch(row, _unknown_fields(row), grade, tuple(checks), status)
 
 
 async def universities_accepting(
@@ -111,6 +156,8 @@ async def universities_accepting(
     qualification: str,
     student_gpa: Optional[float] = None,
     student_gpa_scale: Optional[str] = None,
+    profile: Optional[StudentRouteProfile] = None,
+    language: Optional[str] = None,
 ) -> list[UniversityMatch]:
     """The curated universities in one country that document accepting one qualification.
 
@@ -124,18 +171,13 @@ async def universities_accepting(
         select(ProgramRequirement)
         .where(ProgramRequirement.country_code == country_code)
         .where(ProgramRequirement.level == level)
-        .where(ProgramRequirement.entry_qualification_accepted == qualification)
     )
     rows = list((await session.execute(stmt)).scalars().all())
     return [
-        UniversityMatch(
-            requirement=row,
-            unknown_fields=_unknown_fields(row),
-            grade=check_grade(
-                student_gpa, student_gpa_scale, row.gpa_minimum, row.gpa_scale
-            ),
-        )
+        assess_requirement(row, profile, student_gpa, student_gpa_scale)
         for row in _latest_intake_only(rows)
+        if row.entry_qualification_accepted == qualification
+        and (language is None or (row.language_of_instruction or "").lower() == language.lower())
     ]
 
 
@@ -180,10 +222,9 @@ def describe_universities(
             f"The route itself is still open -- check the universities directly."
         )
     return UNIS_STATUS_NONE_ACCEPT_QUALIFICATION, (
-        f"None of the {country_code} universities we have collected documents accepting "
-        f"'{qualification}' for entry. That is what their own admissions pages state, so "
-        f"it is a real finding rather than a gap -- but we hold only a few universities "
-        f"per country, and others may accept it."
+        f"None of the collected {country_code} rows documents accepting '{qualification}' "
+        f"for entry. Our coverage is incomplete: this is not evidence that a university "
+        f"rejects this qualification. Ask its admissions office."
     )
 
 
@@ -197,7 +238,7 @@ def missing_requirement_note(unknown_fields: tuple[str, ...]) -> Optional[str]:
     if not unknown_fields:
         return None
     return (
-        "Not stated on the source page, so not recorded: "
+        "Not recorded in this catalogue row: "
         + ", ".join(field.replace("_", " ") for field in unknown_fields)
         + ". Unknown here means we could not find it, never that it is not required."
     )

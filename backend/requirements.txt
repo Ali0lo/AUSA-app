@@ -42,3 +42,6 @@ pytest-asyncio>=0.23.6
 # against a real database: without one, every request fell into an exception handler
 # that issued a token unconditionally, and the suite passed on the bypass.
 aiosqlite>=0.20.0
+
+# Database & ORM
+alembic>=1.13.0

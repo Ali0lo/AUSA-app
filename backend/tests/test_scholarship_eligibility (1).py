@@ -75,7 +75,8 @@ def test_unknown_gates_are_reported_apart_from_missing_ones():
     )
 
     assert assessed.gates_missing, "1,000 hours is short of the bar and that is actionable"
-    assert not assessed.gates_unknown, "nothing about this profile was uncheckable"
+    assert any("post-degree" in text for text in assessed.gates_unknown)
+    assert all("short of" not in text for text in assessed.gates_unknown)
 
 
 # --- Level: the gate that decides six of the nine ------------------------------------------
@@ -150,8 +151,9 @@ def test_a_socar_employee_clears_the_employment_gate():
 
     assessed = assess_scholarship(SOCAR_XARICI_TEQAUD, insider, EVERYWHERE)
 
-    assert assessed.status == RouteStatus.OPEN.value
-    assert not assessed.gates_missing and not assessed.gates_unknown
+    assert assessed.status == RouteStatus.UNLOCKABLE.value
+    assert any("SOCAR" in text for text in assessed.gates_met)
+    assert any("current official" in text for text in assessed.gates_unknown)
 
 
 def test_an_age_limit_blocks_and_says_it_cannot_be_worked_towards():
@@ -180,7 +182,8 @@ def test_chevening_states_its_bar_in_hours_and_its_return_obligation():
         CHEVENING, graduate(work_experience_hours=CHEVENING_MINIMUM_WORK_HOURS), EVERYWHERE
     )
 
-    assert assessed.status == RouteStatus.OPEN.value
+    assert assessed.status == RouteStatus.UNLOCKABLE.value
+    assert any("post-degree" in text for text in assessed.gates_unknown)
     assert "2,800" in assessed.scholarship.gates[1].description
     assert assessed.scholarship.obligation is not None
     assert "two years" in assessed.scholarship.obligation
@@ -189,19 +192,15 @@ def test_chevening_states_its_bar_in_hours_and_its_return_obligation():
 # --- Sources that contradict each other ----------------------------------------------------
 
 
-def test_the_banach_field_conflict_is_reported_and_not_resolved():
-    """Our two sources give exactly opposite field lists. Picking one is a coin flip.
-
-    So the gate returns unknown and names both readings, and the award can never come back
-    OPEN while the conflict stands.
-    """
+def test_the_banach_primary_call_replaces_the_conflicting_field_lists():
+    """The 2026 primary call resolves the field conflict; other criteria remain unmodelled."""
     assessed = assess_scholarship(NAWA_BANACH, graduate(), ("PL",))
 
     assert assessed.status == RouteStatus.UNLOCKABLE.value
     conflict = " ".join(assessed.gates_unknown)
-    assert "humanities and social sciences" in conflict
-    assert "engineering, technical, agricultural and natural sciences" in conflict
-    assert "we cannot tell which" in conflict
+    assert "participating universities" in conflict
+    assert "neither earlier exclusive field list applies" in conflict
+    assert "2026---Call-for-applications-EN.pdf" in NAWA_BANACH.citation
 
 
 def test_an_award_with_an_unresolved_gate_can_never_be_open():
@@ -272,7 +271,7 @@ def test_every_instrument_carries_a_citation_and_stays_unverified():
     """`research-brief` is a rung below `claude-extracted`. Loading a row never verifies it."""
     for scholarship in ALL_SCHOLARSHIPS:
         assert scholarship.citation, scholarship.key
-        assert scholarship.provenance == "research-brief", scholarship.key
+        assert scholarship.provenance in {"research-brief", "claude-extracted"}, scholarship.key
 
 
 def test_the_dp_is_not_in_this_catalogue_because_it_has_its_own_assessor():

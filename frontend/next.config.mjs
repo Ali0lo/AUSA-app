@@ -9,7 +9,7 @@ const nextConfig = {
   poweredByHeader: false,
   devIndicators: false,
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   turbopack: {
     root: projectRoot,

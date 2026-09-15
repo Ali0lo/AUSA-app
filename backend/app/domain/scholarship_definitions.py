@@ -1,8 +1,9 @@
 """The hand-written funding catalogue. Ten instruments, each carrying its real gate.
 
-PROVENANCE. Every row here is `research-brief`: taken from spec §5.2 and the 2026-09-04
-Deep Research briefs, whose primary pages this project has NOT opened. That rung sits one
-below `claude-extracted` and well below `human-verified`. Each `citation` names both where
+PROVENANCE. Unreviewed rows remain `research-brief`, taken from spec §5.2 and the 2026-09-04
+Deep Research briefs, whose primary pages had not been opened. Track A updates Türkiye Bursları, Chevening and
+NAWA from primary pages read on 2026-09-15 as `claude-extracted`, never human-verified.
+Research-brief claims remain below extracted primary evidence and human verification. Each `citation` names both where
 our figure came from and, where we hold one, the page a person must open to promote it.
 Where we hold no URL at all, the citation says so rather than guessing one -- an invented
 official URL is worse than an admitted gap, because it looks like a check that happened.
@@ -46,7 +47,7 @@ GENERAL_BRIEF = "AUSA general research brief 2026-09-04, 'Study Abroad Guide for
 # and part-time or overlapping work counts differently under each reading.
 CHEVENING_MINIMUM_WORK_HOURS = 2800
 
-# "Under 21" at bachelor level -- a hard limit, verified at that level only.
+# "Under 21" at bachelor level; the master gate separately uses under 30.
 TURKIYE_BURSLARI_BACHELOR_MAX_AGE = 21
 
 SOCAR_MAX_AGE = 40
@@ -55,35 +56,12 @@ SOCAR_MAX_AGE_MBA = 45
 # --- Tier 1: the Azerbaijani state --------------------------------------------------------
 
 SOCAR_XARICI_TEQAUD = Scholarship(
-    key="socar-xarici-teqaud",
-    name="SOCAR Xarici Təqaüd Proqramı",
-    provider="SOCAR",
-    tier=TIER_AZERBAIJANI_STATE,
-    country_code=None,
-    coverage="Full funding for a master's degree abroad, for SOCAR group employees",
-    gates=(
-        LevelGate(levels=("master",)),
-        # The gate that decides this award, and it is not academic. A student with a perfect
-        # record who does not work for the SOCAR group is ineligible, not uncompetitive.
-        EmploymentGate(employer="SOCAR"),
-        AgeGate(
-            maximum_age=SOCAR_MAX_AGE,
-            applies_to_levels=("master",),
-            unverified_at_other_levels=(
-                "This programme funds master's study only, so no age limit is checked at "
-                "other levels"
-            ),
-        ),
-        LanguageGate(minimum_certificate_level="B2", ielts=6.0, toefl=80),
-    ),
-    citation=(
-        f"{SPEC_5_2}: employment-gated to SOCAR group employees; age at most "
-        f"{SOCAR_MAX_AGE} ({SOCAR_MAX_AGE_MBA} for an MBA); IELTS 6.0 / TOEFL 80 / B2. "
-        "No official programme page has been identified by this project -- the age and "
-        "language figures are unverified, and the MBA exception is NOT applied below "
-        "because nothing in a profile tells us the degree is an MBA"
-    ),
-    window=None,
+    key="socar-xarici-teqaud", name="SOCAR Xarici Təqaüd Proqramı", provider="SOCAR",
+    tier=TIER_AZERBAIJANI_STATE, country_code=None,
+    coverage="Research brief describes funding for SOCAR employees; current terms unconfirmed",
+    gates=(LevelGate(levels=("master",)), EmploymentGate(employer="SOCAR"),
+           UnresolvedGate(summary="The current official SOCAR call was not located. Age, MBA exceptions, language scores and employment conditions need source review; unverified age/language figures are not enforced as rejections.")),
+    citation="Source search 2026-09-15 did not establish a current official call. Previous research-brief claims (age 40/45 and B2/IELTS 6/TOEFL 80) remain unverified; do not rely on them.",
 )
 
 PREZIDENT_TEQAUDU = Scholarship(
@@ -109,40 +87,19 @@ PREZIDENT_TEQAUDU = Scholarship(
 # --- Tier 2: destination-country governments ----------------------------------------------
 
 TURKIYE_BURSLARI = Scholarship(
-    key="turkiye-burslari",
-    name="Türkiye Bursları",
-    provider="Government of Türkiye",
-    tier=TIER_DESTINATION_GOVERNMENT,
-    country_code="TR",
-    coverage=(
-        "Fully funded: tuition waiver, monthly stipend, university dormitory, health "
-        "insurance, and a mandatory one-year Turkish language year (TÖMER)"
-    ),
+    key="turkiye-burslari", name="Türkiye Bursları", provider="Government of Türkiye",
+    tier=TIER_DESTINATION_GOVERNMENT, country_code="TR",
+    coverage="Tuition, placement, stipend, accommodation, health insurance, Turkish language course and flights under the award's terms",
     gates=(
         LevelGate(levels=("bachelor", "master")),
-        AgeGate(
-            maximum_age=TURKIYE_BURSLARI_BACHELOR_MAX_AGE,
-            applies_to_levels=("bachelor",),
-            # The honest half of this gate. The programme plainly sets limits above bachelor
-            # too and we have not read them, so master's gets UNKNOWN rather than a silent
-            # pass that would read as "no age limit applies to you".
-            unverified_at_other_levels=(
-                "Türkiye Bursları sets age limits at master's level as well, and this "
-                "project has not read them. No age check is applied here, which is not the "
-                "same as there being no limit -- check before relying on it"
-            ),
-        ),
+        AgeGate(maximum_age=TURKIYE_BURSLARI_BACHELOR_MAX_AGE,
+                applies_to_levels=("bachelor", "master"), maximum_age_by_level=(("master", 30),),
+                unverified_at_other_levels="This planner covers bachelor and master study."),
+        UnresolvedGate(summary="Additional criteria need review: academic achievement at least 70% for bachelor, 75% for graduate and 90% for health sciences; citizenship, graduation and current Turkish enrolment restrictions also apply. The profile cannot establish all of these. Graduate health-science funding is excluded."),
     ),
-    citation=(
-        f"{SPEC_5_2} and {GENERAL_BRIEF}: fully funded, under 21 at bachelor level, "
-        "applications 10 January - 20 February. No official turkiyeburslari.gov.tr page has "
-        "been opened by this project; the nearest source we hold is "
-        "https://www.studyinturkiye.gov.tr/"
-    ),
-    window=(
-        "Applications run 10 January to 20 February. The 2026 window has closed, so the "
-        "next one opens in January 2027 -- that is the cycle to plan against"
-    ),
+    citation="https://www.turkiyeburslari.gov.tr/scholarshipsprograms ; https://www.turkiyeburslari.gov.tr/fulltimeprograms . Primary pages read 2026-09-15; under 21 for bachelor and under 30 for master. Awaiting human review.",
+    window="Published recurring window: 10 January–20 February. The 2026 round is closed; confirm the next call's dates before applying.",
+    provenance="claude-extracted",
 )
 
 CSC_CHINA = Scholarship(
@@ -177,34 +134,19 @@ CSC_CHINA = Scholarship(
 )
 
 CHEVENING = Scholarship(
-    key="chevening",
-    name="Chevening Scholarship",
+    key="chevening", name="Chevening Scholarship",
     provider="UK Foreign, Commonwealth & Development Office",
-    tier=TIER_DESTINATION_GOVERNMENT,
-    country_code="GB",
-    coverage="Full tuition, a monthly stipend, return flights and visa fees for a one-year taught master's",
+    tier=TIER_DESTINATION_GOVERNMENT, country_code="GB",
+    coverage="Tuition and living/travel support for eligible UK master's study, subject to award terms and any course caps",
     gates=(
         LevelGate(levels=("master",)),
-        WorkExperienceGate(
-            minimum_hours=CHEVENING_MINIMUM_WORK_HOURS,
-            description=(
-                f"{CHEVENING_MINIMUM_WORK_HOURS:,} documented hours of work experience, "
-                "which is roughly two years full-time. Chevening publishes the bar in hours, "
-                "not years, and counts part-time and overlapping work against the hours"
-            ),
-        ),
+        WorkExperienceGate(minimum_hours=CHEVENING_MINIMUM_WORK_HOURS,
+                           description="2,800 hours of work experience gained AFTER completing the undergraduate degree"),
+        UnresolvedGate(summary="The profile records total work hours, not when they were gained. Confirm 2,800 post-degree hours, graduation at least two years before the deadline, three eligible course applications, an unconditional offer by the specified deadline and citizenship/residency conditions."),
     ),
-    citation=(
-        f"{GENERAL_BRIEF}, citing https://www.chevening.org/resource-hub/guidance/"
-        f"eligibility/ and https://www.chevening.org/scholarships/guidance/courses/ -- "
-        f"{CHEVENING_MINIMUM_WORK_HOURS:,} documented hours and four assessed essays on "
-        "leadership, networking, choice of UK course, and career plan. Those pages have not "
-        "been opened by this project"
-    ),
-    obligation=(
-        "Chevening requires you to return to Azerbaijan for at least two years after "
-        "graduating. It is a condition of the award, not a suggestion"
-    ),
+    citation="https://www.chevening.org/resource-hub/guidance/eligibility/ . Primary page read 2026-09-15; total lifetime work hours alone do not establish eligibility. Awaiting human review.",
+    obligation="Return to the country of citizenship for at least two years after the scholarship.",
+    provenance="claude-extracted",
 )
 
 FULBRIGHT = Scholarship(
@@ -226,7 +168,7 @@ FULBRIGHT = Scholarship(
     ),
     citation=(
         f"{GENERAL_BRIEF}, citing https://az.usembassy.gov/fulbright-foreign-student-"
-        "program/. That page has not been opened by this project"
+        "program/. Retrieval on 2026-09-15 returned HTTP 403; a published minimum could not be established."
     ),
     obligation=(
         "The J-1 visa carries a two-year home-country physical presence requirement: after "
@@ -266,33 +208,17 @@ DAAD = Scholarship(
 )
 
 NAWA_BANACH = Scholarship(
-    key="nawa-banach",
-    name="Stefan Banach Scholarship Programme",
+    key="nawa-banach", name="Stefan Banach Scholarship Programme",
     provider="NAWA, the Polish National Agency for Academic Exchange",
-    tier=TIER_DESTINATION_GOVERNMENT,
-    country_code="PL",
-    coverage="Fully funded master's study at a Polish public university",
+    tier=TIER_DESTINATION_GOVERNMENT, country_code="PL",
+    coverage="Public-university tuition exemption and PLN 2500 monthly scholarship under the programme's terms",
     gates=(
         LevelGate(levels=("master",)),
-        # Our two sources describe this restriction as exact opposites. Reported, not
-        # resolved -- the same posture dp_eligibility takes on the C1-vs-TOEFL-80 conflict.
-        # Picking one would produce a confident answer with a 50% chance of being backwards.
-        UnresolvedGate(
-            summary=(
-                "Banach restricts which fields Azerbaijani applicants may study, and our two "
-                "sources give opposite lists: spec §5.2 says humanities and social sciences "
-                "only, while the general research brief says engineering, technical, "
-                "agricultural and natural sciences. Those are complements, so one of them is "
-                "wrong and we cannot tell which. Read nawa.gov.pl before relying on either"
-            )
-        ),
+        UnresolvedGate(summary="The 2026 call permits full-time second-cycle courses at participating universities; neither earlier exclusive field list applies. Check eligible citizenship, degree country/date (normally 2024 onward), prior master's/NAWA awards, B2 study language or B1 Polish preparation, and university admission. The 2026 application round is closed."),
     ),
-    citation=(
-        f"{SPEC_5_2} (humanities/social sciences only for Azerbaijanis) CONTRADICTED BY "
-        f"{GENERAL_BRIEF} (engineering, technical, agricultural and natural sciences). No "
-        "nawa.gov.pl page has been opened by this project, and this conflict is the reason "
-        "no field-of-study check is applied anywhere in the product yet"
-    ),
+    citation="https://nawa.gov.pl/images/Banach/2026/Banach-2026---Call-for-applications-EN.pdf , sections 2.2–2.4; https://nawa.gov.pl/en/students/foreign-students/the-banach-scholarship-programme . Read 2026-09-15; replaces the conflicting research-brief field lists. Awaiting human review.",
+    window="2026 deadline: 8 May at 15:00 Warsaw time, or earlier when the country-group submission cap was reached. Next call unconfirmed.",
+    provenance="claude-extracted",
 )
 
 ERASMUS_MUNDUS = Scholarship(

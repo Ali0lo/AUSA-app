@@ -257,7 +257,7 @@ async def test_a_country_we_never_collected_is_reported_as_our_gap(session):
 
 
 @pytest.mark.asyncio
-async def test_a_collected_country_with_no_match_is_reported_as_a_finding(session):
+async def test_a_collected_country_with_no_match_does_not_imply_rejection(session):
     """Germany is the live example: three German universities collected, all documenting
     the Studienkolleg path, none documenting direct entry on a completed year. Telling a
     student that as 'we have no data' would hide a real finding; telling them 'no German
@@ -278,8 +278,9 @@ async def test_a_collected_country_with_no_match_is_reported_as_a_finding(sessio
         qualification=QUALIFICATION_ONE_YEAR_UNIVERSITY, any_curated=True,
     )
     assert status == UNIS_STATUS_NONE_ACCEPT_QUALIFICATION
-    assert "real finding rather than a gap" in text
-    assert "others may accept it" in text
+    assert "coverage is incomplete" in text
+    assert "not evidence that a university rejects" in text
+    assert "Ask its admissions office" in text
 
 
 def test_a_non_empty_result_needs_no_explanation():

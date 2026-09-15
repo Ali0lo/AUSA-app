@@ -1,0 +1,41 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, expect, it, vi } from "vitest";
+import { CatalogueTarget } from "./CatalogueTarget";
+import { catalogueRow } from "@/test/catalogue";
+import { assessCatalogue, fetchCatalogue } from "@/lib/api";
+import type { CatalogueResult } from "@/lib/api";
+import type { RouteUniversity } from "@/types";
+vi.mock("@/lib/api", async () => ({ ...(await vi.importActual<typeof import("@/lib/api")>("@/lib/api")), assessCatalogue: vi.fn(), fetchCatalogue: vi.fn() }));
+const row = catalogueRow();
+const response: CatalogueResult = {status: "listed", total: 1, items: [row]};
+const renderUniversity = (r: RouteUniversity) => <p>{r.program_name}: {r.tuition_per_year}</p>;
+const props = { university: "Test University", onUniversity: vi.fn(), profile: { level_sought: "master" as const, qualification_held: "bachelor_degree" as const }, renderUniversity };
+beforeEach(() => { vi.mocked(fetchCatalogue).mockReset().mockResolvedValue(response); vi.mocked(assessCatalogue).mockReset().mockResolvedValue(response); });
+it("reads the selected level and reassesses changed scores without retaining stale rows", async () => {
+  const {rerender} = render(<CatalogueTarget {...props} />);
+  expect(await screen.findByText("Computing: 10000")).toBeInTheDocument();
+  expect(fetchCatalogue).toHaveBeenCalledWith("master");
+  vi.mocked(assessCatalogue).mockResolvedValueOnce({...response, items: [catalogueRow({tuition_per_year: 12000})]});
+  rerender(<CatalogueTarget {...props} profile={{...props.profile, ielts: 6}} />);
+  expect(screen.queryByText("Computing: 10000")).not.toBeInTheDocument();
+  expect(await screen.findByText("Computing: 12000")).toBeInTheDocument();
+  expect(assessCatalogue).toHaveBeenLastCalledWith("Test University", {...props.profile, ielts: 6});
+});
+it("ignores an older request that finishes after the chosen university changed", async () => {
+  let finish!: (value: CatalogueResult) => void;
+  vi.mocked(assessCatalogue).mockImplementationOnce(() => new Promise((resolve) => {finish = resolve;}));
+  const {rerender} = render(<CatalogueTarget {...props} />);
+  await waitFor(() => expect(assessCatalogue).toHaveBeenCalledTimes(1));
+  vi.mocked(assessCatalogue).mockResolvedValueOnce({status: "not_collected", total: 0, items: []});
+  rerender(<CatalogueTarget {...props} university="Uncollected University" />);
+  expect(await screen.findByText(/This is a catalogue gap/)).toBeInTheDocument();
+  finish(response);
+  await waitFor(() => expect(screen.queryByText("Computing: 10000")).not.toBeInTheDocument());
+});
+it("offers a working retry after a network failure", async () => {
+  vi.mocked(assessCatalogue).mockRejectedValueOnce(new Error("offline"));
+  render(<CatalogueTarget {...props} />);
+  await userEvent.click(await screen.findByRole("button", {name: "Retry catalogue"}));
+  expect(await screen.findByText("Computing: 10000")).toBeInTheDocument();
+});

@@ -6,6 +6,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.export import router as export_router
 from app.api.v1.routes import router as routes_router
+from app.api.v1.catalogue import router as catalogue_router
 
 api_router = APIRouter()
 
@@ -16,3 +17,4 @@ api_router.include_router(admin_router)
 api_router.include_router(export_router)
 api_router.include_router(applications_router)
 api_router.include_router(routes_router)
+api_router.include_router(catalogue_router)

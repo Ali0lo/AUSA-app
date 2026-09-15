@@ -1,0 +1,432 @@
+{
+  "project": "AUSA",
+  "patch": "Track A",
+  "date": "2026-09-15",
+  "baseline_archive_sha256": "8dcd56428346c47804cc4c412feb52d2a76b5ddcc902db5f06c953cfc5f8348c",
+  "note": "Only new or changed files. No deletions. Preflight accepts the separately uploaded requirements.txt as an additional baseline for that path. Manifest does not hash itself.",
+  "files": [
+    {
+      "path": "TRACK_A_HANDOVER.md",
+      "action": "add",
+      "size": 9396,
+      "original_sha256": null,
+      "sha256": "dae09a3e76c9aee046e7b40a3fa90b711c8a1622ba1645a36874a92f8afbf27b"
+    },
+    {
+      "path": "TRACK_A_TEST_RESULTS.md",
+      "action": "add",
+      "size": 5161,
+      "original_sha256": null,
+      "sha256": "b44ee8bae0e32ac46c8e567297c1445baed0793f74cd87622e92d389ef3f6a13"
+    },
+    {
+      "path": "backend/alembic/env.py",
+      "action": "replace",
+      "size": 2573,
+      "original_sha256": "57e0ea7934ce93c638eb6c00acc502bdbdda42a4cdd95fade5f26d4aa7d5c51f",
+      "sha256": "4b25200633b7fbf309182742d669741cfd0d817159e62da30a6e7ecb63619b34"
+    },
+    {
+      "path": "backend/alembic/versions/2026_09_15_0005-e5f6a7b8c9d0_catalogue_review.py",
+      "action": "add",
+      "size": 2893,
+      "original_sha256": null,
+      "sha256": "9a88152671d0db82b855cb843754584fb78769126bc3a113d88bd60219db2423"
+    },
+    {
+      "path": "backend/app/api/v1/catalogue.py",
+      "action": "add",
+      "size": 4968,
+      "original_sha256": null,
+      "sha256": "6b942a177710f1a1c48bbe9ffc3d9ebca56c79734b75bab55e4513d21f546bb5"
+    },
+    {
+      "path": "backend/app/api/v1/router.py",
+      "action": "replace",
+      "size": 773,
+      "original_sha256": "67faf4cfbf7a2ecc764b0ee86485824ce260ac3bcd46dde2217b7cf1256c306a",
+      "sha256": "ec1f372ce580bf48563b8724b643b75caf1bcd07eb285e7b6ace5e768bcc2e65"
+    },
+    {
+      "path": "backend/app/api/v1/routes.py",
+      "action": "replace",
+      "size": 22797,
+      "original_sha256": "61b2226e72b0d862b84883ba89b684915f84b7f7459fc250f606b180c0f5917c",
+      "sha256": "6c3467b3a139da79f155f407a0860946efb88cfc87430541a25f2567a79994ee"
+    },
+    {
+      "path": "backend/app/core/config.py",
+      "action": "replace",
+      "size": 4014,
+      "original_sha256": "8cf150c2ce7a8159129f79c04fd434e26114162248bf4c961c722e5497a17645",
+      "sha256": "ee7b1df8e22cd3d6f080b4a0f1a27b909ffd07cbafe4af3f446c6b0c26c151a6"
+    },
+    {
+      "path": "backend/app/domain/scholarship_definitions.py",
+      "action": "replace",
+      "size": 15737,
+      "original_sha256": "fef5d233f3ff9171bd3a5665353216514c5f48e0715d416ce182f1502107850d",
+      "sha256": "bf2a99b8e832b1ee5d235648e74936dfa5339e10d932ddd0ef8e75a3681caad0"
+    },
+    {
+      "path": "backend/app/domain/scholarships.py",
+      "action": "replace",
+      "size": 7984,
+      "original_sha256": "d28abc61e3c76ec602a8466b1a6893bdc177e85ffdaac8aa4292caf48ece1492",
+      "sha256": "c98ba181003943e2eb57a2bea083aa198d24731645781550887599929a267026"
+    },
+    {
+      "path": "backend/app/models/qualifications.py",
+      "action": "replace",
+      "size": 8266,
+      "original_sha256": "a6ad7458d381934bd6847bc22f8914abab12fd9537f8c45001fafc3750d42522",
+      "sha256": "b26427da9656908e7d347880f8c970dde0377694c8e2e8328b703569eba68250"
+    },
+    {
+      "path": "backend/app/services/catalogue_evidence.py",
+      "action": "add",
+      "size": 1052,
+      "original_sha256": null,
+      "sha256": "200ea2824353535a5b6b39c07f83e0668d51a2abc9aff356eeae51a2effafb03"
+    },
+    {
+      "path": "backend/app/services/scholarship_eligibility.py",
+      "action": "replace",
+      "size": 14252,
+      "original_sha256": "818cf3a8ec94104e04f3730cf85686e9cf6d518541b421746027dec4d6146201",
+      "sha256": "193044fcbd3a03037e5bce31ca4273b96ecd0c6a7283734ca3119ceb3adb821b"
+    },
+    {
+      "path": "backend/app/services/university_requirements.py",
+      "action": "replace",
+      "size": 12589,
+      "original_sha256": "afe7c33ca13b44b00fdafed856d06f79de0d9d3acbbaca0754177b0f6a528e57",
+      "sha256": "b5e220f8b75f4ae76ce181b8487121ee21fc80ff8deb88b421363f276038daa1"
+    },
+    {
+      "path": "backend/constraints-tested.txt",
+      "action": "add",
+      "size": 1968,
+      "original_sha256": null,
+      "sha256": "e5c2c0c795b67f8944f7daaec3642995ac6435d666c9c7edb4026f77c6590ee5"
+    },
+    {
+      "path": "backend/requirements.txt",
+      "action": "replace",
+      "size": 1019,
+      "original_sha256": "59494c0fd230d04d4fb989506eb30f9405de4a8e28d6339ac9355692c225528f",
+      "sha256": "83137d4f83adf1dc21848fadf9abfa4dad8d847573d2272e4fb9779f465f8e70",
+      "accepted_original_sha256": [
+        "36664bab97736c0bf49c263bf9faa27ffd69afb02b3d83753dfc027bb2e360ca"
+      ]
+    },
+    {
+      "path": "backend/run_backend.bat",
+      "action": "replace",
+      "size": 9582,
+      "original_sha256": "d4c3277415241ce3d99c08d7673e10fcd26e125a79034a354a0ec61b4a82cf46",
+      "sha256": "83b9499eaad21347c3e94669ab1659f75309116417e4bda8a8a5c47e32ee590c"
+    },
+    {
+      "path": "backend/scripts/adopt_legacy_schema.py",
+      "action": "add",
+      "size": 2464,
+      "original_sha256": null,
+      "sha256": "7255ef6e8106f3914218f55e8e6041b05d508ca8772924fa44e813e05a363d91"
+    },
+    {
+      "path": "backend/scripts/bootstrap_catalogue.py",
+      "action": "add",
+      "size": 2837,
+      "original_sha256": null,
+      "sha256": "cb22d9511275bd25ea2c566a701a8c24c0f21e92579e8a50d76eb848f75f4474"
+    },
+    {
+      "path": "backend/scripts/check_catalogue_stack.py",
+      "action": "add",
+      "size": 4309,
+      "original_sha256": null,
+      "sha256": "d56e77725b8bd78e6e66c6225130e09751923e5a6379747895ea7980164102eb"
+    },
+    {
+      "path": "backend/scripts/export_route_example.py",
+      "action": "add",
+      "size": 1804,
+      "original_sha256": null,
+      "sha256": "70620f4b0cf29e11d9cb94a188504ee9a79cd5d68d39148ebc7634b228569e94"
+    },
+    {
+      "path": "backend/scripts/legacy_schema.json",
+      "action": "add",
+      "size": 13328,
+      "original_sha256": null,
+      "sha256": "00730052af5c30c74880616e17b92f54f845b70b9f0a458faeef57a3c419953e"
+    },
+    {
+      "path": "backend/scripts/load_dp_catalogue.py",
+      "action": "replace",
+      "size": 8240,
+      "original_sha256": "f94c405f4bbd92650854b33385ca1195e5c6caad01ce64b2967b42f4326c109f",
+      "sha256": "ebbb53fd0771df438b1344bd3717132104313c263a958acf35a4c6084e91d523"
+    },
+    {
+      "path": "backend/scripts/load_program_requirements.py",
+      "action": "replace",
+      "size": 18323,
+      "original_sha256": "aa536a50c19a88307f822a225253a93a6a78da109947c72c283d6ce519b12a4e",
+      "sha256": "2b7edcef2e9e7c39ad56d91059a30d1519a5d8082bebc172fe00297b3859dc73"
+    },
+    {
+      "path": "backend/scripts/prepare_dim_spotcheck.py",
+      "action": "add",
+      "size": 2464,
+      "original_sha256": null,
+      "sha256": "70ba686801d9082c0787676753441001d425932710e2e0f4182adb6d0623c983"
+    },
+    {
+      "path": "backend/tests/test_catalogue_postgres.py",
+      "action": "add",
+      "size": 5452,
+      "original_sha256": null,
+      "sha256": "da5c1f9c6efacb9acb7ca6cf2c85618bfbe6eaec67bc0f6f618c0d421d4c8f94"
+    },
+    {
+      "path": "backend/tests/test_catalogue_track_a.py",
+      "action": "add",
+      "size": 11772,
+      "original_sha256": null,
+      "sha256": "e5a50aee71f19c0a061bbc1f355d92e6552e4331a30821c13d59625d24ca2d8a"
+    },
+    {
+      "path": "backend/tests/test_dim_spotcheck.py",
+      "action": "add",
+      "size": 1332,
+      "original_sha256": null,
+      "sha256": "80d484c1fec5d0c32af251aab0e02bee33d72f38979717ec44bb4178e15bab9f"
+    },
+    {
+      "path": "backend/tests/test_route_tools.py",
+      "action": "replace",
+      "size": 7114,
+      "original_sha256": "71b760f2ffe07c029b0dfff3dff2ccd960e6ec9a6ec01349df2f8b9910f5dea9",
+      "sha256": "73f31a91a519adccd6dd800f96ad79b664477cd85b9a9a354696227ce96a9c75"
+    },
+    {
+      "path": "backend/tests/test_scholarship_eligibility.py",
+      "action": "replace",
+      "size": 13863,
+      "original_sha256": "44cf78f9b9d32162703375a519a0800765eb60877c97acc9bd548ee41b7ace3e",
+      "sha256": "d5a2ea24caa35927dbae2aab181aa8494b8f6ff3fe7a2b4a27350873e2ab1990"
+    },
+    {
+      "path": "backend/tests/test_university_requirements.py",
+      "action": "replace",
+      "size": 15443,
+      "original_sha256": "d81ebdb4fe4e6902912f5f745131a370d007d438a2c3e83a6f931fd2ec7570e0",
+      "sha256": "bdcd62f608af9ba152594b05f9dd236ccd4f25866a1cb95bee7476ad7096e540"
+    },
+    {
+      "path": "check_patch.py",
+      "action": "add",
+      "size": 1840,
+      "original_sha256": null,
+      "sha256": "db0a1a095bffa52f942810a3309a059b34f3255002d1e9e35f67ade43ed50e5a"
+    },
+    {
+      "path": "data/README.md",
+      "action": "replace",
+      "size": 10117,
+      "original_sha256": "c616f0799ec93ce6f752e0f33db59c961ef201b18157356eccff0a36f2a854bc",
+      "sha256": "1491b2658ce3eb62345d54a30c92354060aca7fe02dc09c07a7dd7ef8fd05258"
+    },
+    {
+      "path": "data/curation/README.md",
+      "action": "replace",
+      "size": 11691,
+      "original_sha256": "bca2c5648fb8d113fa75f4b814e9a26fcd39fba3f7de83c826fd0379fd4c0ff0",
+      "sha256": "f46fcb9d1e5278d1b2d07161cc8920cca66fdce0912cea05a0b04a7ebb72a8d4"
+    },
+    {
+      "path": "data/curation/program_requirements_2026.csv",
+      "action": "replace",
+      "size": 23863,
+      "original_sha256": "6fd3ba88647b17eb875e3c89e339adf6e10fcef26ae8c70069b361af5feb569c",
+      "sha256": "649490b428d8c722ce650434894f5a4e26381585ed7ff3a54f5ce4178fdd3bf4"
+    },
+    {
+      "path": "data/curation/program_requirements_template.csv",
+      "action": "replace",
+      "size": 474,
+      "original_sha256": "f39460bd10ffd68398454e36d6cf09c2f19964c610fab5cccda302cad0e415ed",
+      "sha256": "ebb10c7c961f397ed90feced090bb1193e0912991e7e8a4170645621a3377aab"
+    },
+    {
+      "path": "data/curation/program_requirements_track_a.csv",
+      "action": "add",
+      "size": 39524,
+      "original_sha256": null,
+      "sha256": "5989e877d722b4afb64f7ce253c453ee1e7c61c48fdc27c411035360e6eabd53"
+    },
+    {
+      "path": "data/raw/azerbaijan/dp-bakalavr-2026.csv",
+      "action": "add",
+      "size": 124616,
+      "original_sha256": null,
+      "sha256": "ef41d1c4dd2a0f31c46455a44f330201af07b19a9cb6e0d90abc9c50d2ce8555"
+    },
+    {
+      "path": "data/raw/azerbaijan/dp-master-2026.csv",
+      "action": "add",
+      "size": 307709,
+      "original_sha256": null,
+      "sha256": "9980542ec906c7d3c2e8854731fa312e8d92aa636819f3c71ca7e7594d6ef885"
+    },
+    {
+      "path": "demo_walkthrough.py",
+      "action": "replace",
+      "size": 10920,
+      "original_sha256": "005b03f270a40e8b54eda777e1bdaa3175712c5da2757e2a9e7c98887e9af308",
+      "sha256": "1c306a474ccfadc840bf57fab8857a4af082bd1a1f8118e27591a46196fe32a5"
+    },
+    {
+      "path": "frontend/e2e/ausa.spec.ts",
+      "action": "replace",
+      "size": 12295,
+      "original_sha256": "102209a3f4c123d5d76b8693ede9d383b6147a479f512103fd49176f26f8829b",
+      "sha256": "721c3a1480154aa5d77fa247ae9029eea427f9dfe9f92308c93f2909e31ae29b"
+    },
+    {
+      "path": "frontend/e2e/catalogue.spec.ts",
+      "action": "add",
+      "size": 5056,
+      "original_sha256": null,
+      "sha256": "3b86edb38b915cc749036a626215291e2e80a74ce507c9ec0809ca5279eece84"
+    },
+    {
+      "path": "frontend/next.config.mjs",
+      "action": "replace",
+      "size": 402,
+      "original_sha256": "8b9e6891ab3ce8c9e1646c436a4d1ad1e5cbf9914a6513c5be86cea46d4057b2",
+      "sha256": "7a53ab7e1d4b84ffbe7c6ea4a83ceaa2c5488034dd2ab6be78df65aa2f8c1ae8"
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "action": "replace",
+      "size": 328500,
+      "original_sha256": "c998ef8fc3ee7ef1f0ba67b2556bb96a03b0dcfacd66025f54a725cc0dad8f7f",
+      "sha256": "4e3fc1d91f49d3f5ae19653e462fec1aeead94bc4b39fcc667716e7752102566"
+    },
+    {
+      "path": "frontend/package.json",
+      "action": "replace",
+      "size": 1222,
+      "original_sha256": "8051a1ecbdd8701b7241115f562cb8cb5e613ac64df8ba2aa9dba954eb7d32ba",
+      "sha256": "460c6ed957a8e3c5da5763156be94bbbfe7b187597dabd94d01e12fc4f53e541"
+    },
+    {
+      "path": "frontend/scripts/check_catalogue_stack.mjs",
+      "action": "add",
+      "size": 1998,
+      "original_sha256": null,
+      "sha256": "b136d665424805fde26fb980c0b24e96ebc0ecfd93c165d39e8ee9b9e8218e9b"
+    },
+    {
+      "path": "frontend/src/app/admin/page.tsx",
+      "action": "replace",
+      "size": 17984,
+      "original_sha256": "6463d464fe54619bc1ff795b4d951d00e641a94f534aa696990b87e56226537f",
+      "sha256": "38aedac87f1a9905fabea87a997f04b9a198a3938666732ae61e7df285e8d33d"
+    },
+    {
+      "path": "frontend/src/app/applications/page.tsx",
+      "action": "replace",
+      "size": 6514,
+      "original_sha256": "a21406b7ed16fcc5a18bad7d0caabf3bc6ef52fb429c0db3a277793a2c752cb6",
+      "sha256": "bbc1a9d4def32d3783087ba73953761adc8c966621667dd60c8159472aa66a52"
+    },
+    {
+      "path": "frontend/src/components/ApplicationTracker.tsx",
+      "action": "replace",
+      "size": 6472,
+      "original_sha256": "2a3c28a05752d0a59248077d70947e17be7a303c17a40cccf48a5a295987f9d1",
+      "sha256": "04d758327c4f6e4bb631d017ca34a58c847a902119a474eb13660c6ff3423af1"
+    },
+    {
+      "path": "frontend/src/components/CatalogueReview.test.tsx",
+      "action": "add",
+      "size": 2247,
+      "original_sha256": null,
+      "sha256": "3ccd561c7580571d619c71e753c7a26c5724a0608c6688c96fa8da889337355b"
+    },
+    {
+      "path": "frontend/src/components/CatalogueReview.tsx",
+      "action": "add",
+      "size": 4389,
+      "original_sha256": null,
+      "sha256": "8f27dda86e4ce0f2b20722739868b0581958ba820c2129ae7337f8a3e241aaa6"
+    },
+    {
+      "path": "frontend/src/components/CatalogueTarget.test.tsx",
+      "action": "add",
+      "size": 3002,
+      "original_sha256": null,
+      "sha256": "cd9fd17b3596af9eaa5f67400f25eaef4e1f934f875e2a1e75467f31f627f2e0"
+    },
+    {
+      "path": "frontend/src/components/CatalogueTarget.tsx",
+      "action": "add",
+      "size": 5357,
+      "original_sha256": null,
+      "sha256": "5871c966aac05484bf92a7bf2e9af89e488c5a2e186ddf37c751ad9b5510658f"
+    },
+    {
+      "path": "frontend/src/components/RoutePlanner.test.tsx",
+      "action": "replace",
+      "size": 19937,
+      "original_sha256": "ecb601d796e8e5427223d8f2fd0e186dff88c9a03009497f521df34fe60a63fa",
+      "sha256": "12ac5e9e5e4d81631cc96fe5254b4271474d8d0692ee3bb4494c9481a72eb3c5"
+    },
+    {
+      "path": "frontend/src/components/RoutePlanner.tsx",
+      "action": "replace",
+      "size": 48472,
+      "original_sha256": "03f18c8dd23ccf8f8f80fb690b774103590c6d472ca6e9a00bb82f1b3799fc55",
+      "sha256": "e486ee745ad13a423abc6ff3ae712233815907247780abbb516d7e766c604b8d"
+    },
+    {
+      "path": "frontend/src/lib/api.ts",
+      "action": "replace",
+      "size": 28027,
+      "original_sha256": "089c80c969c6a85b7ef9cf34accc27b1b00767c3b7005ed48f8355e33f8eb610",
+      "sha256": "d72ef170777ba889fd2fd067f4426dbfab480c86ffa99a2093d3ec14d77a73bd"
+    },
+    {
+      "path": "frontend/src/lib/baseline-routes.json",
+      "action": "replace",
+      "size": 323953,
+      "original_sha256": "ee4d19ce9e2c1fd86feb695286172939f946c3c72ab70f124076faa2ab842b2c",
+      "sha256": "76ecc15f080f45573efba92cf6ec0bb577002f7e57a839d588b29271258f3efc"
+    },
+    {
+      "path": "frontend/src/lib/catalogue-api.test.ts",
+      "action": "add",
+      "size": 1300,
+      "original_sha256": null,
+      "sha256": "229eebf6dbea308ab96b1b9581a33313cf372694e8f6b8e7258d9f9df3d0780f"
+    },
+    {
+      "path": "frontend/src/test/catalogue.ts",
+      "action": "add",
+      "size": 1253,
+      "original_sha256": null,
+      "sha256": "b62e4462bbc5267703776a1ce8f0e7ff5a4dce5c6ceb3fa98474800d70e8d034"
+    },
+    {
+      "path": "frontend/src/types/index.ts",
+      "action": "replace",
+      "size": 10424,
+      "original_sha256": "e3a43b0bf6c2f07b4b8760b75c9ee3fccd6ab05d8e9d8924f54a61733fa895b7",
+      "sha256": "49dcc79dcebcbdfb0f2649f01d7b248e759fc15ae1d0498279a1ba3384e9d93a"
+    }
+  ]
+}

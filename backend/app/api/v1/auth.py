@@ -147,7 +147,7 @@ async def login(
         return TokenResponse(access_token=token, token_type="bearer")
     except HTTPException:
         raise
-    except SQLAlchemyError as exc:
+    except (SQLAlchemyError, OSError) as exc:
         # Never issue a token when credentials could not be checked. This previously
         # returned a valid token for student 101 on any database error -- an
         # authentication bypass triggered by an outage, not a dev convenience.

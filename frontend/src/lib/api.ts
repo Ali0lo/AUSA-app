@@ -133,6 +133,53 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 }
 
+export interface CatalogueResult {
+  status: string;
+  total: number;
+  items: RouteUniversity[];
+}
+
+function assertCatalogue(data: unknown): asserts data is CatalogueResult {
+  if (!isRecord(data) || typeof data.status !== "string" || !isNumber(data.total) ||
+      !Array.isArray(data.items) || !data.items.every(isUniversity)) invalidResponse("catalogue");
+}
+
+export async function fetchCatalogue(level: "bachelor" | "master"): Promise<CatalogueResult> {
+  const items: RouteUniversity[] = [];
+  let total = 0;
+  do {
+    const page = await request<unknown>(`/catalogue?level=${level}&limit=250&offset=${items.length}`);
+    assertCatalogue(page);
+    total = page.total;
+    if (!page.items.length) break;
+    items.push(...page.items);
+  } while (items.length < total);
+  return { status: items.length ? "listed" : "not_collected", total, items };
+}
+
+export async function assessCatalogue(university: string, payload: AssessRoutesPayload): Promise<CatalogueResult> {
+  const data = await request<unknown>(`/catalogue/assess?university=${encodeURIComponent(university)}`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+  });
+  assertCatalogue(data);
+  return data;
+}
+
+export interface CatalogueReview { revision: string; requirement: RouteUniversity }
+
+export async function fetchCatalogueReview(level: "bachelor" | "master", token?: string): Promise<CatalogueReview[]> {
+  const data = await request<unknown>(`/admin/catalogue?level=${level}&limit=250`, { headers: authHeaders(token) });
+  if (!Array.isArray(data) || !data.every((row) => isRecord(row) && typeof row.revision === "string" && /^[a-f0-9]{64}$/.test(row.revision) && isUniversity(row.requirement) && isNumber(row.requirement.id))) invalidResponse("catalogue review");
+  return data as CatalogueReview[];
+}
+
+export async function verifyCatalogueRow(id: number, revision: string, token?: string): Promise<void> {
+  await request(`/admin/catalogue/${id}/verify`, {
+    method: "PUT", headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ revision, source_checked: true })
+  });
+}
+
 function authHeaders(token?: string): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -209,6 +256,16 @@ function isUniversity(value: unknown): value is RouteUniversity {
     isOptionalString(value.application_deadline) &&
     isStringArray(value.unknown_fields) &&
     isOptionalString(value.not_stated) &&
+    isOptionalNumber(value.id) &&
+    isOptionalNumber(value.living_cost_estimate_per_year) &&
+    isOptionalString(value.notes) &&
+    isOptionalString(value.requirement_scope) &&
+    isOptionalString(value.language_of_instruction) &&
+    isOptionalString(value.application_status) &&
+    (value.checks === undefined || isStringArray(value.checks)) &&
+    (value.evidence === undefined || (Array.isArray(value.evidence) && value.evidence.every((item) =>
+      isRecord(item) && typeof item.url === "string" && isStringArray(item.fields) &&
+      typeof item.checked_at === "string" && typeof item.note === "string"))) &&
     // The three grade fields are required, not optional. A client that renders a
     // verdict without `grade_exact` reports a proportional cross-scale comparison
     // as though it were an exact one, so a response missing it is not a response

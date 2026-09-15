@@ -207,6 +207,15 @@ export interface RouteHop {
 }
 
 export interface RouteUniversity {
+  id?: number | null;
+  level?: string | null;
+  requirement_scope?: string;
+  language_of_instruction?: string | null;
+  living_cost_estimate_per_year?: number | null;
+  evidence?: { url: string; fields: string[]; checked_at: string; note: string }[];
+  checks?: string[];
+  application_status?: string;
+  verified_at?: string | null;
   university_name: string;
   program_name: string;
   country_code: string;
@@ -256,6 +265,7 @@ export interface RoutePlan {
 }
 
 export interface FundedProgramme {
+  intake_year?: number | null;
   country_code: string | null;
   university_name: string;
   program_name: string;

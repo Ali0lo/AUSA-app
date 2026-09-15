@@ -1,6 +1,14 @@
-from typing import List
-from pydantic import Field, model_validator
+from typing import Any, List
+from pathlib import Path
+from dotenv import load_dotenv
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# OpenAI/LangChain read os.environ directly. BaseSettings alone does not populate it.
+# Locate the backend file independently of the launching directory; real environment
+# variables keep precedence. Never print or overwrite its secrets.
+BACKEND_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(BACKEND_ENV_FILE, override=False)
 
 # Committed development-only key. Safe for local work, never for a deployment --
 # see _reject_insecure_production_config below.
@@ -15,6 +23,16 @@ class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug(cls, v: Any) -> bool:
+        if isinstance(v, str):
+            if v.lower() in {"release", "prod", "production", "0", "false", "no", "off"}:
+                return False
+            if v.lower() in {"debug", "dev", "development", "1", "true", "yes", "on"}:
+                return True
+        return bool(v)
 
     # JWT Authentication Security
     SECRET_KEY: str = Field(
@@ -51,12 +69,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
     ]
 
-    # Authorisation allowlist for /api/v1/admin/* (data verification, seeding).
-    # Fail-closed: empty means nobody is an admin. Set via the ADMIN_EMAILS env var.
-    ADMIN_EMAILS: List[str] = []
-
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=BACKEND_ENV_FILE,
         env_file_encoding="utf-8",
         extra="ignore"
     )

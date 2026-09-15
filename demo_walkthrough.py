@@ -29,6 +29,7 @@ from app.core.database import Base, get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models.dp_catalogue import DPCatalogueEntry  # noqa: E402
 from app.models.qualifications import ProgramRequirement  # noqa: E402
+from scripts.bootstrap_catalogue import CATALOGUE_FILES
 from scripts.load_program_requirements import load_program_requirements  # noqa: E402
 
 CURATED_REQUIREMENTS = REPO / "data" / "curation" / "program_requirements_2026.csv"
@@ -119,9 +120,10 @@ async def main():
         print(f"{RED}Missing {CURATED_REQUIREMENTS}{OFF}")
         sys.exit(1)
     async with Session() as s:
-        summary = await load_program_requirements(s, CURATED_REQUIREMENTS)
+        summaries = [await load_program_requirements(s, path) for path in CATALOGUE_FILES]
+        summary = {"total": sum(item["total"] for item in summaries)}
     print(f"  {summary['total']} curated university requirement rows "
-          f"{DIM}(hand-read from official pages; none human-verified yet){OFF}")
+          f"{DIM}(official sources recorded; human review pending){OFF}")
 
     async def override():
         async with Session() as s:
@@ -214,7 +216,7 @@ async def main():
     print(f"  {DIM}This is the part that matters. Every one of these was once")
     print(f"  answered with an invented number.{OFF}\n")
     print(f"  admission_probability   {BOLD}null{OFF}  {DIM}— never estimated where admission is not mechanical{OFF}")
-    print(f"  per-programme deadline  {BOLD}absent{OFF}  {DIM}— no verified source is wired in{OFF}")
+    print(f"  per-programme deadline  {BOLD}source-specific{OFF}  {DIM}— recorded dates may have passed; blank means unknown{OFF}")
     # Counted from the response, not asserted. A hardcoded count goes stale the moment a
     # curator adds a country, and then this section -- the one about honesty -- is the
     # inaccurate one.
@@ -227,6 +229,21 @@ async def main():
               f"{DIM}— not collected yet, which is our gap and not their answer{OFF}")
     print(f"\n  {DIM}An unknown never reads as permission. A blank is a labelled")
     print(f"  absence and is never filled by estimation.{OFF}")
+
+    rule("Master's catalogue: universities named for a bachelor holder")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://demo") as client:
+        response = await client.post("/api/v1/routes/assess", json={
+            "level_sought": "master", "qualification_held": "bachelor_degree", "ielts": 7.0,
+        })
+        response.raise_for_status()
+        masters = response.json()
+    for country in ("TR", "GB", "CN", "DE", "US", "PL"):
+        names = sorted({university["university_name"] for plan in masters["plans"]
+                        if plan["destination_country"] == country for university in plan["universities"]})
+        if country in {"TR", "GB", "CN"}:
+            assert names, f"Track A3 requires named master's universities for {country}"
+        print(f"  {country}: {', '.join(names) or 'Requirements not collected'}")
+    print("  Programme prerequisites, languages, intake dates and human source review still apply.")
 
     app.dependency_overrides.clear()
     await engine.dispose()

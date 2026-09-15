@@ -73,20 +73,21 @@ def _check_level(gate: LevelGate, profile: StudentRouteProfile) -> GateResult:
 def _check_age(gate: AgeGate, profile: StudentRouteProfile) -> GateResult:
     if profile.level_sought not in gate.applies_to_levels:
         return GateResult(GATE_UNKNOWN, gate.unverified_at_other_levels)
+    maximum_age = dict(gate.maximum_age_by_level).get(profile.level_sought, gate.maximum_age)
     if profile.age is None:
         return GateResult(
             GATE_UNKNOWN,
-            f"This award requires you to be under {gate.maximum_age} at {profile.level_sought} "
+            f"This award requires you to be under {maximum_age} at {profile.level_sought} "
             "level. Tell us your age and this becomes a definite answer either way",
         )
-    if profile.age < gate.maximum_age:
+    if profile.age < maximum_age:
         return GateResult(
             GATE_MET,
-            f"You are {profile.age}, under the age limit of {gate.maximum_age}",
+            f"You are {profile.age}, under the age limit of {maximum_age}",
         )
     return GateResult(
         GATE_BLOCKED,
-        f"You are {profile.age} and this award requires you to be under {gate.maximum_age} "
+        f"You are {profile.age} and this award requires you to be under {maximum_age} "
         f"at {profile.level_sought} level. An age limit is not something you can work "
         "towards -- this one is closed",
     )
