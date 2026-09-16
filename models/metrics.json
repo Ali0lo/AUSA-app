@@ -265,7 +265,52 @@
       "rows": 2576,
       "programs": 1028,
       "forecasting": {
-        "skipped": "too few intake years for a temporal split (train<=2023 has 0 rows, test=2025 has 928)"
+        "split": "train=2024, test=2025 (one-step)",
+        "features": [
+          "university_name",
+          "department_name",
+          "score_type",
+          "cut_lag1"
+        ],
+        "baselines": {
+          "persistence": {
+            "mae": 28.61896551724138,
+            "rmse": 41.35815783890267,
+            "r2": 0.9062629928640425,
+            "n": 928
+          }
+        },
+        "models": {
+          "DecisionTree": {
+            "mae": 39.605911717645526,
+            "rmse": 56.08963602466861,
+            "r2": 0.8275933734814025,
+            "n": 928,
+            "vs_baseline_pct": -38.39,
+            "beats_baseline": false
+          },
+          "RandomForest": {
+            "mae": 34.908923375402495,
+            "rmse": 47.135844682654884,
+            "r2": 0.878243740179221,
+            "n": 928,
+            "vs_baseline_pct": -21.98,
+            "beats_baseline": false
+          },
+          "HistGradientBoosting": {
+            "mae": 36.58792782200931,
+            "rmse": 49.63952611644689,
+            "r2": 0.8649657414330304,
+            "n": 928,
+            "vs_baseline_pct": -27.85,
+            "beats_baseline": false
+          }
+        },
+        "persistence_interval": {
+          "lower_offset": -33.800000000000026,
+          "upper_offset": 57.63000000000002,
+          "coverage": 0.8
+        }
       },
       "cold_start": {
         "split": "GroupShuffleSplit(test_size=0.25) on program_key",
@@ -294,19 +339,19 @@
         },
         "models": {
           "DecisionTree": {
-            "mae": 54.04301700747082,
-            "rmse": 76.16687486835302,
-            "r2": 0.6591349548568177,
+            "mae": 53.91894293339675,
+            "rmse": 76.07087046553488,
+            "r2": 0.6599936988018609,
             "n": 648,
-            "vs_baseline_pct": 5.79,
+            "vs_baseline_pct": 6.01,
             "beats_baseline": true
           },
           "RandomForest": {
-            "mae": 42.11847208518771,
-            "rmse": 59.799742498249955,
-            "r2": 0.7898889844785404,
+            "mae": 42.11567698280781,
+            "rmse": 59.7982881387452,
+            "r2": 0.7898992043632362,
             "n": 648,
-            "vs_baseline_pct": 26.58,
+            "vs_baseline_pct": 26.59,
             "beats_baseline": true
           },
           "HistGradientBoosting": {
@@ -320,11 +365,11 @@
         },
         "shipped_model": {
           "name": "HistGradientBoosting",
-          "artifact": "models\\cutoff_coldstart_AZ.joblib"
+          "artifact": "models/cutoff_coldstart_AZ.joblib"
         }
       },
-      "trained_at": "2026-08-29T13:10:24.122878+00:00",
-      "sklearn_version": "1.7.2"
+      "trained_at": "2026-09-16T03:39:34.404005+00:00",
+      "sklearn_version": "1.9.1"
     }
   },
   "pooled_vs_per_country": {

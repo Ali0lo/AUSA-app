@@ -7,10 +7,14 @@ from sqlalchemy import text
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import engine
+from app.services.prediction import AzerbaijanPredictionService
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Load the Azerbaijan data and artifacts once. Requests must never refit or
+    # reload a model, and an absent artifact remains an explicit absence.
+    app.state.az_prediction_service = AzerbaijanPredictionService.load()
     # Startup: Check database connection
     try:
         async with engine.connect() as conn:

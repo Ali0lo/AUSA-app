@@ -139,6 +139,32 @@ export interface CatalogueResult {
   items: RouteUniversity[];
 }
 
+export interface AzerbaijanPrediction {
+  status: "predicted" | "absent";
+  reason?: string | null;
+  program_code?: string | null;
+  university_name?: string | null;
+  department_name?: string | null;
+  score_type?: string | null;
+  history_years?: number | null;
+  run_id?: string | null;
+  prediction_type?: "forecast" | "cold_start" | null;
+  model?: string | null;
+  target_year?: number | null;
+  predicted_cutoff?: number | null;
+  lower_cutoff?: number | null;
+  upper_cutoff?: number | null;
+}
+
+export async function getAzerbaijanPredictions(filters: { university?: string; group?: string } = {}) {
+  const params = new URLSearchParams();
+  if (filters.university) params.set("university", filters.university);
+  if (filters.group) params.set("group", filters.group);
+  return request<{ status: string; items: AzerbaijanPrediction[] }>(
+    `/azerbaijan/predictions${params.size ? `?${params.toString()}` : ""}`
+  );
+}
+
 function assertCatalogue(data: unknown): asserts data is CatalogueResult {
   if (!isRecord(data) || typeof data.status !== "string" || !isNumber(data.total) ||
       !Array.isArray(data.items) || !data.items.every(isUniversity)) invalidResponse("catalogue");
