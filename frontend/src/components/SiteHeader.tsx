@@ -11,6 +11,7 @@ const navigation = [
   // curated requirements, and since the weighted-score prototype was deleted it is also
   // the only place a student gets an answer about universities.
   { href: "/plan", label: "Plan my route" },
+  { href: "/azerbaijan", label: "Azerbaijan DİM" },
   { href: "/advisor", label: "AI advisor" },
   { href: "/application", label: "Application" },
   { href: "/applications", label: "My Tracker" }

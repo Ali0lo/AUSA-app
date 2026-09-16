@@ -114,6 +114,11 @@ def forecast_features(df: pd.DataFrame) -> list:
 # countries cover different spans -- Turkey and the USA run to 2024, Azerbaijan to 2025.
 def temporal_split_years(df: pd.DataFrame) -> tuple:
     test_year = int(df["intake_year"].max())
+    # Azerbaijan has exactly three observed intakes. Once rows without a prior
+    # cutoff are removed, the first usable training year is the middle intake.
+    # A one-step forecast is still valid: train on 2024 and test on 2025.
+    if df["intake_year"].nunique() == 3:
+        return test_year - 1, test_year - 1, test_year
     return test_year - 2, test_year - 1, test_year
 
 
@@ -264,6 +269,20 @@ def _fit_predict(model, train, test, features):
     return model.predict(test[features].fillna(median))
 
 
+def _trainable_features(train: pd.DataFrame, features: list) -> list:
+    """Keep features that a split can actually learn from.
+
+    A one-step country split may have an all-null lag (there is no second prior
+    year) or a constant intake year. Passing either to HistGradientBoosting can
+    fail during binning, while filling it would invent signal.
+    """
+    return [
+        feature
+        for feature in features
+        if train[feature].notna().any() and train[feature].nunique(dropna=True) > 1
+    ]
+
+
 def evaluate_forecasting(df: pd.DataFrame) -> dict:
     """Temporal split. Baseline: next cutoff = last cutoff."""
     train_end, val_year, test_year = temporal_split_years(df)
@@ -277,14 +296,27 @@ def evaluate_forecasting(df: pd.DataFrame) -> dict:
             f"(train<={train_end} has {len(train)} rows, test={test_year} has {len(test)})"
         }
 
-    features = forecast_features(d)
+    features = _trainable_features(train, forecast_features(d))
+    if not features:
+        return {"skipped": "no trainable forecasting features after split"}
+    one_step = train_end == val_year
     results = {
-        "split": f"train<={train_end}, val={val_year}, test={test_year}",
+        "split": (
+            f"train={train_end}, test={test_year} (one-step)"
+            if one_step
+            else f"train<={train_end}, val={val_year}, test={test_year}"
+        ),
         "features": features,
         "baselines": {"persistence": _score(test["cutoff_value"], test["cut_lag1"])},
         "models": {},
     }
     baseline_mae = results["baselines"]["persistence"]["mae"]
+    persistence_residual = test["cutoff_value"].to_numpy() - test["cut_lag1"].to_numpy()
+    results["persistence_interval"] = {
+        "lower_offset": float(np.quantile(persistence_residual, 0.1)),
+        "upper_offset": float(np.quantile(persistence_residual, 0.9)),
+        "coverage": 0.8,
+    }
 
     for name, model in models().items():
         pred = _fit_predict(model, train, test, features)
@@ -329,6 +361,7 @@ def evaluate_cold_start(df: pd.DataFrame, out_dir: Path, country: str) -> dict:
     baseline_mae = results["baselines"]["department_mean"]["mae"]
 
     best_name, best_mae, best_model = None, np.inf, None
+    best_predictions = None
     for name, model in models().items():
         pred = _fit_predict(model, train, test, features)
         scored = _score(test["cutoff_value"], pred)
@@ -337,12 +370,24 @@ def evaluate_cold_start(df: pd.DataFrame, out_dir: Path, country: str) -> dict:
         results["models"][name] = scored
         if scored["mae"] < best_mae:
             best_name, best_mae, best_model = name, scored["mae"], model
+            best_predictions = pred
 
     if best_mae < baseline_mae:
         out_dir.mkdir(parents=True, exist_ok=True)
         artifact = out_dir / f"cutoff_coldstart_{country}.joblib"
-        dump({"model": best_model, "features": features,
-              "country": country, "sklearn_version": sklearn.__version__}, artifact)
+        residuals = test["cutoff_value"].to_numpy() - np.asarray(best_predictions)
+        dump({
+            "model": best_model,
+            "name": best_name,
+            "features": features,
+            "country": country,
+            "sklearn_version": sklearn.__version__,
+            "interval": {
+                "lower_offset": float(np.quantile(residuals, 0.1)),
+                "upper_offset": float(np.quantile(residuals, 0.9)),
+                "coverage": 0.8,
+            },
+        }, artifact)
         results["shipped_model"] = {"name": best_name, "artifact": str(artifact.relative_to(REPO_ROOT))}
     else:
         # ADR-0004: never ship a model that loses to its baseline just to have one.
