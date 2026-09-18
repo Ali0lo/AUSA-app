@@ -12,6 +12,10 @@ import type {
   Scholarship,
   StudentAccountProfile,
   StudentProfile,
+  TargetCatalogItem,
+  TargetChecklistItem,
+  TargetGapPayload,
+  TargetGapResponse,
   TrackedApplication,
   VerifyProgramPayload
 } from "@/types";
@@ -488,6 +492,94 @@ export async function assessRoutes(payload: AssessRoutesPayload): Promise<Assess
   assertAssessment(data);
   return data;
 }
+
+function isTargetCatalogItem(value: unknown): value is TargetCatalogItem {
+  return (
+    isRecord(value) &&
+    typeof value.university_name === "string" &&
+    typeof value.program_name === "string" &&
+    typeof value.level === "string" &&
+    typeof value.country_code === "string" &&
+    typeof value.source_type === "string" &&
+    typeof value.source_url === "string"
+  );
+}
+
+function assertTargetCatalog(data: unknown): asserts data is TargetCatalogItem[] {
+  if (!Array.isArray(data) || !data.every(isTargetCatalogItem)) {
+    invalidResponse("target catalog");
+  }
+}
+
+function isTargetChecklistItem(value: unknown): value is TargetChecklistItem {
+  return (
+    isRecord(value) &&
+    typeof value.name === "string" &&
+    typeof value.requirement === "string" &&
+    isOptionalString(value.student_value) &&
+    typeof value.status === "string" &&
+    typeof value.explanation === "string"
+  );
+}
+
+function assertTargetGap(data: unknown): asserts data is TargetGapResponse {
+  if (
+    !isRecord(data) ||
+    typeof data.found !== "boolean" ||
+    typeof data.university_name !== "string" ||
+    typeof data.program_name !== "string" ||
+    typeof data.level !== "string" ||
+    typeof data.country_code !== "string" ||
+    typeof data.route_status !== "string" ||
+    typeof data.route_gap_statement !== "string" ||
+    !isStringArray(data.unlock_steps) ||
+    !isNumber(data.unlock_time_months) ||
+    !isNumber(data.unlock_cost_azn_low) ||
+    !isNumber(data.unlock_cost_azn_high) ||
+    !Array.isArray(data.checklist) ||
+    !data.checklist.every(isTargetChecklistItem) ||
+    !isOptionalString(data.application_portal) ||
+    !isOptionalString(data.application_deadline) ||
+    !isOptionalNumber(data.application_fee) ||
+    !isOptionalString(data.currency) ||
+    !isOptionalString(data.documents_required) ||
+    !Array.isArray(data.alternatives) ||
+    typeof data.provenance !== "string" ||
+    typeof data.source_url !== "string" ||
+    !isOptionalString(data.last_checked) ||
+    !isOptionalString(data.notes)
+  ) {
+    invalidResponse("target gap assessment");
+  }
+}
+
+export async function fetchTargetCatalog(
+  filters: { level?: string; country?: string } = {}
+): Promise<TargetCatalogItem[]> {
+  const params = new URLSearchParams();
+  if (filters.level) params.set("level", filters.level);
+  if (filters.country) params.set("country", filters.country);
+  const queryStr = params.toString() ? `?${params.toString()}` : "";
+  const data = await request<unknown>(`/routes/catalog${queryStr}`);
+  assertTargetCatalog(data);
+  return data;
+}
+
+export async function assessTargetGap(payload: TargetGapPayload): Promise<TargetGapResponse> {
+  const body: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (value !== null && value !== undefined && value !== "") body[key] = value;
+  }
+
+  const data = await request<unknown>("/routes/target-gap", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  assertTargetGap(data);
+  return data;
+}
+
 
 export async function fetchCurrentStudentProfile(token: string): Promise<StudentAccountProfile> {
   const data = await request<unknown>("/auth/me", {
