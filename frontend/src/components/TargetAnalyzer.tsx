@@ -383,6 +383,26 @@ export function TargetAnalyzer({
       {/* Results panel */}
       {result && (
         <div className="space-y-6" data-testid="target-results">
+          {/* Honest Uncurated Fallback State Banner (D2) */}
+          {!result.found && (
+            <div className="panel p-6 border-l-4 border-amber-500 bg-amber-50/40 dark:bg-amber-950/20">
+              <div className="flex items-start gap-3">
+                <HelpCircle className="h-6 w-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-ink">
+                    Catalogue Gap (Our Data, Not an Admission Rejection)
+                  </h3>
+                  <p className="mt-1 text-sm text-ink leading-6">
+                    Requirements for <span className="font-semibold">{result.university_name}</span> have not been collected or verified in the AUSA catalogue yet. This is a limitation of our current dataset, not an indication that the institution will reject your application.
+                  </p>
+                  <p className="mt-2 text-xs text-muted leading-5 border-l-2 border-quiet pl-3">
+                    <strong>Speculative study plans excluded:</strong> AUSA does not invent speculative score targets or preparation schedules without empirical admission outcome models. Please check with the university&apos;s admissions office directly for official qualification equivalence.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Section 1: Route Gap Statement */}
           <section className="panel p-6 sm:p-8" aria-labelledby="gap-statement-heading">
             <div className="flex flex-wrap items-start justify-between gap-4">
