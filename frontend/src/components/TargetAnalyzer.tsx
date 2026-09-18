@@ -35,6 +35,23 @@ const GRADE_SCALES: { value: GradeScaleKey; label: string }[] = [
   { value: "ru_attestat_5", label: "Russian Attestat (3.0 – 5.0)" }
 ];
 
+const COUNTRY_NAMES: Record<string, string> = {
+  AZ: "Azerbaijan",
+  TR: "Turkey",
+  PL: "Poland",
+  DE: "Germany",
+  GB: "United Kingdom",
+  US: "United States",
+  IT: "Italy",
+  HU: "Hungary",
+  CN: "China",
+  KR: "South Korea"
+};
+
+function countryName(code: string): string {
+  return COUNTRY_NAMES[code] ?? code;
+}
+
 export function TargetAnalyzer({
   initialUniversity = "",
   initialLevel = "bachelor"
@@ -363,16 +380,132 @@ export function TargetAnalyzer({
         </div>
       )}
 
-      {/* Results placeholder */}
+      {/* Results panel */}
       {result && (
         <div className="space-y-6" data-testid="target-results">
-          {/* Detailed sections will be layered in Commits 12-16 */}
-          <div className="panel p-6">
-            <h2 className="text-xl font-serif font-bold">
-              {result.university_name} — {result.program_name}
-            </h2>
-            <p className="text-sm text-muted mt-1">{result.route_gap_statement}</p>
-          </div>
+          {/* Section 1: Route Gap Statement */}
+          <section className="panel p-6 sm:p-8" aria-labelledby="gap-statement-heading">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase tracking-widest text-muted">
+                    {countryName(result.country_code)} · {result.level === "master" ? "Master's" : "Bachelor's"}
+                  </span>
+                </div>
+                <h2 id="gap-statement-heading" className="text-2xl font-serif font-bold text-ink mt-1">
+                  {result.university_name}
+                </h2>
+                <p className="text-sm font-medium text-muted mt-0.5">
+                  {result.program_name}
+                </p>
+              </div>
+
+              {/* Status Tag */}
+              <div>
+                {result.route_status === "OPEN" && (
+                  <span className="status-tag status-available text-xs">
+                    ✓ Route Open Directly
+                  </span>
+                )}
+                {result.route_status === "UNLOCKABLE" && (
+                  <span className="status-tag status-experimental text-xs">
+                    ⚡ Route Unlockable via Bridge
+                  </span>
+                )}
+                {result.route_status === "BLOCKED" && (
+                  <span className="status-tag status-offline text-xs">
+                    ✕ Route Blocked
+                  </span>
+                )}
+                {result.route_status === "UNKNOWN" && (
+                  <span className="status-tag status-offline text-xs">
+                    ? Status Unverified
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Gap Statement Callout */}
+            <div
+              className={`mt-6 rounded-lg border p-4 ${
+                result.route_status === "OPEN"
+                  ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200"
+                  : result.route_status === "UNLOCKABLE"
+                    ? "border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200"
+                    : "border-quiet bg-paper/60 text-ink"
+              }`}
+            >
+              <h3 className="text-xs font-bold uppercase tracking-wider">
+                1. Objective Gap Statement
+              </h3>
+              <p className="mt-2 text-sm leading-6">
+                {result.route_gap_statement}
+              </p>
+            </div>
+
+            {/* Unlock Steps & Requirements (if UNLOCKABLE or unlock_steps present) */}
+            {result.unlock_steps && result.unlock_steps.length > 0 && (
+              <div className="mt-6 border-t border-quiet pt-4">
+                <h4 className="text-sm font-semibold text-ink flex items-center gap-2">
+                  <Clock size={16} className="text-accent" />
+                  What It Takes to Bridge the Gap:
+                </h4>
+                <ul className="mt-2 space-y-1.5 pl-5 list-disc text-sm text-ink">
+                  {result.unlock_steps.map((step, idx) => (
+                    <li key={idx}>{step}</li>
+                  ))}
+                </ul>
+
+                <dl className="mt-4 grid grid-cols-2 gap-4 text-xs bg-paper/40 p-3 rounded border border-quiet">
+                  <div>
+                    <dt className="text-muted">Estimated Prep Duration:</dt>
+                    <dd className="font-semibold text-ink">
+                      {result.unlock_time_months > 0
+                        ? `${result.unlock_time_months} months`
+                        : "Direct / immediate"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted">Estimated Pathway Cost:</dt>
+                    <dd className="font-semibold text-ink">
+                      {result.unlock_cost_azn_low === 0 && result.unlock_cost_azn_high === 0
+                        ? "Minimal / zero direct route fee"
+                        : `${result.unlock_cost_azn_low.toLocaleString("en-US")} – ${result.unlock_cost_azn_high.toLocaleString("en-US")} AZN`}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            )}
+
+            {/* Provenance & Last Checked footer */}
+            <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-quiet pt-4 text-xs text-muted">
+              {result.source_url && (
+                <a
+                  href={result.source_url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-link inline-flex items-center gap-1 font-medium"
+                >
+                  Official Admission Requirements Page
+                  <ExternalLink size={12} />
+                </a>
+              )}
+              <span
+                className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${
+                  result.provenance === "human-verified"
+                    ? "border border-emerald-300 bg-emerald-50 font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                    : "border border-amber-300 bg-amber-50 font-normal text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                }`}
+              >
+                {result.provenance === "human-verified"
+                  ? "✓ Checked by a person"
+                  : "Read from official portal, not yet human-verified"}
+              </span>
+              {result.last_checked && (
+                <span className="font-mono">Last verified: {result.last_checked.slice(0, 10)}</span>
+              )}
+            </div>
+          </section>
         </div>
       )}
     </div>
