@@ -506,6 +506,76 @@ export function TargetAnalyzer({
               )}
             </div>
           </section>
+
+          {/* Section 2: Scale-Aware Requirement Checklist */}
+          <section className="panel p-6 sm:p-8" aria-labelledby="requirement-checklist-heading">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 id="requirement-checklist-heading" className="text-xl font-serif font-bold text-ink">
+                  2. Requirement Checklist
+                </h3>
+                <p className="mt-1 text-sm text-muted">
+                  Multi-scale check comparing your academic profile and credentials against stated entry criteria.
+                </p>
+              </div>
+              <span className="text-xs font-mono text-muted">
+                {result.checklist.filter((c) => c.status === "MET").length} of {result.checklist.length} met
+              </span>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {result.checklist.map((item, idx) => {
+                const isMet = item.status === "MET";
+                const isGap = item.status === "GAP";
+                const isUnknown = item.status === "UNKNOWN";
+
+                return (
+                  <div
+                    key={idx}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border border-quiet bg-paper/40 transition hover:bg-paper/70"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        {isMet && <CheckCircle2 size={18} className="text-success shrink-0" />}
+                        {isGap && <XCircle size={18} className="text-warning shrink-0" />}
+                        {isUnknown && <HelpCircle size={18} className="text-muted shrink-0" />}
+                        <h4 className="font-semibold text-sm text-ink">{item.name}</h4>
+                      </div>
+                      <p className="mt-1 text-xs text-muted">
+                        <span className="font-medium text-ink">Published Requirement: </span>
+                        {item.requirement}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        <span className="font-medium text-ink">Your Profile: </span>
+                        {item.student_value ?? "Not provided / Unstated"}
+                      </p>
+                      <p className="mt-1.5 text-xs text-muted leading-5 border-l-2 border-quiet pl-2.5">
+                        {item.explanation}
+                      </p>
+                    </div>
+
+                    <div className="sm:self-center shrink-0">
+                      <span
+                        className={`status-tag text-xs font-semibold ${
+                          isMet
+                            ? "status-available"
+                            : isGap
+                              ? "status-experimental"
+                              : "status-offline"
+                        }`}
+                      >
+                        {isMet ? "✓ Met" : isGap ? "⚠ Gap" : "? Unknown"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="mt-4 text-xs text-muted leading-5 border-l-2 border-quiet pl-3">
+              Scale-awareness note: Grade comparisons across different grading systems (Attestat 5.0, Higher Ed 100, US 4.0, German 1.0-5.0) are indicative screening metrics. Universities conduct their own official conversions through bodies like uni-assist or internal credentials evaluators.
+            </p>
+          </section>
         </div>
       )}
     </div>
