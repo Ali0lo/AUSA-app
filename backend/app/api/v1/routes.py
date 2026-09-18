@@ -562,3 +562,73 @@ async def assess(
             funded_programmes_explanation=funded_explanation,
         ),
     )
+
+
+class TargetCatalogItem(BaseModel):
+    university_name: str
+    program_name: str
+    level: str
+    country_code: str
+    source_type: str
+    source_url: str
+
+
+@router.get(
+    "/catalog",
+    response_model=List[TargetCatalogItem],
+    status_code=status.HTTP_200_OK,
+    summary="List target institutions and programs available for analysis",
+)
+async def list_target_catalog(
+    level: Optional[str] = None,
+    country: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+) -> List[TargetCatalogItem]:
+    """Returns curated target institutions with offline database resilience."""
+    items: List[TargetCatalogItem] = []
+    try:
+        stmt = select(ProgramRequirement)
+        if level:
+            stmt = stmt.where(ProgramRequirement.level == level)
+        if country:
+            stmt = stmt.where(ProgramRequirement.country_code == country)
+        result = await db.execute(stmt)
+        rows = result.scalars().all()
+        for r in rows:
+            items.append(
+                TargetCatalogItem(
+                    university_name=r.university_name,
+                    program_name=r.program_name,
+                    level=r.level,
+                    country_code=r.country_code,
+                    source_type="curated",
+                    source_url=r.source_url or "",
+                )
+            )
+    except Exception:
+        pass
+
+    if not items:
+        # Offline fallback to curated CSV
+        from pathlib import Path
+        import csv
+        csv_path = Path(__file__).resolve().parents[4] / "data" / "curation" / "program_requirements_2026.csv"
+        if csv_path.exists():
+            with open(csv_path, mode="r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if level and row.get("level") != level:
+                        continue
+                    if country and row.get("country_code") != country:
+                        continue
+                    items.append(
+                        TargetCatalogItem(
+                            university_name=row.get("university_name", ""),
+                            program_name=row.get("program_name", ""),
+                            level=row.get("level", ""),
+                            country_code=row.get("country_code", ""),
+                            source_type="curated",
+                            source_url=row.get("source_url", ""),
+                        )
+                    )
+    return items
