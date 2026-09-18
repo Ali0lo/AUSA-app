@@ -205,8 +205,8 @@ a clear error rather than degraded output.
 ### Tests
 
 ```bash
-cd backend && python -m pytest -q      # 301 backend tests passing
-cd frontend && npm test                 # 54 vitest tests across 8 suites passing
+cd backend && python -m pytest -q      # 352 backend tests passing (3 skipped)
+cd frontend && npm test                 # 72 vitest tests across 13 suites passing
 cd frontend && npm run typecheck       # strict TypeScript check
 cd frontend && npm run build           # Next.js production build
 ```
@@ -241,13 +241,21 @@ assumed:
 ## Honest status
 
 **Working end to end:**
-- Route engine and two-hop composition
+- Route engine and two-hop composition across 16 routes and 6 destinations
 - State Programme eligibility (4,121 catalogue rows) and 10 external scholarship evaluations
 - `POST /routes/assess`, which returns classified routes (OPEN / UNLOCKABLE / BLOCKED), cost-to-degree rankings, and the named universities each plan reaches
-- Frontend RoutePlanner (`/plan`) with **Discovery** and **Target** modes, live profile refining, baseline fixtures (never empty before input), persistent "Your score goes further here" non-exclusion ranking, and explicit absence visibility (`unknown_fields`, `not_stated`, `provenance`, and `last_checked`)
-- Curated requirements for 12 universities across DE, GB, TR, and CN
+- Frontend RoutePlanner (`/plan`) with **Discovery Mode**, live profile refining, baseline fixtures (never empty before input), persistent "Your score goes further here" non-exclusion ranking, and explicit absence visibility (`unknown_fields`, `not_stated`, `provenance`, and `last_checked`)
+- Dedicated Target Mode (`/target`, `TargetAnalyzer.tsx` & `POST /routes/target-gap`) providing objective gap statements, scale-aware requirement checklists (Attestat 5.0, Higher Ed 100, US 4.0, German 1.0-5.0), process milestones with deadlines, viable alternatives closing the gap, and honest uncurated catalogue gap fallbacks
+- Azerbaijan Domestic DİM Cutoff Predictor (`/azerbaijan`, `GET /azerbaijan/predictions`)
+- Curated requirements for institutions across DE, GB, TR, IT, and CN
 - Auth and access control · application tracker · admin review queue · PDF export
-- **301 backend tests** (`pytest`) + **54 frontend tests** (`vitest`) passing.
+- **352 backend tests** (`pytest`) + **72 frontend tests** (`vitest`) passing.
+
+**Four Verified Architectural Limitations:**
+1. **Published cutoffs describe the domestic route in every foreign destination**: German NC tables are explicitly footnoted *"ohne Bildungsausländer\*innen"*; UK and US cutoffs do not govern international quotas. This is why statistical cutoff forecasting is strictly domestic (Azerbaijan-only) and foreign routing is deterministic.
+2. **The ML rests on one country and three intake years**: The gradient-boosted cutoff forecaster is fitted solely to Azerbaijani DİM admission rounds (2023–2025) and cannot generalize to foreign selection mechanisms.
+3. **Every figure in the funding catalogue is `research-brief` provenance until Track A5 lands**: All funding rules reflect official edicts and decrees recorded in curated briefs before human editorial review stamps each row.
+4. **`verified_by` is empty on the DİM training rows until Track A6 lands**: The DİM score history is bulk-extracted from published state gazettes and awaits manual individual audit stamps.
 
 **Built but not yet connected:**
 - The LangGraph agent's tools cannot see routes or the catalogue directly
