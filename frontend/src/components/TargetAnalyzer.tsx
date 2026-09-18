@@ -576,6 +576,104 @@ export function TargetAnalyzer({
               Scale-awareness note: Grade comparisons across different grading systems (Attestat 5.0, Higher Ed 100, US 4.0, German 1.0-5.0) are indicative screening metrics. Universities conduct their own official conversions through bodies like uni-assist or internal credentials evaluators.
             </p>
           </section>
+
+          {/* Section 3: Process Milestones & Deadlines */}
+          <section className="panel p-6 sm:p-8" aria-labelledby="process-milestones-heading">
+            <h3 id="process-milestones-heading" className="text-xl font-serif font-bold text-ink">
+              3. Process Milestones &amp; Deadlines
+            </h3>
+            <p className="mt-1 text-sm text-muted">
+              Step-by-step operational timeline and verified application parameters for {result.university_name}.
+            </p>
+
+            {/* Key Application Parameters Grid */}
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border border-quiet bg-paper/50 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                  <Calendar size={14} className="text-accent" />
+                  Application Deadline
+                </span>
+                <p className="mt-2 text-base font-bold text-ink">
+                  {result.application_deadline || "Not stated in catalogue"}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {result.application_deadline
+                    ? "Check official portal for intake exceptions"
+                    : "Confirm with admissions office"}
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-quiet bg-paper/50 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                  <ExternalLink size={14} className="text-accent" />
+                  Application Portal
+                </span>
+                <p className="mt-2 text-base font-bold text-ink truncate">
+                  {result.application_portal || "Direct institution portal"}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">Official submission gateway</p>
+              </div>
+
+              <div className="rounded-lg border border-quiet bg-paper/50 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                  <Building2 size={14} className="text-accent" />
+                  Application Fee
+                </span>
+                <p className="mt-2 text-base font-bold text-ink">
+                  {result.application_fee !== null && result.application_fee !== undefined
+                    ? `${result.application_fee} ${result.currency ?? ""}`.trim()
+                    : "Not recorded (verify)"}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">Excludes visa &amp; courier fees</p>
+              </div>
+
+              <div className="rounded-lg border border-quiet bg-paper/50 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                  <Clock size={14} className="text-accent" />
+                  Lead Time Needed
+                </span>
+                <p className="mt-2 text-base font-bold text-ink">
+                  {result.unlock_time_months > 0
+                    ? `${result.unlock_time_months} months prep`
+                    : "Direct application ready"}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">Pathway / preparation buffer</p>
+              </div>
+            </div>
+
+            {/* Documents Required */}
+            {result.documents_required && (
+              <div className="mt-6 rounded-lg border border-quiet bg-paper/30 p-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+                  Required Application Documents:
+                </h4>
+                <p className="mt-1.5 text-sm text-ink leading-6">
+                  {result.documents_required}
+                </p>
+              </div>
+            )}
+
+            {/* Step-by-Step Milestones Checklist */}
+            <div className="mt-6">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+                Mandatory Execution Milestones:
+              </h4>
+              <ol className="mt-3 space-y-2.5 text-sm text-ink pl-5 list-decimal">
+                <li className="leading-6">
+                  <span className="font-semibold">Verify Intake &amp; Requirements:</span> Review the institution&apos;s published admission guidelines for your intended academic year and confirm that subject-specific prerequisites are met.
+                </li>
+                <li className="leading-6">
+                  <span className="font-semibold">Credential Evaluation:</span> Arrange certified translations and, if applying to institutions in Germany or the UK, initiate preliminary documentation clearance (e.g. uni-assist VPD or NARIC statement) at least 6 weeks before deadline.
+                </li>
+                <li className="leading-6">
+                  <span className="font-semibold">Standardized Examination:</span> Ensure all requisite language certificates (IELTS/TOEFL) and standardized tests (SAT, TR-YÖS, TestAS) are sat with official score reporting sent directly to the institution code.
+                </li>
+                <li className="leading-6">
+                  <span className="font-semibold">Portal Submission:</span> Submit application dossiers via {result.application_portal || "the institutional portal"} prior to {result.application_deadline || "the stated deadline"}.
+                </li>
+              </ol>
+            </div>
+          </section>
         </div>
       )}
     </div>
