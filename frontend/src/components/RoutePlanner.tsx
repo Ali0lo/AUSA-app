@@ -265,7 +265,8 @@ function PlanCard({
   onTargetUniversity?: (name: string) => void;
 }) {
   const isOpen = plan.status === "open";
-
+  const isDirect = plan.hops.length === 1;
+  const isBridge = plan.hops.length > 1;
 
   return (
     <section className="panel mt-6 p-5 sm:p-7">
@@ -276,37 +277,69 @@ function PlanCard({
             {countryName(plan.destination_country)}
           </h3>
         </div>
-        <span className={`status-tag ${isOpen ? "status-available" : "status-experimental"}`}>
-          {isOpen ? "Open now" : "Needs something first"}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {isDirect ? (
+            <span className="status-tag status-available text-xs">
+              1-hop direct route
+            </span>
+          ) : (
+            <span className="status-tag status-experimental text-xs">
+              2-hop bridge ({plan.hops[0]?.mechanism || "pathway"})
+            </span>
+          )}
+          <span className={`status-tag ${isOpen ? "status-available" : "status-experimental"}`}>
+            {isOpen ? "Open now" : "Needs something first"}
+          </span>
+        </div>
       </div>
 
       <ol className="mt-5 border-y border-quiet">
-        {plan.hops.map((hop, hopIndex) => (
-          <li key={hop.key} className="flex gap-4 border-b border-quiet py-3 last:border-b-0">
-            <span className="font-serif text-lg text-accent">{hopIndex + 1}</span>
-            <div className="min-w-0">
-              <p className="font-semibold">{hop.mechanism}</p>
-              <p className="mt-1 text-xs leading-5 text-muted">
-                {countryName(hop.country_code)} · {months(hop.time_cost_months)} ·{" "}
-                {money(hop.money_cost_azn_low, hop.money_cost_azn_high)}
-              </p>
-              {hop.proof_of_funds && (
-                <p className="mt-2 border-l-2 border-warning pl-3 text-xs leading-5">
-                  <span className="font-semibold">
-                    {hop.proof_of_funds.amount.toLocaleString()} {hop.proof_of_funds.currency}{" "}
-                    {hop.proof_of_funds.period}, in the bank before the visa.
-                  </span>{" "}
-                  <span className="text-muted">{hop.proof_of_funds.mechanism}.</span>{" "}
-                  <span className="text-muted">
-                    This is separate from the cost above — the money stays yours.
-                  </span>
+        {plan.hops.map((hop, hopIndex) => {
+          const isBridgeHop = isBridge && hopIndex === 0;
+          const isFinalHop = isBridge && hopIndex === plan.hops.length - 1;
+          return (
+            <li key={hop.key} className="flex gap-4 border-b border-quiet py-3 last:border-b-0">
+              <span className="font-serif text-lg text-accent">{hopIndex + 1}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold">{hop.mechanism}</p>
+                  {isBridgeHop && (
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                      Bridge Step
+                    </span>
+                  )}
+                  {isFinalHop && (
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                      Target Degree
+                    </span>
+                  )}
+                  {isDirect && (
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                      Direct Entry
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted">
+                  {countryName(hop.country_code)} · {months(hop.time_cost_months)} ·{" "}
+                  {money(hop.money_cost_azn_low, hop.money_cost_azn_high)}
                 </p>
-              )}
-              <p className="mt-1 text-xs leading-5 text-muted">{hop.citation}</p>
-            </div>
-          </li>
-        ))}
+                {hop.proof_of_funds && (
+                  <p className="mt-2 border-l-2 border-warning pl-3 text-xs leading-5">
+                    <span className="font-semibold">
+                      {hop.proof_of_funds.amount.toLocaleString()} {hop.proof_of_funds.currency}{" "}
+                      {hop.proof_of_funds.period}, in the bank before the visa.
+                    </span>{" "}
+                    <span className="text-muted">{hop.proof_of_funds.mechanism}.</span>{" "}
+                    <span className="text-muted">
+                      This is separate from the cost above — the money stays yours.
+                    </span>
+                  </p>
+                )}
+                <p className="mt-1 text-xs leading-5 text-muted">{hop.citation}</p>
+              </div>
+            </li>
+          );
+        })}
       </ol>
 
       <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
