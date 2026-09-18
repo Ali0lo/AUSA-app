@@ -564,16 +564,23 @@ export function RoutePlanner() {
   // Destination filtering & ranking (D1.4: Destination ranks, never excludes)
   const { mainPlans, outsidePlans } = useMemo(() => {
     if (!activeResult) return { mainPlans: [], outsidePlans: [] };
+    const sortPlans = (plans: RoutePlan[]) =>
+      [...plans].sort((a, b) => {
+        if (a.status === "open" && b.status !== "open") return -1;
+        if (a.status !== "open" && b.status === "open") return 1;
+        if (a.total_cost_azn_low !== b.total_cost_azn_low) return a.total_cost_azn_low - b.total_cost_azn_low;
+        return a.total_months - b.total_months;
+      });
 
     if (preferredDestinations.length === 0) {
-      return { mainPlans: activeResult.plans, outsidePlans: [] };
+      return { mainPlans: sortPlans(activeResult.plans), outsidePlans: [] };
     }
 
-    const main = activeResult.plans.filter((p) =>
-      preferredDestinations.includes(p.destination_country)
+    const main = sortPlans(
+      activeResult.plans.filter((p) => preferredDestinations.includes(p.destination_country))
     );
-    const outside = activeResult.plans.filter(
-      (p) => !preferredDestinations.includes(p.destination_country)
+    const outside = sortPlans(
+      activeResult.plans.filter((p) => !preferredDestinations.includes(p.destination_country))
     );
     return { mainPlans: main, outsidePlans: outside };
   }, [activeResult, preferredDestinations]);
@@ -582,7 +589,7 @@ export function RoutePlanner() {
   const openPlans = useMemo(() => mainPlans.filter((p) => p.status === "open"), [mainPlans]);
   const unlockablePlans = useMemo(() => mainPlans.filter((p) => p.status === "unlockable"), [mainPlans]);
 
-  // Best outside plans for "Your score goes further here"
+  // Best outside plans for "Your score goes further here" (D1.4)
   const topOutsidePlans = useMemo(() => {
     const openOutside = outsidePlans.filter((p) => p.status === "open");
     if (openOutside.length > 0) return openOutside;
