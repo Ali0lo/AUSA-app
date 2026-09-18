@@ -932,7 +932,7 @@ async def assess_target_gap(
                 requirement="Mandatory before degree" if found_req else "Direct entry possible",
                 student_value="Completed foundation" if held_qual == "foundation_year" else "Attestat / School-leaver",
                 status="MET" if (not found_req or held_qual in ("foundation_year", "one_year_university")) else "GAP",
-                explanation=getattr(row, "foundation_providers", "Check recognized preparatory course providers."),
+                explanation=getattr(row, "foundation_providers", None) or "Check recognized preparatory course providers.",
             )
         )
 
