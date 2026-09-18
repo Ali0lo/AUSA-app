@@ -667,15 +667,15 @@ export function RoutePlanner() {
   return (
     <div>
       {/* Mode switcher: Discovery vs Target */}
-      <div className="flex border-b border-quiet pb-4 mb-8 items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
+        <div className="inline-flex rounded-full border border-white/10 bg-[#13152c]/90 p-1 backdrop-blur-xl">
           <button
             type="button"
             onClick={() => setMode("discovery")}
-            className={`button text-sm py-2 px-4 ${
+            className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ${
               mode === "discovery"
-                ? "border-accent bg-accent text-paper font-semibold"
-                : "border-quiet bg-paper text-muted hover:text-ink"
+                ? "bg-gradient-to-r from-purple-500 to-orange-500 text-white shadow-lg shadow-orange-500/20"
+                : "text-slate-400 hover:text-white"
             }`}
           >
             <Compass size={16} aria-hidden="true" />
@@ -684,10 +684,10 @@ export function RoutePlanner() {
           <button
             type="button"
             onClick={() => setMode("target")}
-            className={`button text-sm py-2 px-4 ${
+            className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 ${
               mode === "target"
-                ? "border-accent bg-accent text-paper font-semibold"
-                : "border-quiet bg-paper text-muted hover:text-ink"
+                ? "bg-gradient-to-r from-purple-500 to-orange-500 text-white shadow-lg shadow-orange-500/20"
+                : "text-slate-400 hover:text-white"
             }`}
           >
             <Crosshair size={16} aria-hidden="true" />
@@ -695,7 +695,7 @@ export function RoutePlanner() {
           </button>
         </div>
 
-        <p className="text-xs text-muted">
+        <p className="text-xs text-slate-400">
           {mode === "discovery"
             ? "Enter your credentials to see every reachable route."
             : "Name a university to check its recorded requirements and application steps."}
@@ -704,9 +704,9 @@ export function RoutePlanner() {
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-14">
         {/* Profile Sidebar */}
-        <form onSubmit={submit} className="panel-strong h-fit p-5 sm:p-6" noValidate>
+        <form onSubmit={submit} className="rounded-3xl border border-white/10 bg-[#13152c]/85 p-6 backdrop-blur-2xl shadow-2xl h-fit sm:p-7" noValidate>
           <p className="eyebrow">Your profile</p>
-          <p className="mt-3 text-sm leading-6 text-muted">
+          <p className="mt-3 text-sm leading-6 text-slate-400">
             Leave anything blank that you do not have. A blank is treated as unknown, never as zero.
           </p>
 
@@ -719,8 +719,8 @@ export function RoutePlanner() {
               value={level}
               onChange={(event) => setLevel(event.target.value as "bachelor" | "master")}
             >
-              <option value="bachelor">A bachelor&apos;s degree</option>
-              <option value="master">A master&apos;s degree</option>
+              <option value="bachelor" className="bg-[#13152c] text-white">A bachelor&apos;s degree</option>
+              <option value="master" className="bg-[#13152c] text-white">A master&apos;s degree</option>
             </select>
             <p className="field-help">
               Level is asked first because findings invert between them: Germany and UK direct entry are closed on attestat but open to bachelor graduates.
@@ -736,7 +736,7 @@ export function RoutePlanner() {
               onChange={(event) => setQualification(event.target.value as RouteQualification)}
             >
               {QUALIFICATIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option key={option.value} value={option.value} className="bg-[#13152c] text-white">{option.label}</option>
               ))}
             </select>
           </div>
@@ -759,7 +759,7 @@ export function RoutePlanner() {
                 onChange={(event) => setGpaScale(event.target.value as GradeScaleKey)}
               >
                 {GRADE_SCALES.map((scale) => (
-                  <option key={scale.value} value={scale.value}>{scale.label}</option>
+                  <option key={scale.value} value={scale.value} className="bg-[#13152c] text-white">{scale.label}</option>
                 ))}
               </select>
             </div>
@@ -788,7 +788,7 @@ export function RoutePlanner() {
           {/* D1.2: Destination Preferences (never excludes) */}
           <div className="mt-5">
             <p className="field-label">Preferred destinations</p>
-            <p className="text-xs text-muted mb-2">
+            <p className="text-xs text-slate-400 mb-2">
               Destination ranks, it never excludes. Chosen countries fill main results; others appear under &ldquo;Your score goes further here&rdquo;.
             </p>
             <div className="grid grid-cols-2 gap-2 mt-2">
@@ -799,10 +799,10 @@ export function RoutePlanner() {
                     type="button"
                     key={dest.code}
                     onClick={() => handleDestinationToggle(dest.code)}
-                    className={`text-xs p-2 text-left border transition-colors ${
+                    className={`text-xs p-2.5 rounded-xl border text-left transition-all ${
                       isSelected
-                        ? "border-accent bg-accent/10 font-semibold text-accent"
-                        : "border-quiet bg-paper text-muted hover:border-line"
+                        ? "border-orange-500/50 bg-gradient-to-r from-orange-500/20 to-purple-500/20 font-semibold text-orange-300 shadow-[0_0_12px_rgba(255,122,0,0.2)]"
+                        : "border-white/10 bg-white/[0.04] text-slate-400 hover:border-white/20 hover:text-white"
                     }`}
                   >
                     {isSelected ? "✓ " : "+ "}
@@ -823,16 +823,16 @@ export function RoutePlanner() {
               onChange={(e) => handleSelectField(e.target.value)}
             >
               {FIELD_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
+                <option key={opt.value} value={opt.value} className="bg-[#13152c] text-white">
                   {opt.label}
                 </option>
               ))}
             </select>
           </div>
 
-          <fieldset className="mt-6 border-t border-quiet pt-5">
+          <fieldset className="mt-6 border-t border-white/[0.08] pt-5">
             <legend className="sr-only">Exam scores</legend>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
               Exams you have sat
             </p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -856,7 +856,7 @@ export function RoutePlanner() {
               ))}
             </div>
 
-            <p className="text-xs text-muted mt-2">For a TOEFL result reported on the 1–6 scale, leave TOEFL blank; this planner does not yet compare that scale.</p>
+            <p className="text-xs text-slate-400 mt-2">For a TOEFL result reported on the 1–6 scale, leave TOEFL blank; this planner does not yet compare that scale.</p>
 
             {dim.trim() !== "" && (
               <div className="mt-4">
@@ -867,11 +867,11 @@ export function RoutePlanner() {
                   value={dimGroup}
                   onChange={(event) => setDimGroup(event.target.value)}
                 >
-                  <option value="">Not sure</option>
-                  <option value="1">Group 1 — engineering and technology</option>
-                  <option value="2">Group 2</option>
-                  <option value="3">Group 3</option>
-                  <option value="4">Group 4</option>
+                  <option value="" className="bg-[#13152c] text-white">Not sure</option>
+                  <option value="1" className="bg-[#13152c] text-white">Group 1 — engineering and technology</option>
+                  <option value="2" className="bg-[#13152c] text-white">Group 2</option>
+                  <option value="3" className="bg-[#13152c] text-white">Group 3</option>
+                  <option value="4" className="bg-[#13152c] text-white">Group 4</option>
                 </select>
                 <p className="field-help">
                   The state programme asks 400 of Group 1 and 550 of every other field. Leave
@@ -888,10 +888,10 @@ export function RoutePlanner() {
                 value={language}
                 onChange={(event) => setLanguage(event.target.value)}
               >
-                <option value="">None or not sure</option>
-                <option value="B2">B2</option>
-                <option value="C1">C1</option>
-                <option value="C2">C2</option>
+                <option value="" className="bg-[#13152c] text-white">None or not sure</option>
+                <option value="B2" className="bg-[#13152c] text-white">B2</option>
+                <option value="C1" className="bg-[#13152c] text-white">C1</option>
+                <option value="C2" className="bg-[#13152c] text-white">C2</option>
               </select>
               <p className="field-help">
                 The Dövlət Proqramı requires C1 or above.
@@ -899,7 +899,7 @@ export function RoutePlanner() {
             </div>
           </fieldset>
 
-          <fieldset className="mt-7 border-t border-quiet pt-6">
+          <fieldset className="mt-7 border-t border-white/[0.08] pt-6">
             <legend className="eyebrow">Other admission tests</legend>
             <p className="field-help">Leave tests you have not taken blank. Check the university’s accepted test format and subscores.</p>
             {([
@@ -911,9 +911,9 @@ export function RoutePlanner() {
             </div>)}
           </fieldset>
 
-          <fieldset className="mt-7 border-t border-quiet pt-6">
+          <fieldset className="mt-7 border-t border-white/[0.08] pt-6">
             <legend className="eyebrow">For funding</legend>
-            <p className="mt-3 text-sm leading-6 text-muted">
+            <p className="mt-3 text-sm leading-6 text-slate-400">
               Several scholarships are decided by things that have nothing to do with your
               grades. Leave any of these blank and we will say the gate went unchecked —
               never that you cleared it.
@@ -963,10 +963,10 @@ export function RoutePlanner() {
                     className="field"
                     value={employer}
                     onChange={(event) => setEmployer(event.target.value)}
-                    placeholder="if you are working"
+                    placeholder="e.g. SOCAR Downstream"
                   />
                   <p className="field-help">
-                    SOCAR&apos;s scholarship is open only to SOCAR group employees. No
+                    SOCAR gives preference to its own employees and partners. No other
                     academic record opens it, so this is the only way we can tell whether it
                     applies to you.
                   </p>
@@ -975,7 +975,7 @@ export function RoutePlanner() {
             )}
           </fieldset>
 
-          <button type="submit" className="button-primary mt-7 w-full" disabled={pending}>
+          <button type="submit" className="button-primary mt-7 w-full shadow-[0_0_25px_rgba(255,107,0,0.35)] min-h-12" disabled={pending}>
             {pending ? (
               <>
                 <Loader2 size={16} className="animate-spin" aria-hidden="true" />
