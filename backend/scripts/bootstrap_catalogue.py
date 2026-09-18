@@ -4,9 +4,18 @@ Run from backend: python -m scripts.bootstrap_catalogue
 Optional research CSVs and RAG embeddings are loaded explicitly by their own scripts.
 """
 import asyncio
-from pathlib import Path
-from alembic import command
-from alembic.config import Config
+try:
+    from alembic import command
+    from alembic.config import Config
+except ImportError:
+    import sys, importlib
+    _cwd = sys.path.pop(0) if sys.path and sys.path[0] in ("", ".") else None
+    try:
+        command = importlib.import_module("alembic.command")
+        Config = importlib.import_module("alembic.config").Config
+    finally:
+        if _cwd is not None:
+            sys.path.insert(0, _cwd)
 from app.core.database import AsyncSessionLocal, engine
 from scripts.load_program_requirements import DEFAULT_FILE, KEY_FIELDS, read_rows, load_program_requirements
 from scripts.collect_dp_catalogue import DEFAULT_DESTINATION, RESOURCES
