@@ -632,3 +632,339 @@ async def list_target_catalog(
                         )
                     )
     return items
+
+
+class ChecklistItem(BaseModel):
+    name: str
+    requirement: str
+    student_value: Optional[str] = None
+    status: str  # "MET", "GAP", "UNKNOWN"
+    explanation: str
+
+
+class TargetGapPayload(BaseModel):
+    university_name: str
+    program_name: Optional[str] = None
+    level: str = "bachelor"
+    qualification_held: str = "attestat"
+    gpa: Optional[float] = None
+    gpa_scale: Optional[str] = None
+    ielts: Optional[float] = None
+    toefl: Optional[int] = None
+    dim_score: Optional[float] = None
+    sat: Optional[int] = None
+    tr_yos: Optional[float] = None
+    test_as: Optional[float] = None
+
+
+class TargetGapResponse(BaseModel):
+    found: bool
+    university_name: str
+    program_name: str
+    level: str
+    country_code: str
+    route_status: str  # "OPEN", "UNLOCKABLE", "BLOCKED", "UNKNOWN"
+    route_gap_statement: str
+    unlock_steps: List[str]
+    unlock_time_months: int
+    unlock_cost_azn_low: int
+    unlock_cost_azn_high: int
+    checklist: List[ChecklistItem]
+    application_portal: Optional[str] = None
+    application_deadline: Optional[str] = None
+    application_fee: Optional[float] = None
+    currency: Optional[str] = None
+    documents_required: Optional[str] = None
+    alternatives: List[dict] = []
+    provenance: str = "claude-extracted"
+    source_url: str = ""
+    last_checked: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.post(
+    "/target-gap",
+    response_model=TargetGapResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Detailed gap analysis for a specific target university",
+)
+async def assess_target_gap(
+    payload: TargetGapPayload,
+    db: AsyncSession = Depends(get_db),
+) -> TargetGapResponse:
+    """Evaluates a student's profile against an explicit target university with gap analysis."""
+    from app.domain.grades import check_grade
+    from app.domain.routes import StudentRouteProfile
+
+    # Search in database first
+    row = None
+    try:
+        stmt = select(ProgramRequirement).where(
+            ProgramRequirement.university_name.ilike(f"%{payload.university_name}%"),
+            ProgramRequirement.level == payload.level,
+        )
+        if payload.program_name:
+            stmt = stmt.where(ProgramRequirement.program_name.ilike(f"%{payload.program_name}%"))
+        res = await db.execute(stmt)
+        row = res.scalars().first()
+    except Exception:
+        pass
+
+    # Offline fallback to CSV if row not in DB
+    if not row:
+        from pathlib import Path
+        import csv
+        csv_path = Path(__file__).resolve().parents[4] / "data" / "curation" / "program_requirements_2026.csv"
+        if csv_path.exists():
+            with open(csv_path, mode="r", encoding="utf-8-sig") as f:
+                for r in csv.DictReader(f):
+                    if (
+                        payload.university_name.lower() in r.get("university_name", "").lower()
+                        and r.get("level", "") == payload.level
+                    ):
+                        class CsvRequirement:
+                            pass
+                        req = CsvRequirement()
+                        for k, v in r.items():
+                            setattr(req, k, v if v != "" else None)
+                        req.gpa_minimum = float(r["gpa_minimum"]) if r.get("gpa_minimum") else None
+                        req.language_minimum_score = float(r["language_minimum_score"]) if r.get("language_minimum_score") else None
+                        req.entrance_exam_minimum = float(r["entrance_exam_minimum"]) if r.get("entrance_exam_minimum") else None
+                        req.tuition_per_year = float(r["tuition_per_year"]) if r.get("tuition_per_year") else None
+                        req.application_fee = float(r["application_fee"]) if r.get("application_fee") else None
+                        row = req
+                        break
+
+    # If university is not held in our catalogue
+    if not row:
+        return TargetGapResponse(
+            found=False,
+            university_name=payload.university_name,
+            program_name=payload.program_name or "General Admissions",
+            level=payload.level,
+            country_code="UNKNOWN",
+            route_status="UNKNOWN",
+            route_gap_statement=(
+                f"We have not collected admission requirements for {payload.university_name} yet. "
+                "This is a catalogue gap in our data, not a statement that the institution will reject you. "
+                "Please check the institution's official international admissions page directly."
+            ),
+            unlock_steps=[],
+            unlock_time_months=0,
+            unlock_cost_azn_low=0,
+            unlock_cost_azn_high=0,
+            checklist=[],
+            alternatives=[
+                {"university_name": "Bogazici University", "country_code": "TR", "reason": "Direct attestat accepted"},
+                {"university_name": "Istanbul Technical University", "country_code": "TR", "reason": "Direct attestat accepted"},
+                {"university_name": "University of Warsaw", "country_code": "PL", "reason": "Direct entry with apostille"},
+            ],
+            provenance="not_collected",
+            source_url="",
+        )
+
+    # University is held. Evaluate Route Gap
+    c_code = getattr(row, "country_code", "UNKNOWN")
+    accepted_qual = getattr(row, "entry_qualification_accepted", None)
+    held_qual = payload.qualification_held
+
+    route_status = "OPEN"
+    gap_statement = f"Direct route to {row.university_name} is accessible with your qualification ({held_qual})."
+    unlock_steps: List[str] = []
+    unlock_months = 0
+    cost_low = 0
+    cost_high = 0
+
+    if c_code == "DE" and held_qual == "attestat" and payload.level == "bachelor":
+        route_status = "BLOCKED"
+        gap_statement = (
+            f"{row.university_name} does not accept a 11-year school certificate (attestat) for direct entry. "
+            "Under anabin regulations, direct entry requires one completed university year or a Studienkolleg."
+        )
+        unlock_steps = [
+            "Attend Studienkolleg in Germany and pass Feststellungsprüfung (12 months, TestAS required, ~6,000–14,000 AZN)",
+            "Complete 1 year at an accredited Azerbaijani university (~1,000–4,000 AZN) to unlock subject-restricted direct entry"
+        ]
+        unlock_months = 12
+        cost_low = 1000
+        cost_high = 14000
+    elif c_code == "GB" and held_qual == "attestat" and payload.level == "bachelor":
+        route_status = "BLOCKED"
+        gap_statement = (
+            f"{row.university_name} does not accept an Azerbaijani attestat alone for direct bachelor entry. "
+            "Entry requires an international foundation year or one completed year of university."
+        )
+        unlock_steps = [
+            "Enroll in an accredited International Foundation Programme (12 months, ~25,000–45,000 AZN)",
+            "Complete 1 year at an accredited Azerbaijani university (~1,000–4,000 AZN) for direct UCAS admission"
+        ]
+        unlock_months = 12
+        cost_low = 1000
+        cost_high = 45000
+    elif accepted_qual and accepted_qual != held_qual:
+        route_status = "UNLOCKABLE"
+        gap_statement = f"This programme requires {accepted_qual.replace('_', ' ')}. You currently hold {held_qual.replace('_', ' ')}."
+        unlock_steps = [f"Attain {accepted_qual.replace('_', ' ')} credential before enrollment."]
+
+    # Requirement Checklist
+    checklist: List[ChecklistItem] = []
+
+    # 1. Entry Qualification
+    checklist.append(
+        ChecklistItem(
+            name="Entry Qualification",
+            requirement=f"Accepts: {(accepted_qual or 'Varies').replace('_', ' ')}",
+            student_value=held_qual.replace('_', ' '),
+            status="MET" if (accepted_qual == held_qual or route_status == "OPEN") else "GAP",
+            explanation="Your current schooling status vs published entry qualification.",
+        )
+    )
+
+    # 2. GPA Requirement
+    gpa_min = getattr(row, "gpa_minimum", None)
+    gpa_scale = getattr(row, "gpa_scale", None)
+    if gpa_min is not None:
+        if payload.gpa is not None:
+            grade_check = check_grade(
+                student_gpa=payload.gpa,
+                student_scale=payload.gpa_scale,
+                min_gpa=gpa_min,
+                min_scale=gpa_scale,
+            )
+            checklist.append(
+                ChecklistItem(
+                    name="Academic Grade Average",
+                    requirement=f"{gpa_min} out of {gpa_scale or 'stated scale'}",
+                    student_value=f"{payload.gpa} out of {payload.gpa_scale or 'unknown scale'}",
+                    status="MET" if grade_check.verdict == "meets" else "GAP",
+                    explanation=grade_check.explanation,
+                )
+            )
+        else:
+            checklist.append(
+                ChecklistItem(
+                    name="Academic Grade Average",
+                    requirement=f"{gpa_min} out of {gpa_scale or 'stated scale'}",
+                    student_value=None,
+                    status="UNKNOWN",
+                    explanation="You have not entered a grade average. Check if your grade clears this bar.",
+                )
+            )
+    else:
+        checklist.append(
+            ChecklistItem(
+                name="Academic Grade Average",
+                requirement="No minimum grade stated",
+                student_value=f"{payload.gpa}" if payload.gpa else None,
+                status="UNKNOWN",
+                explanation="The university admissions page did not publish a cutoff grade.",
+            )
+        )
+
+    # 3. Language Requirement
+    lang_test = getattr(row, "language_test", None)
+    lang_min = getattr(row, "language_minimum_score", None)
+    if lang_test:
+        student_score = None
+        st_val = "Not entered"
+        status_lang = "UNKNOWN"
+        if lang_test.upper() == "IELTS" and payload.ielts is not None:
+            student_score = payload.ielts
+            st_val = f"IELTS {payload.ielts}"
+            status_lang = "MET" if (lang_min is None or payload.ielts >= lang_min) else "GAP"
+        elif lang_test.upper() == "TOEFL" and payload.toefl is not None:
+            student_score = payload.toefl
+            st_val = f"TOEFL {payload.toefl}"
+            status_lang = "MET" if (lang_min is None or payload.toefl >= lang_min) else "GAP"
+
+        checklist.append(
+            ChecklistItem(
+                name="Language Proficiency",
+                requirement=f"{lang_test} {lang_min if lang_min else '(score not stated)'}",
+                student_value=st_val if student_score is not None else None,
+                status=status_lang,
+                explanation=f"Tested against {lang_test} benchmark." if student_score else "No matching test score entered.",
+            )
+        )
+    else:
+        checklist.append(
+            ChecklistItem(
+                name="Language Proficiency",
+                requirement="Not stated on the source page",
+                student_value=f"IELTS {payload.ielts}" if payload.ielts else None,
+                status="UNKNOWN",
+                explanation="The official admissions page did not state a language minimum. Not 'none required'.",
+            )
+        )
+
+    # 4. Entrance Exam
+    exam_name = getattr(row, "entrance_exam", None)
+    exam_min = getattr(row, "entrance_exam_minimum", None)
+    if exam_name:
+        status_exam = "UNKNOWN"
+        student_ex_val = None
+        if "SAT" in exam_name.upper() and payload.sat:
+            student_ex_val = f"SAT {payload.sat}"
+            status_exam = "MET" if (not exam_min or payload.sat >= exam_min) else "GAP"
+        elif "YÖS" in exam_name.upper() and payload.tr_yos:
+            student_ex_val = f"TR-YÖS {payload.tr_yos}"
+            status_exam = "MET" if (not exam_min or payload.tr_yos >= exam_min) else "GAP"
+        elif "TESTAS" in exam_name.upper() and payload.test_as:
+            student_ex_val = f"TestAS {payload.test_as}"
+            status_exam = "MET" if (not exam_min or payload.test_as >= exam_min) else "GAP"
+
+        checklist.append(
+            ChecklistItem(
+                name="Entrance Examination",
+                requirement=f"{exam_name} {exam_min if exam_min else ''}".strip(),
+                student_value=student_ex_val,
+                status=status_exam,
+                explanation=f"{exam_name} benchmark evaluation.",
+            )
+        )
+
+    # 5. Foundation Requirement
+    found_req = getattr(row, "foundation_required", None)
+    if found_req is not None:
+        checklist.append(
+            ChecklistItem(
+                name="Preparatory / Foundation Year",
+                requirement="Mandatory before degree" if found_req else "Direct entry possible",
+                student_value="Completed foundation" if held_qual == "foundation_year" else "Attestat / School-leaver",
+                status="MET" if (not found_req or held_qual in ("foundation_year", "one_year_university")) else "GAP",
+                explanation=getattr(row, "foundation_providers", "Check recognized preparatory course providers."),
+            )
+        )
+
+    # Alternatives along open routes
+    alternatives = [
+        {"university_name": "Bogazici University", "country_code": "TR", "reason": "Direct attestat accepted, Turkey #1 destination"},
+        {"university_name": "Istanbul Technical University", "country_code": "TR", "reason": "Direct attestat accepted, low tuition"},
+        {"university_name": "University of Warsaw", "country_code": "PL", "reason": "Direct attestat accepted with apostille"},
+    ]
+
+    return TargetGapResponse(
+        found=True,
+        university_name=getattr(row, "university_name", payload.university_name),
+        program_name=getattr(row, "program_name", "Degree Programme"),
+        level=getattr(row, "level", payload.level),
+        country_code=c_code,
+        route_status=route_status,
+        route_gap_statement=gap_statement,
+        unlock_steps=unlock_steps,
+        unlock_time_months=unlock_months,
+        unlock_cost_azn_low=cost_low,
+        unlock_cost_azn_high=cost_high,
+        checklist=checklist,
+        application_portal=getattr(row, "application_portal", None),
+        application_deadline=str(getattr(row, "application_deadline", "")) or None,
+        application_fee=getattr(row, "application_fee", None),
+        currency=getattr(row, "currency", None),
+        documents_required=getattr(row, "documents_required", None),
+        alternatives=alternatives,
+        provenance=getattr(row, "provenance", "claude-extracted"),
+        source_url=getattr(row, "source_url", ""),
+        last_checked=str(getattr(row, "last_checked", "")) or None,
+        notes=getattr(row, "notes", None),
+    )
+
