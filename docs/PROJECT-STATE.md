@@ -107,7 +107,7 @@ DİM admission, and the state programme's own academic gate is a DİM band.
 
 ## 3. What is actually built — verified 5 September
 
-**286 backend tests pass** (`cd backend && python -m pytest -q`).
+**352 backend tests pass** (`cd backend && python -m pytest -q`) and **72 frontend tests pass** (`cd frontend && npm test`).
 
 ### Working end to end
 
@@ -115,10 +115,11 @@ DİM admission, and the state programme's own academic gate is a DİM band.
 |---|---|
 | **Route engine** | `services/route_engine.py` + `domain/route_definitions.py` — **16 routes** across 7 country codes, both levels, each cited. Classifies OPEN / UNLOCKABLE / BLOCKED and composes to a two-hop cap, so `az-prep-year → de-bachelor-direct` falls out of the data, not an `if` |
 | **`POST /routes/assess`** | The product's spine. Profile in; blocked routes, costed plans, the universities each plan reaches, DP eligibility, and 10 scholarship assessments out |
+| **`POST /routes/target-gap` & `/target`** | Dedicated Target Mode (`TargetAnalyzer.tsx`). Objective gap analysis, scale-aware requirement checklist, process milestones & deadlines, viable alternatives, and honest uncurated fallback |
 | **State Programme** | `services/dp_eligibility.py` against the regulation; `dp_catalogue` holds the official **4,121 rows** (1,214 bachelor / 2,907 master, 2026) |
 | **Scholarships** | `domain/scholarship_definitions.py` — **10 instruments** beside the DP, each carrying the gate that actually decides it (SOCAR: employment. Türkiye Bursları: under 21. Chevening: 2,800 hours). An unchecked gate returns `gates_unknown` and never counts as open |
 | **Grade comparison** | `domain/grades.py` — attestat 5.0, 100-point, 4.0 and German scales, with `exact=False` when the comparison crosses scales |
-| **Frontend `/plan`** | `RoutePlanner.tsx` calls `assessRoutes` against the real endpoint |
+| **Frontend `/plan` & `/target`** | `RoutePlanner.tsx` and `TargetAnalyzer.tsx` call real route endpoints, rendering 1-hop vs 2-hop badges, non-excluding destination sorting, and absence provenance tags |
 | **Platform** | Auth + access control (the 30 Aug bypass is fixed and tested), admin review queue, application tracker, PDF export, extraction pipeline with robots checking, CI |
 
 ### Built, measured, but not serving anything
@@ -247,7 +248,7 @@ working at once do not touch the same files.
 | A — Catalogue | [`tracks/track-a-catalogue.md`](tracks/track-a-catalogue.md) | two people, unclaimed |
 | B — ML | [`tracks/track-b-ml.md`](tracks/track-b-ml.md) | unclaimed |
 | C — Product & LLM | [`tracks/track-c-product-llm.md`](tracks/track-c-product-llm.md) | Fariz + Claude — C1/C3/C4 done |
-| D — Frontend | [`tracks/track-d-frontend.md`](tracks/track-d-frontend.md) | unclaimed |
+| D — Frontend | [`tracks/track-d-frontend.md`](tracks/track-d-frontend.md) | COMPLETED |
 
 Sizes are working days.
 
@@ -282,14 +283,14 @@ application code.
 | C3 | **Resolve the legacy matcher** (Gap 4) — delete `/matching/*` and the demo programmes, or keep with a stated reason | 0.5 |
 | C4 | **Fix the `le=4.0` GPA bound** on registration and the matching schema | 0.25 |
 
-### Track D — Frontend and report *(one person)*
+### Track D — Frontend and report *(COMPLETED)*
 
-| | Task | Days |
-|---|---|---|
-| D1 | **Discovery flow** — one profile step, results refining live, destination ranks and never excludes | 2 |
-| D2 | **Target flow** — name a university, get gap + requirement checklist + process checklist + alternatives | 1.5 |
-| D3 | **Provenance and `last_checked` visible on every row**, and `unknown_fields` rendered as a named absence rather than a blank | 0.5 |
-| D4 | **Report / README pass** — correct the stale claims in §5, and state plainly that this is two products in one repository | 1 |
+| | Task | Days | Status |
+|---|---|---|---|
+| D1 | **Discovery flow** — one profile step, results refining live, 1-hop vs 2-hop badges, destination ranks and never excludes ("Your score goes further here") | 2 | Completed |
+| D2 | **Target flow** — dedicated `/target` and `TargetAnalyzer.tsx`, objective gap statements, scale-aware requirement checklist, process milestones & deadlines, viable alternatives | 1.5 | Completed |
+| D3 | **Provenance and `last_checked` visible on every row**, and `unknown_fields` rendered as a named absence rather than a blank | 0.5 | Completed |
+| D4 | **Report / README pass** — dual-product architecture, 352+ backend & 72 frontend tests, and four verified limitations quoted verbatim | 1 | Completed |
 
 **Cut order if the schedule slips** (unchanged): Poland first, then the USA bachelor path,
 then curation depth — fewer universities per country rather than dropping a country. **Not
