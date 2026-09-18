@@ -153,16 +153,16 @@ export function TargetAnalyzer({
   return (
     <div className="space-y-8" data-testid="target-analyzer" aria-label="Target roadmap analysis">
       {/* Header & Description */}
-      <section className="panel p-6 sm:p-8">
+      <section className="rounded-3xl border border-white/10 bg-[#13152c]/85 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/20 to-orange-500/20 text-orange-400 shadow-inner">
             <Building2 size={22} />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-ink">
+            <h1 className="text-2xl sm:text-3xl font-sans font-bold tracking-tight text-white">
               Target University Analyzer
             </h1>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-sm text-slate-400">
               Objective gap analysis against specific institutional requirements.
               No arbitrary composite scores or speculative admission forecasts.
             </p>
@@ -176,7 +176,7 @@ export function TargetAnalyzer({
             <div>
               <label
                 htmlFor="target-university-input"
-                className="block text-sm font-semibold text-ink"
+                className="block text-sm font-semibold text-slate-200"
               >
                 Target University
               </label>
@@ -192,7 +192,7 @@ export function TargetAnalyzer({
                 />
                 <Search
                   size={16}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                 />
                 <datalist id="target-catalog-list">
                   {catalogOptions.map((name) => (
@@ -200,7 +200,7 @@ export function TargetAnalyzer({
                   ))}
                 </datalist>
               </div>
-              <p className="mt-1 text-xs text-muted">
+              <p className="mt-1 text-xs text-slate-400">
                 Choose from our curated catalogue or type any target institution.
               </p>
             </div>
@@ -208,7 +208,7 @@ export function TargetAnalyzer({
             {/* Curated Quick Picks */}
             {catalogOptions.length > 0 && (
               <div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Curated Catalog Quick Picks:
                 </span>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -217,10 +217,10 @@ export function TargetAnalyzer({
                       key={name}
                       type="button"
                       onClick={() => handleSelectUniversity(name)}
-                      className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
                         universityInput === name
-                          ? "bg-accent text-paper"
-                          : "bg-quiet hover:bg-line text-ink"
+                          ? "bg-gradient-to-r from-orange-500 to-purple-600 text-white font-semibold shadow-md shadow-orange-500/20"
+                          : "border border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/20 hover:text-white"
                       }`}
                     >
                       {name}
@@ -232,15 +232,15 @@ export function TargetAnalyzer({
           </div>
 
           {/* Student Profile Input for Target Evaluation */}
-          <div className="space-y-4 rounded-lg border border-quiet p-4 bg-paper/50">
-            <h2 className="text-sm font-semibold text-ink flex items-center gap-1.5">
-              <GraduationCap size={16} className="text-accent" />
+          <div className="space-y-4 rounded-2xl border border-white/[0.08] p-5 bg-[#101226]/70 backdrop-blur-md">
+            <h2 className="text-sm font-semibold text-white flex items-center gap-1.5">
+              <GraduationCap size={16} className="text-orange-400" />
               Academic Credentials
             </h2>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-muted">
+                <label className="block text-xs font-semibold text-slate-400">
                   Degree Level
                 </label>
                 <select
@@ -248,13 +248,13 @@ export function TargetAnalyzer({
                   onChange={(e) => setLevel(e.target.value as "bachelor" | "master")}
                   className="field mt-1 text-xs"
                 >
-                  <option value="bachelor">Bachelor</option>
-                  <option value="master">Master</option>
+                  <option value="bachelor" className="bg-[#13152c] text-white">Bachelor</option>
+                  <option value="master" className="bg-[#13152c] text-white">Master</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted">
+                <label className="block text-xs font-semibold text-slate-400">
                   Qualification Held
                 </label>
                 <select
@@ -264,10 +264,10 @@ export function TargetAnalyzer({
                   }
                   className="field mt-1 text-xs"
                 >
-                  <option value="attestat">Attestat (11-year)</option>
-                  <option value="bachelor_degree">Bachelor Degree</option>
-                  <option value="ib_diploma">IB Diploma</option>
-                  <option value="a_levels">A-Levels</option>
+                  <option value="attestat" className="bg-[#13152c] text-white">Attestat (11-year)</option>
+                  <option value="bachelor_degree" className="bg-[#13152c] text-white">Bachelor Degree</option>
+                  <option value="ib_diploma" className="bg-[#13152c] text-white">IB Diploma</option>
+                  <option value="a_levels" className="bg-[#13152c] text-white">A-Levels</option>
                 </select>
               </div>
             </div>
@@ -275,7 +275,7 @@ export function TargetAnalyzer({
             {/* GPA & Scale */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-muted">
+                <label className="block text-xs font-semibold text-slate-400">
                   Grade / GPA
                 </label>
                 <input
@@ -288,7 +288,7 @@ export function TargetAnalyzer({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-muted">
+                <label className="block text-xs font-semibold text-slate-400">
                   Grade Scale
                 </label>
                 <select
@@ -297,7 +297,7 @@ export function TargetAnalyzer({
                   className="field mt-1 text-xs"
                 >
                   {GRADE_SCALES.map((s) => (
-                    <option key={s.value} value={s.value}>
+                    <option key={s.value} value={s.value} className="bg-[#13152c] text-white">
                       {s.label}
                     </option>
                   ))}
@@ -308,7 +308,7 @@ export function TargetAnalyzer({
             {/* Standardized Tests */}
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="block text-xs font-semibold text-muted">
+                <label className="block text-xs font-semibold text-slate-400">
                   IELTS
                 </label>
                 <input
@@ -321,7 +321,7 @@ export function TargetAnalyzer({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-muted">
+                <label className="block text-xs font-semibold text-slate-400">
                   TOEFL iBT
                 </label>
                 <input
@@ -333,7 +333,7 @@ export function TargetAnalyzer({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-muted">
+                <label className="block text-xs font-semibold text-slate-400">
                   DİM Score
                 </label>
                 <input
@@ -349,12 +349,12 @@ export function TargetAnalyzer({
         </div>
 
         {/* Action button */}
-        <div className="mt-6 flex justify-end">
+        <div className="mt-7 flex justify-end">
           <button
             type="button"
             onClick={() => handleAnalyze()}
             disabled={loading || !universityInput.trim()}
-            className="button-primary flex items-center gap-2"
+            className="button-primary flex items-center gap-2 px-7 shadow-[0_0_25px_rgba(255,107,0,0.35)] min-h-12 text-sm"
           >
             {loading ? (
               <>
@@ -384,18 +384,18 @@ export function TargetAnalyzer({
         <div className="space-y-6" data-testid="target-results">
           {/* Honest Uncurated Fallback State Banner (D2) */}
           {!result.found && (
-            <div className="panel p-6 border-l-4 border-amber-500 bg-amber-50/40 dark:bg-amber-950/20">
-              <div className="flex items-start gap-3">
-                <HelpCircle className="h-6 w-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="rounded-3xl border border-amber-500/30 bg-amber-500/[0.08] p-6 backdrop-blur-xl shadow-2xl">
+              <div className="flex items-start gap-3.5">
+                <HelpCircle className="h-6 w-6 text-amber-400 shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-serif text-lg font-bold text-ink">
+                  <h3 className="font-sans text-lg font-bold text-amber-200">
                     Catalogue Gap (Our Data, Not an Admission Rejection)
                   </h3>
-                  <p className="mt-1 text-sm text-ink leading-6">
-                    Requirements for <span className="font-semibold">{result.university_name}</span> have not been collected or verified in the AUSA catalogue yet. This is a limitation of our current dataset, not an indication that the institution will reject your application.
+                  <p className="mt-1.5 text-sm text-slate-300 leading-6">
+                    Requirements for <span className="font-semibold text-white">{result.university_name}</span> have not been collected or verified in the AUSA catalogue yet. This is a limitation of our current dataset, not an indication that the institution will reject your application.
                   </p>
-                  <p className="mt-2 text-xs text-muted leading-5 border-l-2 border-quiet pl-3">
-                    <strong>Speculative study plans excluded:</strong> AUSA does not invent speculative score targets or preparation schedules without empirical admission outcome models. Please check with the university&apos;s admissions office directly for official qualification equivalence.
+                  <p className="mt-3 text-xs text-slate-400 leading-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                    <strong className="text-slate-300">Speculative study plans excluded:</strong> AUSA does not invent speculative score targets or preparation schedules without empirical admission outcome models. Please check with the university&apos;s admissions office directly for official qualification equivalence.
                   </p>
                 </div>
               </div>
@@ -403,18 +403,18 @@ export function TargetAnalyzer({
           )}
 
           {/* Section 1: Route Gap Statement */}
-          <section className="panel p-6 sm:p-8" aria-labelledby="gap-statement-heading">
+          <section className="rounded-3xl border border-white/[0.08] bg-[#13152c]/80 p-6 sm:p-8 backdrop-blur-xl shadow-2xl" aria-labelledby="gap-statement-heading">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase tracking-widest text-muted">
+                  <span className="text-xs uppercase tracking-widest text-slate-400">
                     {countryName(result.country_code)} · {result.level === "master" ? "Master's" : "Bachelor's"}
                   </span>
                 </div>
-                <h2 id="gap-statement-heading" className="text-2xl font-serif font-bold text-ink mt-1">
+                <h2 id="gap-statement-heading" className="text-2xl sm:text-3xl font-sans font-bold text-white mt-1">
                   {result.university_name}
                 </h2>
-                <p className="text-sm font-medium text-muted mt-0.5">
+                <p className="text-sm font-medium text-slate-400 mt-0.5">
                   {result.program_name}
                 </p>
               </div>
@@ -422,22 +422,22 @@ export function TargetAnalyzer({
               {/* Status Tag */}
               <div>
                 {result.route_status === "OPEN" && (
-                  <span className="status-tag status-available text-xs">
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">
                     ✓ Route Open Directly
                   </span>
                 )}
                 {result.route_status === "UNLOCKABLE" && (
-                  <span className="status-tag status-experimental text-xs">
+                  <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-orange-400">
                     ⚡ Route Unlockable via Bridge
                   </span>
                 )}
                 {result.route_status === "BLOCKED" && (
-                  <span className="status-tag status-offline text-xs">
+                  <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-rose-400">
                     ✕ Route Blocked
                   </span>
                 )}
                 {result.route_status === "UNKNOWN" && (
-                  <span className="status-tag status-offline text-xs">
+                  <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-purple-300">
                     ? Status Unverified
                   </span>
                 )}
@@ -446,15 +446,15 @@ export function TargetAnalyzer({
 
             {/* Gap Statement Callout */}
             <div
-              className={`mt-6 rounded-lg border p-4 ${
+              className={`mt-6 rounded-2xl border p-5 backdrop-blur-md ${
                 result.route_status === "OPEN"
-                  ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200"
+                  ? "border-emerald-500/30 bg-emerald-500/[0.08] text-emerald-200"
                   : result.route_status === "UNLOCKABLE"
-                    ? "border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200"
-                    : "border-quiet bg-paper/60 text-ink"
+                    ? "border-orange-500/30 bg-orange-500/[0.08] text-orange-200"
+                    : "border-purple-500/30 bg-purple-500/[0.08] text-purple-200"
               }`}
             >
-              <h3 className="text-xs font-bold uppercase tracking-wider">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white">
                 1. Objective Gap Statement
               </h3>
               <p className="mt-2 text-sm leading-6">
@@ -464,29 +464,29 @@ export function TargetAnalyzer({
 
             {/* Unlock Steps & Requirements (if UNLOCKABLE or unlock_steps present) */}
             {result.unlock_steps && result.unlock_steps.length > 0 && (
-              <div className="mt-6 border-t border-quiet pt-4">
-                <h4 className="text-sm font-semibold text-ink flex items-center gap-2">
-                  <Clock size={16} className="text-accent" />
+              <div className="mt-6 border-t border-white/[0.08] pt-5">
+                <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <Clock size={16} className="text-orange-400" />
                   What It Takes to Bridge the Gap:
                 </h4>
-                <ul className="mt-2 space-y-1.5 pl-5 list-disc text-sm text-ink">
+                <ul className="mt-2 space-y-1.5 pl-5 list-disc text-sm text-slate-300">
                   {result.unlock_steps.map((step, idx) => (
                     <li key={idx}>{step}</li>
                   ))}
                 </ul>
 
-                <dl className="mt-4 grid grid-cols-2 gap-4 text-xs bg-paper/40 p-3 rounded border border-quiet">
+                <dl className="mt-4 grid grid-cols-2 gap-4 text-xs bg-[#101226]/60 p-4 rounded-2xl border border-white/[0.08]">
                   <div>
-                    <dt className="text-muted">Estimated Prep Duration:</dt>
-                    <dd className="font-semibold text-ink">
+                    <dt className="text-slate-400">Estimated Prep Duration:</dt>
+                    <dd className="font-semibold text-white mt-0.5">
                       {result.unlock_time_months > 0
                         ? `${result.unlock_time_months} months`
                         : "Direct / immediate"}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-muted">Estimated Pathway Cost:</dt>
-                    <dd className="font-semibold text-ink">
+                    <dt className="text-slate-400">Estimated Pathway Cost:</dt>
+                    <dd className="font-semibold text-white mt-0.5">
                       {result.unlock_cost_azn_low === 0 && result.unlock_cost_azn_high === 0
                         ? "Minimal / zero direct route fee"
                         : `${result.unlock_cost_azn_low.toLocaleString("en-US")} – ${result.unlock_cost_azn_high.toLocaleString("en-US")} AZN`}
@@ -497,7 +497,7 @@ export function TargetAnalyzer({
             )}
 
             {/* Provenance & Last Checked footer */}
-            <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-quiet pt-4 text-xs text-muted">
+            <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/[0.08] pt-4 text-xs text-slate-400">
               {result.source_url && (
                 <a
                   href={result.source_url}
@@ -510,10 +510,10 @@ export function TargetAnalyzer({
                 </a>
               )}
               <span
-                className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs ${
                   result.provenance === "human-verified"
-                    ? "border border-emerald-300 bg-emerald-50 font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                    : "border border-amber-300 bg-amber-50 font-normal text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                    ? "border border-emerald-500/30 bg-emerald-500/10 font-medium text-emerald-400"
+                    : "border border-purple-500/30 bg-purple-500/10 font-normal text-purple-300"
                 }`}
               >
                 {result.provenance === "human-verified"
@@ -521,7 +521,7 @@ export function TargetAnalyzer({
                   : "Read from official portal, not yet human-verified"}
               </span>
               {result.last_checked && (
-                <span className="font-mono">Last verified: {result.last_checked.slice(0, 10)}</span>
+                <span className="font-mono text-slate-500">Last verified: {result.last_checked.slice(0, 10)}</span>
               )}
             </div>
           </section>
