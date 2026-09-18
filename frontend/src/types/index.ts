@@ -329,3 +329,66 @@ export interface AssessRoutesResponse {
   // bachelor award is under-21. null when this profile does not face that trade-off.
   prep_year_warning: string | null;
 }
+
+export interface TargetCatalogItem {
+  university_name: string;
+  program_name: string;
+  level: string;
+  country_code: string;
+  source_type: string;
+  source_url: string;
+}
+
+export interface TargetChecklistItem {
+  name: string;
+  requirement: string;
+  student_value: string | null;
+  status: "MET" | "GAP" | "UNKNOWN" | string;
+  explanation: string;
+}
+
+export interface TargetAlternative {
+  university_name: string;
+  country_code: string;
+  reason: string;
+}
+
+export interface TargetGapResponse {
+  found: boolean;
+  university_name: string;
+  program_name: string;
+  level: string;
+  country_code: string;
+  route_status: "OPEN" | "UNLOCKABLE" | "BLOCKED" | "UNKNOWN" | string;
+  route_gap_statement: string;
+  unlock_steps: string[];
+  unlock_time_months: number;
+  unlock_cost_azn_low: number;
+  unlock_cost_azn_high: number;
+  checklist: TargetChecklistItem[];
+  application_portal?: string | null;
+  application_deadline?: string | null;
+  application_fee?: number | null;
+  currency?: string | null;
+  documents_required?: string | null;
+  alternatives: TargetAlternative[];
+  provenance: string;
+  source_url: string;
+  last_checked?: string | null;
+  notes?: string | null;
+}
+
+export interface TargetGapPayload {
+  university_name: string;
+  program_name?: string;
+  level?: "bachelor" | "master" | string;
+  qualification_held?: RouteQualification | string;
+  gpa?: number;
+  gpa_scale?: GradeScaleKey | string;
+  ielts?: number;
+  toefl?: number;
+  dim_score?: number;
+  sat?: number;
+  tr_yos?: number;
+  test_as?: number;
+}

@@ -103,11 +103,11 @@ In strict adherence to project honesty and scientific rigour, the system documen
 
 The implementation has been verified through comprehensive automated testing across both frontend and backend suites:
 
-- **Backend Test Suite:** 301 passing unit, domain, and API contract tests (`pytest`).
+- **Backend Test Suite:** 352 passing unit, domain, and API contract tests (`pytest`, 3 skipped).
   - Verified route engine transitions and two-hop plan compositions.
   - Verified State Programme quota algorithms (4,121 catalogue rows).
   - Verified error handling and contract schemas.
-- **Frontend Test Suite:** 54 passing tests across 8 test suites (`vitest`).
+- **Frontend Test Suite:** 72 passing tests across 13 test suites (`vitest`).
   - Verified Discovery Flow interactions and status groupings.
   - Verified Target Flow gap analysis and honest catalog gap fallbacks.
   - Verified absence visibility, provenance indicators, and scale flags.

@@ -224,6 +224,13 @@ function UniversityCard({
       {/* The unknowns, said out loud. A blank tuition rendered in a list reads as
           free and a blank language test reads as none required -- both wrong in
           the direction that costs a student an application. */}
+      {university.unknown_fields && university.unknown_fields.length > 0 && (
+        <div className="mt-3 border-l-2 border-warning pl-3 text-xs leading-5 text-muted">
+          <span className="font-semibold text-warning">Not stated on institution website: </span>
+          {university.unknown_fields.map((f) => f.replace(/_/g, " ")).join(", ")}
+        </div>
+      )}
+
       {university.not_stated && (
         <p className="mt-3 text-xs leading-5 text-muted border-l-2 border-warning pl-3">
           {university.not_stated}
@@ -240,13 +247,19 @@ function UniversityCard({
           Source page
           <ExternalLink size={12} aria-hidden="true" />
         </a>
-        <span className={university.provenance === "human-verified" ? "text-success font-medium" : "text-muted"}>
+        <span
+          className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${
+            university.provenance === "human-verified"
+              ? "border border-emerald-300 bg-emerald-50 font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+              : "border border-amber-300 bg-amber-50 font-normal text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+          }`}
+        >
           {university.provenance === "human-verified"
             ? "✓ Checked by a person"
             : "Read from the source page, not yet checked by a person"}
         </span>
         {university.last_checked && (
-          <span>Last checked: {university.last_checked.slice(0, 10)}</span>
+          <span className="font-mono text-xs">Last checked: {university.last_checked.slice(0, 10)}</span>
         )}
       </div>
     </article>
@@ -265,7 +278,8 @@ function PlanCard({
   onTargetUniversity?: (name: string) => void;
 }) {
   const isOpen = plan.status === "open";
-
+  const isDirect = plan.hops.length === 1;
+  const isBridge = plan.hops.length > 1;
 
   return (
     <section className="panel mt-6 p-5 sm:p-7">
@@ -276,37 +290,69 @@ function PlanCard({
             {countryName(plan.destination_country)}
           </h3>
         </div>
-        <span className={`status-tag ${isOpen ? "status-available" : "status-experimental"}`}>
-          {isOpen ? "Open now" : "Needs something first"}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {isDirect ? (
+            <span className="status-tag status-available text-xs">
+              1-hop direct route
+            </span>
+          ) : (
+            <span className="status-tag status-experimental text-xs">
+              2-hop bridge ({plan.hops[0]?.mechanism || "pathway"})
+            </span>
+          )}
+          <span className={`status-tag ${isOpen ? "status-available" : "status-experimental"}`}>
+            {isOpen ? "Open now" : "Needs something first"}
+          </span>
+        </div>
       </div>
 
       <ol className="mt-5 border-y border-quiet">
-        {plan.hops.map((hop, hopIndex) => (
-          <li key={hop.key} className="flex gap-4 border-b border-quiet py-3 last:border-b-0">
-            <span className="font-serif text-lg text-accent">{hopIndex + 1}</span>
-            <div className="min-w-0">
-              <p className="font-semibold">{hop.mechanism}</p>
-              <p className="mt-1 text-xs leading-5 text-muted">
-                {countryName(hop.country_code)} · {months(hop.time_cost_months)} ·{" "}
-                {money(hop.money_cost_azn_low, hop.money_cost_azn_high)}
-              </p>
-              {hop.proof_of_funds && (
-                <p className="mt-2 border-l-2 border-warning pl-3 text-xs leading-5">
-                  <span className="font-semibold">
-                    {hop.proof_of_funds.amount.toLocaleString()} {hop.proof_of_funds.currency}{" "}
-                    {hop.proof_of_funds.period}, in the bank before the visa.
-                  </span>{" "}
-                  <span className="text-muted">{hop.proof_of_funds.mechanism}.</span>{" "}
-                  <span className="text-muted">
-                    This is separate from the cost above — the money stays yours.
-                  </span>
+        {plan.hops.map((hop, hopIndex) => {
+          const isBridgeHop = isBridge && hopIndex === 0;
+          const isFinalHop = isBridge && hopIndex === plan.hops.length - 1;
+          return (
+            <li key={hop.key} className="flex gap-4 border-b border-quiet py-3 last:border-b-0">
+              <span className="font-serif text-lg text-accent">{hopIndex + 1}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold">{hop.mechanism}</p>
+                  {isBridgeHop && (
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                      Bridge Step
+                    </span>
+                  )}
+                  {isFinalHop && (
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                      Target Degree
+                    </span>
+                  )}
+                  {isDirect && (
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                      Direct Entry
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted">
+                  {countryName(hop.country_code)} · {months(hop.time_cost_months)} ·{" "}
+                  {money(hop.money_cost_azn_low, hop.money_cost_azn_high)}
                 </p>
-              )}
-              <p className="mt-1 text-xs leading-5 text-muted">{hop.citation}</p>
-            </div>
-          </li>
-        ))}
+                {hop.proof_of_funds && (
+                  <p className="mt-2 border-l-2 border-warning pl-3 text-xs leading-5">
+                    <span className="font-semibold">
+                      {hop.proof_of_funds.amount.toLocaleString()} {hop.proof_of_funds.currency}{" "}
+                      {hop.proof_of_funds.period}, in the bank before the visa.
+                    </span>{" "}
+                    <span className="text-muted">{hop.proof_of_funds.mechanism}.</span>{" "}
+                    <span className="text-muted">
+                      This is separate from the cost above — the money stays yours.
+                    </span>
+                  </p>
+                )}
+                <p className="mt-1 text-xs leading-5 text-muted">{hop.citation}</p>
+              </div>
+            </li>
+          );
+        })}
       </ol>
 
       <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
@@ -531,16 +577,23 @@ export function RoutePlanner() {
   // Destination filtering & ranking (D1.4: Destination ranks, never excludes)
   const { mainPlans, outsidePlans } = useMemo(() => {
     if (!activeResult) return { mainPlans: [], outsidePlans: [] };
+    const sortPlans = (plans: RoutePlan[]) =>
+      [...plans].sort((a, b) => {
+        if (a.status === "open" && b.status !== "open") return -1;
+        if (a.status !== "open" && b.status === "open") return 1;
+        if (a.total_cost_azn_low !== b.total_cost_azn_low) return a.total_cost_azn_low - b.total_cost_azn_low;
+        return a.total_months - b.total_months;
+      });
 
     if (preferredDestinations.length === 0) {
-      return { mainPlans: activeResult.plans, outsidePlans: [] };
+      return { mainPlans: sortPlans(activeResult.plans), outsidePlans: [] };
     }
 
-    const main = activeResult.plans.filter((p) =>
-      preferredDestinations.includes(p.destination_country)
+    const main = sortPlans(
+      activeResult.plans.filter((p) => preferredDestinations.includes(p.destination_country))
     );
-    const outside = activeResult.plans.filter(
-      (p) => !preferredDestinations.includes(p.destination_country)
+    const outside = sortPlans(
+      activeResult.plans.filter((p) => !preferredDestinations.includes(p.destination_country))
     );
     return { mainPlans: main, outsidePlans: outside };
   }, [activeResult, preferredDestinations]);
@@ -549,7 +602,7 @@ export function RoutePlanner() {
   const openPlans = useMemo(() => mainPlans.filter((p) => p.status === "open"), [mainPlans]);
   const unlockablePlans = useMemo(() => mainPlans.filter((p) => p.status === "unlockable"), [mainPlans]);
 
-  // Best outside plans for "Your score goes further here"
+  // Best outside plans for "Your score goes further here" (D1.4)
   const topOutsidePlans = useMemo(() => {
     const openOutside = outsidePlans.filter((p) => p.status === "open");
     if (openOutside.length > 0) return openOutside;
