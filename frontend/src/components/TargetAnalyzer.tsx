@@ -674,6 +674,65 @@ export function TargetAnalyzer({
               </ol>
             </div>
           </section>
+
+          {/* Section 4: Viable Alternatives Recommender */}
+          <section className="panel p-6 sm:p-8" aria-labelledby="alternatives-heading">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 id="alternatives-heading" className="text-xl font-serif font-bold text-ink">
+                  4. Viable Alternatives Closing the Gap
+                </h3>
+                <p className="mt-1 text-sm text-muted">
+                  Institutions offering comparable programs where your existing qualifications either open directly or require fewer bridge steps.
+                </p>
+              </div>
+              <Sparkles size={20} className="text-accent shrink-0" />
+            </div>
+
+            {result.alternatives && result.alternatives.length > 0 ? (
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                {result.alternatives.map((alt, idx) => (
+                  <div
+                    key={idx}
+                    className="flex flex-col justify-between p-4 rounded-lg border border-quiet bg-paper/50 transition hover:border-accent/40"
+                  >
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                        {countryName(alt.country_code)}
+                      </span>
+                      <h4 className="mt-1 text-base font-serif font-bold text-ink">
+                        {alt.university_name}
+                      </h4>
+                      <p className="mt-2 text-xs leading-5 text-muted">
+                        {alt.reason}
+                      </p>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-quiet flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectUniversity(alt.university_name)}
+                        className="button-secondary text-xs py-1 px-3"
+                      >
+                        Target This Alternative
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-6 p-4 rounded-lg border border-quiet bg-paper/30 text-sm text-muted">
+                <p>
+                  No direct alternatives are recorded in our current catalogue for this specific target.
+                  Use the Discovery Route Planner to view all open and unlockable pathways matching your profile.
+                </p>
+                <div className="mt-3">
+                  <a href="/plan" className="text-link text-xs font-semibold inline-flex items-center gap-1">
+                    Open Discovery Route Planner →
+                  </a>
+                </div>
+              </div>
+            )}
+          </section>
         </div>
       )}
     </div>
