@@ -181,18 +181,18 @@ function UniversityCard({
   }
 
   return (
-    <article className="border-t border-quiet py-5">
+    <article className="rounded-2xl border border-white/[0.08] bg-[#101226]/75 p-5 mt-4 backdrop-blur-md transition-all hover:border-white/[0.15]">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h4 className="font-serif text-xl font-semibold">{university.university_name}</h4>
+        <h4 className="font-sans text-lg font-bold text-white">{university.university_name}</h4>
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-[0.12em] text-muted">
+          <span className="text-xs uppercase tracking-[0.12em] text-slate-400">
             {countryName(university.country_code)} · {university.intake_year} intake
           </span>
           {onTarget && (
             <button
               type="button"
               onClick={() => onTarget(university.university_name)}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline ml-2"
+              className="inline-flex items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-0.5 text-xs font-semibold text-orange-300 transition-colors hover:bg-orange-500/20 ml-2"
             >
               <Crosshair size={12} aria-hidden="true" />
               Target
@@ -200,44 +200,42 @@ function UniversityCard({
           )}
         </div>
       </div>
-      <p className="mt-1 text-sm text-muted">{university.program_name}</p>
+      <p className="mt-1 text-sm text-slate-300">{university.program_name}</p>
 
       {facts.length > 0 && (
         <dl className="mt-4 grid gap-x-6 gap-y-2 sm:grid-cols-2">
           {facts.map(([term, value]) => (
-            <div key={term} className="flex justify-between gap-3 border-b border-quiet pb-1.5 text-sm">
-              <dt className="text-muted">{term}</dt>
-              <dd className="text-right font-semibold">{value}</dd>
+            <div key={term} className="flex justify-between gap-3 border-b border-white/[0.06] pb-1.5 text-sm">
+              <dt className="text-slate-400">{term}</dt>
+              <dd className="text-right font-medium text-slate-200">{value}</dd>
             </div>
           ))}
         </dl>
       )}
 
       <GradeLine university={university} />
-      {university.application_status && university.application_status !== "needs_review" && <p className="mt-3 font-semibold text-warning">{university.application_status.replace(/_/g, " ")}</p>}
-      {university.checks?.length ? <ul className="mt-3 list-disc pl-5 text-sm text-muted">{university.checks.map((check) => <li key={check}>{check}</li>)}</ul> : null}
-      {university.notes && <p className="mt-3 whitespace-pre-line text-sm text-muted">{university.notes}</p>}
-      {university.living_cost_estimate_per_year != null && <p className="mt-2 text-sm">Annual living estimate: {university.living_cost_estimate_per_year.toLocaleString("en-US")} {university.currency}</p>}
-      {university.application_fee != null && <p className="mt-2 text-sm">Application fee: {university.application_fee} {university.currency}</p>}
-      {university.evidence?.length ? <details className="mt-3 text-sm"><summary>Evidence and scope</summary><ul className="mt-2 space-y-2">{university.evidence.map((item, index) => <li key={index}><a className="text-link" href={/^https?:\/\//i.test(item.url) ? item.url : undefined} target="_blank" rel="noreferrer noopener">{item.fields.map((field) => field.replace(/_/g, " ")).join(", ")}</a>: {item.note} (Read {item.checked_at})</li>)}</ul></details> : null}
+      {university.application_status && university.application_status !== "needs_review" && <p className="mt-3 font-semibold text-amber-400">{university.application_status.replace(/_/g, " ")}</p>}
+      {university.checks?.length ? <ul className="mt-3 list-disc pl-5 text-sm text-slate-400">{university.checks.map((check) => <li key={check}>{check}</li>)}</ul> : null}
+      {university.notes && <p className="mt-3 whitespace-pre-line text-sm text-slate-400">{university.notes}</p>}
+      {university.living_cost_estimate_per_year != null && <p className="mt-2 text-sm text-slate-300">Annual living estimate: {university.living_cost_estimate_per_year.toLocaleString("en-US")} {university.currency}</p>}
+      {university.application_fee != null && <p className="mt-2 text-sm text-slate-300">Application fee: {university.application_fee} {university.currency}</p>}
+      {university.evidence?.length ? <details className="mt-3 text-sm text-slate-300"><summary className="cursor-pointer font-medium text-orange-400 hover:text-orange-300">Evidence and scope</summary><ul className="mt-2 space-y-2">{university.evidence.map((item, index) => <li key={index}><a className="text-link" href={/^https?:\/\//i.test(item.url) ? item.url : undefined} target="_blank" rel="noreferrer noopener">{item.fields.map((field) => field.replace(/_/g, " ")).join(", ")}</a>: {item.note} (Read {item.checked_at})</li>)}</ul></details> : null}
 
-      {/* The unknowns, said out loud. A blank tuition rendered in a list reads as
-          free and a blank language test reads as none required -- both wrong in
-          the direction that costs a student an application. */}
+      {/* The unknowns, said out loud. */}
       {university.unknown_fields && university.unknown_fields.length > 0 && (
-        <div className="mt-3 border-l-2 border-warning pl-3 text-xs leading-5 text-muted">
-          <span className="font-semibold text-warning">Not stated on institution website: </span>
+        <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3 text-xs leading-5 text-slate-300">
+          <span className="font-semibold text-amber-400">Not stated on institution website: </span>
           {university.unknown_fields.map((f) => f.replace(/_/g, " ")).join(", ")}
         </div>
       )}
 
       {university.not_stated && (
-        <p className="mt-3 text-xs leading-5 text-muted border-l-2 border-warning pl-3">
+        <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3 text-xs leading-5 text-slate-300">
           {university.not_stated}
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
         <a
           className="text-link inline-flex items-center gap-1"
           href={university.source_url}
@@ -248,10 +246,10 @@ function UniversityCard({
           <ExternalLink size={12} aria-hidden="true" />
         </a>
         <span
-          className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs ${
             university.provenance === "human-verified"
-              ? "border border-emerald-300 bg-emerald-50 font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-              : "border border-amber-300 bg-amber-50 font-normal text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+              ? "border border-emerald-500/30 bg-emerald-500/10 font-medium text-emerald-400"
+              : "border border-purple-500/30 bg-purple-500/10 font-normal text-purple-300"
           }`}
         >
           {university.provenance === "human-verified"
@@ -259,7 +257,7 @@ function UniversityCard({
             : "Read from the source page, not yet checked by a person"}
         </span>
         {university.last_checked && (
-          <span className="font-mono text-xs">Last checked: {university.last_checked.slice(0, 10)}</span>
+          <span className="font-mono text-xs text-slate-500">Last checked: {university.last_checked.slice(0, 10)}</span>
         )}
       </div>
     </article>
@@ -275,119 +273,125 @@ function PlanCard({
   plan: RoutePlan;
   index: number;
   budget?: number;
-  onTargetUniversity?: (name: string) => void;
+  onTargetUniversity?: (uniName: string) => void;
 }) {
   const isOpen = plan.status === "open";
   const isDirect = plan.hops.length === 1;
   const isBridge = plan.hops.length > 1;
 
   return (
-    <section className="panel mt-6 p-5 sm:p-7">
+    <section className="rounded-3xl border border-white/[0.08] bg-[#13152c]/75 p-6 sm:p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:border-white/[0.15] mt-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Option {String(index + 1).padStart(2, "0")}</p>
-          <h3 className="section-heading mt-2 text-2xl sm:text-3xl">
+          <h3 className="font-sans text-2xl sm:text-3xl font-bold text-white mt-2">
             {countryName(plan.destination_country)}
           </h3>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isDirect ? (
-            <span className="status-tag status-available text-xs">
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">
               1-hop direct route
             </span>
           ) : (
-            <span className="status-tag status-experimental text-xs">
+            <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-orange-400">
               2-hop bridge ({plan.hops[0]?.mechanism || "pathway"})
             </span>
           )}
-          <span className={`status-tag ${isOpen ? "status-available" : "status-experimental"}`}>
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
+            isOpen
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+              : "border-purple-500/30 bg-purple-500/10 text-purple-300"
+          }`}>
             {isOpen ? "Open now" : "Needs something first"}
           </span>
         </div>
       </div>
 
-      <ol className="mt-5 border-y border-quiet">
+      <ol className="mt-6 divide-y divide-white/[0.08] border-y border-white/[0.08]">
         {plan.hops.map((hop, hopIndex) => {
           const isBridgeHop = isBridge && hopIndex === 0;
           const isFinalHop = isBridge && hopIndex === plan.hops.length - 1;
           return (
-            <li key={hop.key} className="flex gap-4 border-b border-quiet py-3 last:border-b-0">
-              <span className="font-serif text-lg text-accent">{hopIndex + 1}</span>
+            <li key={hop.key} className="flex gap-4 py-4">
+              <span className="font-sans text-xl font-extrabold bg-gradient-to-r from-purple-400 to-orange-400 bg-clip-text text-transparent">
+                {hopIndex + 1}
+              </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold">{hop.mechanism}</p>
+                  <p className="font-semibold text-white">{hop.mechanism}</p>
                   {isBridgeHop && (
-                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                    <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange-300">
                       Bridge Step
                     </span>
                   )}
                   {isFinalHop && (
-                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
                       Target Degree
                     </span>
                   )}
                   {isDirect && (
-                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
                       Direct Entry
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-xs leading-5 text-muted">
+                <p className="mt-1 text-xs leading-5 text-slate-400">
                   {countryName(hop.country_code)} · {months(hop.time_cost_months)} ·{" "}
                   {money(hop.money_cost_azn_low, hop.money_cost_azn_high)}
                 </p>
                 {hop.proof_of_funds && (
-                  <p className="mt-2 border-l-2 border-warning pl-3 text-xs leading-5">
-                    <span className="font-semibold">
+                  <p className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3 text-xs leading-5 text-slate-300">
+                    <span className="font-semibold text-amber-300">
                       {hop.proof_of_funds.amount.toLocaleString()} {hop.proof_of_funds.currency}{" "}
                       {hop.proof_of_funds.period}, in the bank before the visa.
                     </span>{" "}
-                    <span className="text-muted">{hop.proof_of_funds.mechanism}.</span>{" "}
-                    <span className="text-muted">
+                    <span className="text-slate-400">{hop.proof_of_funds.mechanism}.</span>{" "}
+                    <span className="text-slate-400">
                       This is separate from the cost above — the money stays yours.
                     </span>
                   </p>
                 )}
-                <p className="mt-1 text-xs leading-5 text-muted">{hop.citation}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{hop.citation}</p>
               </div>
             </li>
           );
         })}
       </ol>
 
-      <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+      <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-2 text-sm">
         <div>
-          <dt className="text-muted">Extra time</dt>
-          <dd className="font-semibold">{months(plan.total_months)}</dd>
+          <dt className="text-slate-400">Extra time</dt>
+          <dd className="font-semibold text-white">{months(plan.total_months)}</dd>
         </div>
         <div>
-          <dt className="text-muted">Estimated route cost</dt>
-          <dd className="font-semibold">
+          <dt className="text-slate-400">Estimated route cost</dt>
+          <dd className="font-semibold text-white">
             {money(plan.total_cost_azn_low, plan.total_cost_azn_high)}
           </dd>
         </div>
         <div>
-          <dt className="text-muted">You would apply holding</dt>
-          <dd className="font-semibold">{plan.qualification_delivered.replace(/_/g, " ")}</dd>
+          <dt className="text-slate-400">You would apply holding</dt>
+          <dd className="font-semibold text-white">{plan.qualification_delivered.replace(/_/g, " ")}</dd>
         </div>
       </dl>
 
       {/* Tuition transparency notice (D1.5 / D3) */}
       {(
-        <p className="mt-3 text-xs leading-5 text-muted border-l-2 border-quiet pl-3">
+        <p className="mt-4 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 text-xs leading-5 text-slate-400">
           Route estimates are rough planning figures. Full cost to degree is unavailable: programme duration, tuition changes, living expenses and currency conversion have not all been assessed. Unknown tuition is not free.
         </p>
       )}
 
       {/* Budget headroom check */}
       {budget !== undefined && (
-        <div className="mt-3 text-xs">
+        <div className="mt-4 text-xs">
           {plan.total_cost_azn_high <= budget ? (
-            <span className="text-success font-semibold">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 font-semibold text-emerald-300">
               ✓ Route entry cost fits within your stated budget of {budget.toLocaleString("en-US")} AZN/year.
             </span>
           ) : (
-            <span className="text-warning font-semibold">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1.5 font-semibold text-amber-300">
               ⚠ Route entry cost ({plan.total_cost_azn_low.toLocaleString("en-US")}–{plan.total_cost_azn_high.toLocaleString("en-US")} AZN) exceeds your stated budget of {budget.toLocaleString("en-US")} AZN/year. Scholarships or funding will be needed.
             </span>
           )}
@@ -395,9 +399,9 @@ function PlanCard({
       )}
 
       {plan.missing.length > 0 && (
-        <div className="notice-warning mt-5">
-          <p className="font-semibold">Before this route opens:</p>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
+        <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.08] p-4 text-amber-200 backdrop-blur-md">
+          <p className="font-semibold text-amber-300">Before this route opens:</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs sm:text-sm">
             {plan.missing.map((gap) => (
               <li key={gap}>{gap}</li>
             ))}
@@ -406,7 +410,7 @@ function PlanCard({
       )}
 
       <div className="mt-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
           {plan.universities.length > 0
             ? `${plan.universities.length} ${plan.universities.length === 1 ? "university accepts" : "universities accept"} what this route gives you`
             : "Universities"}
@@ -423,16 +427,14 @@ function PlanCard({
             ))}
           </div>
         ) : (
-          /* Never an unexplained empty list. Distinguishes "we have not collected this country"
-             from "we collected it and none of them accepts this qualification". */
-          <div className="mt-2 text-sm leading-6 text-muted">
+          <div className="mt-2 text-sm leading-6 text-slate-400 rounded-2xl border border-white/[0.08] bg-[#101226]/50 p-4">
             {plan.universities_status === "no_requirements_collected_for_this_country_yet" && (
-              <span className="block font-semibold text-xs uppercase tracking-wider text-muted mb-1">
+              <span className="block font-semibold text-xs uppercase tracking-wider text-purple-400 mb-1">
                 Catalogue gap (our data)
               </span>
             )}
             {plan.universities_status === "no_curated_universities_accept_qualification" && (
-              <span className="block font-semibold text-xs uppercase tracking-wider text-muted mb-1">
+              <span className="block font-semibold text-xs uppercase tracking-wider text-amber-400 mb-1">
                 Finding about this country
               </span>
             )}
@@ -458,74 +460,72 @@ const SCHOLARSHIP_HEADLINE: Record<string, string> = {
 
 function ScholarshipCard({ scholarship }: { scholarship: Scholarship }) {
   return (
-    <article className="border-t border-quiet py-5">
+    <article className="rounded-2xl border border-white/[0.08] bg-[#101226]/75 p-5 mt-4 backdrop-blur-md transition-all hover:border-white/[0.15]">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h4 className="font-serif text-xl font-semibold">{scholarship.name}</h4>
-        <span className="text-xs uppercase tracking-[0.12em] text-muted">
+        <h4 className="font-sans text-lg font-bold text-white">{scholarship.name}</h4>
+        <span className="text-xs uppercase tracking-[0.12em] text-slate-400">
           {TIER_NAMES[scholarship.tier] ?? "Funding"}
           {scholarship.country_code ? ` · ${countryName(scholarship.country_code)}` : ""}
         </span>
       </div>
-      <p className="mt-1 text-sm text-muted">{scholarship.provider}</p>
+      <p className="mt-1 text-sm text-slate-400">{scholarship.provider}</p>
 
       <p
         className={`mt-3 text-sm font-semibold ${
           scholarship.status === "open"
-            ? "text-success"
+            ? "text-emerald-400"
             : scholarship.status === "blocked"
-              ? "text-muted"
-              : "text-warning"
+              ? "text-slate-400"
+              : "text-amber-400"
         }`}
       >
         {SCHOLARSHIP_HEADLINE[scholarship.status] ?? scholarship.status}
       </p>
 
-      <p className="mt-2 text-sm leading-6">{scholarship.coverage}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-300">{scholarship.coverage}</p>
 
       {scholarship.gates_met.length > 0 && (
-        <ul className="mt-3 space-y-1 text-sm text-success">
+        <ul className="mt-3 space-y-1 text-sm text-emerald-400">
           {scholarship.gates_met.map((gate) => <li key={gate}>✓ {gate}</li>)}
         </ul>
       )}
       {scholarship.gates_blocked.length > 0 && (
-        <ul className="mt-2 space-y-1 text-sm text-muted">
+        <ul className="mt-2 space-y-1 text-sm text-slate-400">
           {scholarship.gates_blocked.map((gate) => <li key={gate}>✕ {gate}</li>)}
         </ul>
       )}
       {scholarship.gates_missing.length > 0 && (
-        <ul className="mt-2 space-y-1 text-sm text-warning">
+        <ul className="mt-2 space-y-1 text-sm text-amber-400">
           {scholarship.gates_missing.map((gate) => <li key={gate}>· {gate}</li>)}
         </ul>
       )}
 
-      {/* Rendered apart from the list above, and labelled, because it asks something
-          different of the reader. A missing gate is work they can go and do; an unknown
-          gate is a fact they can tell us, or a page nobody on this project has read. */}
+      {/* Rendered apart from the list above, and labelled */}
       {scholarship.gates_unknown.length > 0 && (
-        <div className="mt-3 border-l-2 border-quiet pl-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
+        <div className="mt-3 rounded-xl border border-purple-500/20 bg-purple-500/[0.05] p-3 text-xs leading-5 text-slate-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-purple-300">
             What we could not check
           </p>
-          <ul className="mt-1 space-y-1 text-sm leading-6 text-muted">
+          <ul className="mt-1 space-y-1 text-sm leading-6 text-slate-400">
             {scholarship.gates_unknown.map((gate) => <li key={gate}>{gate}</li>)}
           </ul>
         </div>
       )}
 
       {scholarship.window && (
-        <p className="mt-3 text-xs leading-5 text-muted">
-          <span className="font-semibold">When: </span>
+        <p className="mt-3 text-xs leading-5 text-slate-400">
+          <span className="font-semibold text-slate-300">When: </span>
           {scholarship.window}
         </p>
       )}
       {scholarship.obligation && (
-        <p className="mt-2 text-xs leading-5 text-muted">
-          <span className="font-semibold">What you commit to: </span>
+        <p className="mt-2 text-xs leading-5 text-slate-400">
+          <span className="font-semibold text-slate-300">What you commit to: </span>
           {scholarship.obligation}
         </p>
       )}
 
-      <p className="mt-3 text-xs leading-5 text-muted">
+      <p className="mt-3 text-xs leading-5 text-slate-500">
         {scholarship.citation} · {scholarship.provenance}, not yet verified by a person.
       </p>
     </article>
@@ -1014,11 +1014,11 @@ export function RoutePlanner() {
             <>
               {/* Baseline hint if user has not performed a custom submit yet */}
               {!hasSubmitted && (
-                <div className="panel p-4 mb-6 border-l-4 border-accent">
-                  <p className="body-large text-sm font-semibold text-ink">
+                <div className="rounded-2xl border border-orange-500/30 bg-orange-500/[0.08] p-4 mb-6 backdrop-blur-md">
+                  <p className="body-large text-sm font-semibold text-orange-200">
                     Showing an example for a school-leaver (Attestat, Bachelor), generated 15 September 2026.
                   </p>
-                  <p className="mt-1 text-xs text-muted">
+                  <p className="mt-1 text-xs text-slate-400">
                     Enter what you hold and what you have scored. You will get every route this
                     qualification opens, what each one costs in time and money, and the universities
                     that document accepting it. Nothing here is a prediction of whether you will be admitted.
@@ -1028,76 +1028,76 @@ export function RoutePlanner() {
               )}
 
               {/* Dövlət Proqramı */}
-              <div className="panel-strong p-5 sm:p-6">
+              <div className="rounded-3xl border border-white/10 bg-[#13152c]/85 p-6 sm:p-7 backdrop-blur-2xl shadow-2xl">
                 <p className="eyebrow">Dövlət Proqramı</p>
-                <h2 className="section-heading mt-2 text-2xl">
+                <h2 className="font-sans text-2xl font-bold text-white mt-2">
                   {activeResult.dp.status === "open"
                     ? "You clear the published requirements"
                     : "Not yet clearing the published requirements"}
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-muted">{activeResult.dp.note}</p>
+                <p className="mt-3 text-sm leading-6 text-slate-300">{activeResult.dp.note}</p>
 
                 {activeResult.dp.gates_met.length > 0 && (
-                  <ul className="mt-4 space-y-1 text-sm text-success">
+                  <ul className="mt-4 space-y-1 text-sm text-emerald-400">
                     {activeResult.dp.gates_met.map((gate) => <li key={gate}>✓ {gate}</li>)}
                   </ul>
                 )}
                 {activeResult.dp.gates_missing.length > 0 && (
-                  <ul className="mt-2 space-y-1 text-sm text-warning">
+                  <ul className="mt-2 space-y-1 text-sm text-amber-400">
                     {activeResult.dp.gates_missing.map((gate) => <li key={gate}>· {gate}</li>)}
                   </ul>
                 )}
 
-                <dl className="mt-5 space-y-3 border-t border-quiet pt-4 text-xs leading-5">
+                <dl className="mt-5 space-y-3 border-t border-white/[0.08] pt-4 text-xs leading-5">
                   <div>
-                    <dt className="font-semibold uppercase tracking-[0.1em] text-muted">Places</dt>
-                    <dd className="mt-1">{activeResult.dp.quota_note}</dd>
+                    <dt className="font-semibold uppercase tracking-[0.1em] text-slate-400">Places</dt>
+                    <dd className="mt-1 text-slate-300">{activeResult.dp.quota_note}</dd>
                   </div>
                   <div>
-                    <dt className="font-semibold uppercase tracking-[0.1em] text-muted">When</dt>
-                    <dd className="mt-1">{activeResult.dp.window_note}</dd>
+                    <dt className="font-semibold uppercase tracking-[0.1em] text-slate-400">When</dt>
+                    <dd className="mt-1 text-slate-300">{activeResult.dp.window_note}</dd>
                   </div>
                   <div>
-                    <dt className="font-semibold uppercase tracking-[0.1em] text-muted">
+                    <dt className="font-semibold uppercase tracking-[0.1em] text-slate-400">
                       What you commit to
                     </dt>
-                    <dd className="mt-1">{activeResult.dp.obligation_note}</dd>
+                    <dd className="mt-1 text-slate-300">{activeResult.dp.obligation_note}</dd>
                   </div>
                 </dl>
 
                 {activeResult.dp.funded_programmes.length > 0 ? (
                   <p className="mt-4 text-sm">
-                    <span className="font-semibold">
+                    <span className="font-semibold text-white">
                       {activeResult.dp.funded_programmes.length} funded programmes
                     </span>{" "}
-                    <span className="text-muted">
+                    <span className="text-slate-400">
                       in the countries your routes reach. Catalogue years: {[...new Set(activeResult.dp.funded_programmes.map((p) => p.intake_year).filter(Boolean))].join(", ") || "not recorded"}. These entries are not award allocations; funding for another intake needs confirmation.
                     </span>
                   </p>
                 ) : (
-                  <p className="mt-4 text-sm leading-6 text-muted">
+                  <p className="mt-4 text-sm leading-6 text-slate-400">
                     {activeResult.dp.funded_programmes_explanation}
                   </p>
                 )}
               </div>
 
               {/* D1.3: Results grouped in three groups: OPEN, UNLOCKABLE, BLOCKED */}
-              <p className="mt-8 text-sm text-muted">
+              <p className="mt-8 text-sm text-slate-400">
                 {activeResult.plans.length} routes, soonest first.
               </p>
 
               {/* Group 1: OPEN routes */}
               <section className="mt-6">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-serif text-2xl font-semibold">Open Routes</h3>
-                  <span className="status-tag status-available text-xs">Direct entry</span>
+                <div className="flex items-center gap-3">
+                  <h3 className="font-sans text-2xl font-bold text-white">Open Routes</h3>
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">Direct entry</span>
                 </div>
-                <p className="text-xs text-muted mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Routes reachable right now with your current qualifications.
                 </p>
 
                 {openPlans.length === 0 ? (
-                  <div className="panel p-4 mt-3 text-sm text-muted">
+                  <div className="rounded-2xl border border-white/[0.08] bg-[#101226]/50 p-5 mt-3 text-sm text-slate-400">
                     No direct entry routes in your selected destinations are open on this qualification alone.
                     See the unlockable pathways below to open these destinations.
                   </div>
@@ -1116,16 +1116,16 @@ export function RoutePlanner() {
 
               {/* Group 2: UNLOCKABLE routes */}
               <section className="mt-10">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-serif text-2xl font-semibold">Unlockable Routes</h3>
-                  <span className="status-tag status-experimental text-xs">Pathways available</span>
+                <div className="flex items-center gap-3">
+                  <h3 className="font-sans text-2xl font-bold text-white">Unlockable Routes</h3>
+                  <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-orange-400">Pathways available</span>
                 </div>
-                <p className="text-xs text-muted mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Routes that unlock with a preparatory year, foundation programme, or examination.
                 </p>
 
                 {unlockablePlans.length === 0 ? (
-                  <div className="panel p-4 mt-3 text-sm text-muted">
+                  <div className="rounded-2xl border border-white/[0.08] bg-[#101226]/50 p-5 mt-3 text-sm text-slate-400">
                     No unlockable two-hop pathways recorded for these criteria.
                   </div>
                 ) : (
@@ -1143,14 +1143,14 @@ export function RoutePlanner() {
 
               {/* D1.4: Persistent "Your score goes further here" section */}
               {preferredDestinations.length > 0 && topOutsidePlans.length > 0 && (
-                <section className="mt-12 panel p-5 sm:p-7 border-l-4 border-accent">
-                  <div className="flex items-center gap-2">
-                    <Sparkles size={18} className="text-accent" />
-                    <h3 className="font-serif text-xl sm:text-2xl font-semibold">
+                <section className="mt-12 rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-900/20 via-[#13152c]/90 to-orange-950/20 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl">
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles size={20} className="text-orange-400" />
+                    <h3 className="font-sans text-xl sm:text-2xl font-bold text-white">
                       Your score goes further here
                     </h3>
                   </div>
-                  <p className="mt-1 text-sm text-muted">
+                  <p className="mt-1 text-sm text-slate-300">
                     Destinations you didn&apos;t select where your qualification and scores already clear the bar or unlock pathways.
                     AUSA never excludes options to prevent agency steering.
                   </p>
@@ -1170,16 +1170,16 @@ export function RoutePlanner() {
 
               {/* Prep year trade-off warning */}
               {activeResult.prep_year_warning && (
-                <div className="notice-warning mt-8">
-                  <p className="font-semibold">One route costs you another option</p>
-                  <p className="mt-2 leading-6">{activeResult.prep_year_warning}</p>
+                <div className="mt-8 rounded-2xl border border-amber-500/20 bg-amber-500/[0.08] p-4 text-amber-200 backdrop-blur-md">
+                  <p className="font-semibold text-amber-300">One route costs you another option</p>
+                  <p className="mt-2 leading-6 text-sm">{activeResult.prep_year_warning}</p>
                 </div>
               )}
 
               {/* Funding beyond state programme */}
-              <section className="mt-10 border-t border-line pt-6">
+              <section className="mt-10 border-t border-white/[0.08] pt-6">
                 <p className="eyebrow">Funding beyond the state programme</p>
-                <p className="mt-3 text-sm leading-6 text-muted">
+                <p className="mt-3 text-sm leading-6 text-slate-400">
                   {activeResult.scholarships_note}
                 </p>
                 {activeResult.scholarships.map((scholarship) => (
@@ -1189,11 +1189,11 @@ export function RoutePlanner() {
 
               {/* Group 3: BLOCKED routes */}
               {activeResult.blocked.length > 0 && (
-                <section className="mt-10 border-t border-line pt-6">
+                <section className="mt-10 border-t border-white/[0.08] pt-6">
                   <p className="eyebrow">Closed to you right now</p>
-                  <ul className="mt-4 space-y-2 text-sm leading-6 text-muted">
+                  <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-400">
                     {activeResult.blocked.map((entry) => (
-                      <li key={entry} className="border-l-2 border-quiet pl-3 py-1">
+                      <li key={entry} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-2 text-slate-400">
                         {entry}
                       </li>
                     ))}
