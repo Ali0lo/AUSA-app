@@ -224,6 +224,13 @@ function UniversityCard({
       {/* The unknowns, said out loud. A blank tuition rendered in a list reads as
           free and a blank language test reads as none required -- both wrong in
           the direction that costs a student an application. */}
+      {university.unknown_fields && university.unknown_fields.length > 0 && (
+        <div className="mt-3 border-l-2 border-warning pl-3 text-xs leading-5 text-muted">
+          <span className="font-semibold text-warning">Not stated on institution website: </span>
+          {university.unknown_fields.map((f) => f.replace(/_/g, " ")).join(", ")}
+        </div>
+      )}
+
       {university.not_stated && (
         <p className="mt-3 text-xs leading-5 text-muted border-l-2 border-warning pl-3">
           {university.not_stated}
@@ -240,13 +247,19 @@ function UniversityCard({
           Source page
           <ExternalLink size={12} aria-hidden="true" />
         </a>
-        <span className={university.provenance === "human-verified" ? "text-success font-medium" : "text-muted"}>
+        <span
+          className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs ${
+            university.provenance === "human-verified"
+              ? "border border-emerald-300 bg-emerald-50 font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+              : "border border-amber-300 bg-amber-50 font-normal text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+          }`}
+        >
           {university.provenance === "human-verified"
             ? "✓ Checked by a person"
             : "Read from the source page, not yet checked by a person"}
         </span>
         {university.last_checked && (
-          <span>Last checked: {university.last_checked.slice(0, 10)}</span>
+          <span className="font-mono text-xs">Last checked: {university.last_checked.slice(0, 10)}</span>
         )}
       </div>
     </article>
