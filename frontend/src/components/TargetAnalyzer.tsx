@@ -527,17 +527,17 @@ export function TargetAnalyzer({
           </section>
 
           {/* Section 2: Scale-Aware Requirement Checklist */}
-          <section className="panel p-6 sm:p-8" aria-labelledby="requirement-checklist-heading">
+          <section className="rounded-3xl border border-white/[0.08] bg-[#13152c]/80 p-6 sm:p-8 backdrop-blur-xl shadow-2xl" aria-labelledby="requirement-checklist-heading">
             <div className="flex items-center justify-between">
               <div>
-                <h3 id="requirement-checklist-heading" className="text-xl font-serif font-bold text-ink">
+                <h3 id="requirement-checklist-heading" className="text-xl font-sans font-bold text-white">
                   2. Requirement Checklist
                 </h3>
-                <p className="mt-1 text-sm text-muted">
+                <p className="mt-1 text-sm text-slate-400">
                   Multi-scale check comparing your academic profile and credentials against stated entry criteria.
                 </p>
               </div>
-              <span className="text-xs font-mono text-muted">
+              <span className="text-xs font-mono text-slate-400">
                 {result.checklist.filter((c) => c.status === "MET").length} of {result.checklist.length} met
               </span>
             </div>
@@ -551,36 +551,36 @@ export function TargetAnalyzer({
                 return (
                   <div
                     key={idx}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border border-quiet bg-paper/40 transition hover:bg-paper/70"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-white/[0.08] bg-[#101226]/60 backdrop-blur-md transition hover:border-white/20"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        {isMet && <CheckCircle2 size={18} className="text-success shrink-0" />}
-                        {isGap && <XCircle size={18} className="text-warning shrink-0" />}
-                        {isUnknown && <HelpCircle size={18} className="text-muted shrink-0" />}
-                        <h4 className="font-semibold text-sm text-ink">{item.name}</h4>
+                        {isMet && <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />}
+                        {isGap && <XCircle size={18} className="text-amber-400 shrink-0" />}
+                        {isUnknown && <HelpCircle size={18} className="text-purple-400 shrink-0" />}
+                        <h4 className="font-semibold text-sm text-white">{item.name}</h4>
                       </div>
-                      <p className="mt-1 text-xs text-muted">
-                        <span className="font-medium text-ink">Published Requirement: </span>
+                      <p className="mt-1 text-xs text-slate-400">
+                        <span className="font-medium text-slate-200">Published Requirement: </span>
                         {item.requirement}
                       </p>
-                      <p className="mt-0.5 text-xs text-muted">
-                        <span className="font-medium text-ink">Your Profile: </span>
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        <span className="font-medium text-slate-200">Your Profile: </span>
                         {item.student_value ?? "Not provided / Unstated"}
                       </p>
-                      <p className="mt-1.5 text-xs text-muted leading-5 border-l-2 border-quiet pl-2.5">
+                      <p className="mt-1.5 text-xs text-slate-400 leading-5 border-l-2 border-white/10 pl-2.5">
                         {item.explanation}
                       </p>
                     </div>
 
                     <div className="sm:self-center shrink-0">
                       <span
-                        className={`status-tag text-xs font-semibold ${
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
                           isMet
-                            ? "status-available"
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
                             : isGap
-                              ? "status-experimental"
-                              : "status-offline"
+                              ? "border-orange-500/30 bg-orange-500/10 text-orange-400"
+                              : "border-purple-500/30 bg-purple-500/10 text-purple-300"
                         }`}
                       >
                         {isMet ? "✓ Met" : isGap ? "⚠ Gap" : "? Unknown"}
@@ -591,82 +591,82 @@ export function TargetAnalyzer({
               })}
             </div>
 
-            <p className="mt-4 text-xs text-muted leading-5 border-l-2 border-quiet pl-3">
+            <p className="mt-4 text-xs text-slate-500 leading-5 border-l-2 border-white/10 pl-3">
               Scale-awareness note: Grade comparisons across different grading systems (Attestat 5.0, Higher Ed 100, US 4.0, German 1.0-5.0) are indicative screening metrics. Universities conduct their own official conversions through bodies like uni-assist or internal credentials evaluators.
             </p>
           </section>
 
           {/* Section 3: Process Milestones & Deadlines */}
-          <section className="panel p-6 sm:p-8" aria-labelledby="process-milestones-heading">
-            <h3 id="process-milestones-heading" className="text-xl font-serif font-bold text-ink">
+          <section className="rounded-3xl border border-white/[0.08] bg-[#13152c]/80 p-6 sm:p-8 backdrop-blur-xl shadow-2xl" aria-labelledby="process-milestones-heading">
+            <h3 id="process-milestones-heading" className="text-xl font-sans font-bold text-white">
               3. Process Milestones &amp; Deadlines
             </h3>
-            <p className="mt-1 text-sm text-muted">
+            <p className="mt-1 text-sm text-slate-400">
               Step-by-step operational timeline and verified application parameters for {result.university_name}.
             </p>
 
             {/* Key Application Parameters Grid */}
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border border-quiet bg-paper/50 p-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
-                  <Calendar size={14} className="text-accent" />
+              <div className="rounded-2xl border border-white/[0.08] bg-[#101226]/60 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Calendar size={14} className="text-orange-400" />
                   Application Deadline
                 </span>
-                <p className="mt-2 text-base font-bold text-ink">
+                <p className="mt-2 text-base font-bold text-white">
                   {result.application_deadline || "Not stated in catalogue"}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">
+                <p className="mt-0.5 text-xs text-slate-500">
                   {result.application_deadline
                     ? "Check official portal for intake exceptions"
                     : "Confirm with admissions office"}
                 </p>
               </div>
 
-              <div className="rounded-lg border border-quiet bg-paper/50 p-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
-                  <ExternalLink size={14} className="text-accent" />
+              <div className="rounded-2xl border border-white/[0.08] bg-[#101226]/60 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <ExternalLink size={14} className="text-orange-400" />
                   Application Portal
                 </span>
-                <p className="mt-2 text-base font-bold text-ink truncate">
+                <p className="mt-2 text-base font-bold text-white truncate">
                   {result.application_portal || "Direct institution portal"}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">Official submission gateway</p>
+                <p className="mt-0.5 text-xs text-slate-500">Official submission gateway</p>
               </div>
 
-              <div className="rounded-lg border border-quiet bg-paper/50 p-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
-                  <Building2 size={14} className="text-accent" />
+              <div className="rounded-2xl border border-white/[0.08] bg-[#101226]/60 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Building2 size={14} className="text-orange-400" />
                   Application Fee
                 </span>
-                <p className="mt-2 text-base font-bold text-ink">
+                <p className="mt-2 text-base font-bold text-white">
                   {result.application_fee !== null && result.application_fee !== undefined
                     ? `${result.application_fee} ${result.currency ?? ""}`.trim()
                     : "Not recorded (verify)"}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">Excludes visa &amp; courier fees</p>
+                <p className="mt-0.5 text-xs text-slate-500">Excludes visa &amp; courier fees</p>
               </div>
 
-              <div className="rounded-lg border border-quiet bg-paper/50 p-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
-                  <Clock size={14} className="text-accent" />
+              <div className="rounded-2xl border border-white/[0.08] bg-[#101226]/60 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Clock size={14} className="text-orange-400" />
                   Lead Time Needed
                 </span>
-                <p className="mt-2 text-base font-bold text-ink">
+                <p className="mt-2 text-base font-bold text-white">
                   {result.unlock_time_months > 0
                     ? `${result.unlock_time_months} months prep`
                     : "Direct application ready"}
                 </p>
-                <p className="mt-0.5 text-xs text-muted">Pathway / preparation buffer</p>
+                <p className="mt-0.5 text-xs text-slate-500">Pathway / preparation buffer</p>
               </div>
             </div>
 
             {/* Documents Required */}
             {result.documents_required && (
-              <div className="mt-6 rounded-lg border border-quiet bg-paper/30 p-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+              <div className="mt-6 rounded-2xl border border-white/[0.08] bg-[#101226]/50 p-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Required Application Documents:
                 </h4>
-                <p className="mt-1.5 text-sm text-ink leading-6">
+                <p className="mt-1.5 text-sm text-slate-200 leading-6">
                   {result.documents_required}
                 </p>
               </div>
@@ -674,38 +674,38 @@ export function TargetAnalyzer({
 
             {/* Step-by-Step Milestones Checklist */}
             <div className="mt-6">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Mandatory Execution Milestones:
               </h4>
-              <ol className="mt-3 space-y-2.5 text-sm text-ink pl-5 list-decimal">
+              <ol className="mt-3 space-y-2.5 text-sm text-slate-300 pl-5 list-decimal">
                 <li className="leading-6">
-                  <span className="font-semibold">Verify Intake &amp; Requirements:</span> Review the institution&apos;s published admission guidelines for your intended academic year and confirm that subject-specific prerequisites are met.
+                  <span className="font-semibold text-white">Verify Intake &amp; Requirements:</span> Review the institution&apos;s published admission guidelines for your intended academic year and confirm that subject-specific prerequisites are met.
                 </li>
                 <li className="leading-6">
-                  <span className="font-semibold">Credential Evaluation:</span> Arrange certified translations and, if applying to institutions in Germany or the UK, initiate preliminary documentation clearance (e.g. uni-assist VPD or NARIC statement) at least 6 weeks before deadline.
+                  <span className="font-semibold text-white">Credential Evaluation:</span> Arrange certified translations and, if applying to institutions in Germany or the UK, initiate preliminary documentation clearance (e.g. uni-assist VPD or NARIC statement) at least 6 weeks before deadline.
                 </li>
                 <li className="leading-6">
-                  <span className="font-semibold">Standardized Examination:</span> Ensure all requisite language certificates (IELTS/TOEFL) and standardized tests (SAT, TR-YÖS, TestAS) are sat with official score reporting sent directly to the institution code.
+                  <span className="font-semibold text-white">Standardized Examination:</span> Ensure all requisite language certificates (IELTS/TOEFL) and standardized tests (SAT, TR-YÖS, TestAS) are sat with official score reporting sent directly to the institution code.
                 </li>
                 <li className="leading-6">
-                  <span className="font-semibold">Portal Submission:</span> Submit application dossiers via {result.application_portal || "the institutional portal"} prior to {result.application_deadline || "the stated deadline"}.
+                  <span className="font-semibold text-white">Portal Submission:</span> Submit application dossiers via {result.application_portal || "the institutional portal"} prior to {result.application_deadline || "the stated deadline"}.
                 </li>
               </ol>
             </div>
           </section>
 
           {/* Section 4: Viable Alternatives Recommender */}
-          <section className="panel p-6 sm:p-8" aria-labelledby="alternatives-heading">
+          <section className="rounded-3xl border border-white/[0.08] bg-[#13152c]/80 p-6 sm:p-8 backdrop-blur-xl shadow-2xl" aria-labelledby="alternatives-heading">
             <div className="flex items-center justify-between">
               <div>
-                <h3 id="alternatives-heading" className="text-xl font-serif font-bold text-ink">
+                <h3 id="alternatives-heading" className="text-xl font-sans font-bold text-white">
                   4. Viable Alternatives Closing the Gap
                 </h3>
-                <p className="mt-1 text-sm text-muted">
+                <p className="mt-1 text-sm text-slate-400">
                   Institutions offering comparable programs where your existing qualifications either open directly or require fewer bridge steps.
                 </p>
               </div>
-              <Sparkles size={20} className="text-accent shrink-0" />
+              <Sparkles size={20} className="text-orange-400 shrink-0" />
             </div>
 
             {result.alternatives && result.alternatives.length > 0 ? (
@@ -713,24 +713,24 @@ export function TargetAnalyzer({
                 {result.alternatives.map((alt, idx) => (
                   <div
                     key={idx}
-                    className="flex flex-col justify-between p-4 rounded-lg border border-quiet bg-paper/50 transition hover:border-accent/40"
+                    className="flex flex-col justify-between p-5 rounded-2xl border border-white/[0.08] bg-[#101226]/60 backdrop-blur-md transition hover:border-purple-500/30"
                   >
                     <div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                         {countryName(alt.country_code)}
                       </span>
-                      <h4 className="mt-1 text-base font-serif font-bold text-ink">
+                      <h4 className="mt-1 text-base font-sans font-bold text-white">
                         {alt.university_name}
                       </h4>
-                      <p className="mt-2 text-xs leading-5 text-muted">
+                      <p className="mt-2 text-xs leading-5 text-slate-400">
                         {alt.reason}
                       </p>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-quiet flex justify-end">
+                    <div className="mt-4 pt-3 border-t border-white/[0.06] flex justify-end">
                       <button
                         type="button"
                         onClick={() => handleSelectUniversity(alt.university_name)}
-                        className="button-secondary text-xs py-1 px-3"
+                        className="button-secondary text-xs py-1.5 px-3.5"
                       >
                         Target This Alternative
                       </button>
@@ -739,7 +739,7 @@ export function TargetAnalyzer({
                 ))}
               </div>
             ) : (
-              <div className="mt-6 p-4 rounded-lg border border-quiet bg-paper/30 text-sm text-muted">
+              <div className="mt-6 p-5 rounded-2xl border border-white/[0.08] bg-[#101226]/40 text-sm text-slate-400">
                 <p>
                   No direct alternatives are recorded in our current catalogue for this specific target.
                   Use the Discovery Route Planner to view all open and unlockable pathways matching your profile.

@@ -13,12 +13,12 @@ export default function PlanPage() {
       <div className="max-w-3xl">
         <p className="eyebrow">Route planning</p>
         <h1 className="page-heading mt-3">Every option your results actually open.</h1>
-        <p className="body-large mt-6">
+        <p className="body-large mt-5">
           Not a shortlist of what we would recommend. Every route that your qualification and
           scores make reachable, ranked by how long it takes, with the universities that
           document accepting what each route gives you.
         </p>
-        <p className="mt-4 text-sm leading-6 text-muted">
+        <p className="mt-3 text-sm leading-6 text-slate-400">
           Requirements are quoted from each university&apos;s own admissions page and linked back
           to it. Where a page does not state something, it is shown as not stated rather than
           left blank — an unknown requirement is not an absent one.
