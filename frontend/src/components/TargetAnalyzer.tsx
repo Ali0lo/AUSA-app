@@ -28,11 +28,10 @@ import {
 } from "lucide-react";
 
 const GRADE_SCALES: { value: GradeScaleKey; label: string }[] = [
-  { value: "az_attestat_5", label: "Azerbaijan Attestat (3.0 – 5.0)" },
-  { value: "az_he_100", label: "Azerbaijani Higher Ed (0 – 100)" },
-  { value: "us_gpa_4", label: "US / International GPA (0.0 – 4.0)" },
-  { value: "de_gpa_5", label: "German Scale (1.0 best – 5.0 fail)" },
-  { value: "ru_attestat_5", label: "Russian Attestat (3.0 – 5.0)" }
+  { value: "5.0", label: "out of 5 — the usual attestat scale" },
+  { value: "100", label: "out of 100 — most Azerbaijani and Turkish universities" },
+  { value: "4.0", label: "out of 4.0 — US-style GPA" },
+  { value: "german", label: "German 1.0–4.0 — where 1.0 is best" }
 ];
 
 const COUNTRY_NAMES: Record<string, string> = {
@@ -66,7 +65,7 @@ export function TargetAnalyzer({
     initialLevel === "master" ? "bachelor_degree" : "attestat"
   );
   const [gpa, setGpa] = useState("");
-  const [gpaScale, setGpaScale] = useState<GradeScaleKey>("az_attestat_5");
+  const [gpaScale, setGpaScale] = useState<GradeScaleKey>("5.0");
   const [ielts, setIelts] = useState("");
   const [toefl, setToefl] = useState("");
   const [dimScore, setDimScore] = useState("");
@@ -96,10 +95,10 @@ export function TargetAnalyzer({
   useEffect(() => {
     if (level === "master" && qualification === "attestat") {
       setQualification("bachelor_degree");
-      setGpaScale("az_he_100");
+      setGpaScale("100");
     } else if (level === "bachelor" && qualification === "bachelor_degree") {
       setQualification("attestat");
-      setGpaScale("az_attestat_5");
+      setGpaScale("5.0");
     }
   }, [level, qualification]);
 
