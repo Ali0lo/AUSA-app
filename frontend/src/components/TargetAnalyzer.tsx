@@ -152,7 +152,7 @@ export function TargetAnalyzer({
   ).sort();
 
   return (
-    <div className="space-y-8" aria-label="Target University Analyzer">
+    <div className="space-y-8" data-testid="target-analyzer" aria-label="Target roadmap analysis">
       {/* Header & Description */}
       <section className="panel p-6 sm:p-8">
         <div className="flex items-center gap-3">
