@@ -49,7 +49,11 @@ export default function HomePage() {
         <div className="site-container flex min-h-[700px] items-center py-20">
           <div className="max-w-4xl">
             <div className="flex flex-wrap items-center gap-3 animate-fade-in">
-              <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-orange-300 backdrop-blur-md shadow-sm">
+              <span className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-orange-300 backdrop-blur-md shadow-sm">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
+                </span>
                 AUSA prototype
               </span>
               <span className="text-sm font-medium text-slate-300">Built for Azerbaijani students</span>

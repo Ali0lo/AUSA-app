@@ -43,6 +43,13 @@ export function SiteFooter() {
       <div className="border-t border-white/[0.06]">
         <div className="site-container flex flex-col gap-2 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <span>© 2026 AUSA team</span>
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            <span className="text-slate-400">All systems operational</span>
+          </div>
           <span>Frontend build 1.0 · English interface</span>
         </div>
       </div>
