@@ -4,6 +4,7 @@ Run from backend: python -m scripts.bootstrap_catalogue
 Optional research CSVs and RAG embeddings are loaded explicitly by their own scripts.
 """
 import asyncio
+from pathlib import Path
 try:
     from alembic import command
     from alembic.config import Config
