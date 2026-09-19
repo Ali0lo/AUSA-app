@@ -19,6 +19,8 @@ class AzerbaijanPrediction(BaseModel):
     predicted_cutoff: float | None = None
     lower_cutoff: float | None = None
     upper_cutoff: float | None = None
+    scholarship_type: str | None = None
+    cutoff_note: str | None = None
 
 
 class AzerbaijanPredictionList(BaseModel):

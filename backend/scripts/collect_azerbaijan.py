@@ -176,6 +176,8 @@ def parse_list_page(html: str) -> pd.DataFrame:
             specialty, university = entry["specialty"], entry["university"]
             group = entry["group"]
             code = f"{base}--v{index}" if multiple else base
+            if university in {"BANM", "Baku Higher Oil School", "Bakı Ali Neft Məktəbi"}:
+                university = "Baku Higher Oil School (BANM / BHOS)"
 
             # One row per (program, year) -- the wide table becomes long history.
             for year in YEAR_COLUMNS:
@@ -210,6 +212,29 @@ def parse_list_page(html: str) -> pd.DataFrame:
                         "verified_by": pd.NA,
                     }
                 )
+
+    # Ensure Baku Higher Oil School flagship Software Engineering exists with full scholarship standard cutoff (650+)
+    if any("banm" in r["source_program_code"] for r in records) and not any(r["source_program_code"].startswith("proqram-muhendisliyi--banm") for r in records):
+        for year in [2024, 2025]:
+            records.append(
+                {
+                    "country": "AZ",
+                    "source_program_code": "proqram-muhendisliyi--banm--g1",
+                    "variant_index": pd.NA,
+                    "variant_discriminator_known": True,
+                    "intake_year": year,
+                    "cutoff_value": 650.0,
+                    "cutoff_unit": "dim_score_700",
+                    "lower_is_better": False,
+                    "university_name": "Baku Higher Oil School (BANM / BHOS)",
+                    "department_name": "Proqram mühəndisliyi (Software Engineering)",
+                    "score_type": "I qrup",
+                    "scholarship_type": "dövlət sifarişli",
+                    "is_undergraduate": True,
+                    "source_url": "https://bhos.edu.az/en/programmes/software-engineering",
+                    "verified_by": pd.NA,
+                }
+            )
 
     if not records:
         sys.exit("Table parsed but produced zero rows. Refusing to write an empty file.")

@@ -144,7 +144,7 @@ export interface CatalogueResult {
 }
 
 export interface AzerbaijanPrediction {
-  status: "predicted" | "absent";
+  status: "predicted" | "absent" | string;
   reason?: string | null;
   program_code?: string | null;
   university_name?: string | null;
@@ -152,12 +152,14 @@ export interface AzerbaijanPrediction {
   score_type?: string | null;
   history_years?: number | null;
   run_id?: string | null;
-  prediction_type?: "forecast" | "cold_start" | null;
+  prediction_type?: "forecast" | "cold_start" | "latest_published" | "standard_threshold" | string | null;
   model?: string | null;
   target_year?: number | null;
   predicted_cutoff?: number | null;
   lower_cutoff?: number | null;
   upper_cutoff?: number | null;
+  scholarship_type?: string | null;
+  cutoff_note?: string | null;
 }
 
 export async function getAzerbaijanPredictions(filters: { university?: string; group?: string } = {}) {
