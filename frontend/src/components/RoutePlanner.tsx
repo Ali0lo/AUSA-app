@@ -280,7 +280,7 @@ function PlanCard({
   const isBridge = plan.hops.length > 1;
 
   return (
-    <section className="rounded-3xl border border-white/[0.08] bg-[#13152c]/75 p-6 sm:p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:border-white/[0.15] mt-6">
+    <section className="card-hover rounded-3xl border border-white/[0.08] bg-[#13152c]/75 p-6 sm:p-8 backdrop-blur-xl shadow-2xl transition-all duration-300 mt-6 animate-slide-up">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Option {String(index + 1).padStart(2, "0")}</p>

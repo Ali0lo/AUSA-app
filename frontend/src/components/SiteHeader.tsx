@@ -55,7 +55,7 @@ export function SiteHeader() {
               >
                 {item.label}
                 {active && (
-                  <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 shadow-[0_0_8px_rgba(255,122,0,0.5)]" />
+                  <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 shadow-[0_0_8px_rgba(255,122,0,0.5)] animate-fade-in" />
                 )}
               </Link>
             );
@@ -68,7 +68,7 @@ export function SiteHeader() {
 
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white hover:bg-white/10 transition-colors lg:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white hover:bg-white/10 transition-transform active:scale-95 lg:hidden"
           aria-label={open ? "Close navigation" : "Open navigation"}
           aria-expanded={open}
           aria-controls="mobile-navigation"
@@ -79,7 +79,7 @@ export function SiteHeader() {
       </div>
 
       {open && (
-        <div id="mobile-navigation" className="border-t border-white/[0.08] bg-[#0c0d1b]/95 backdrop-blur-2xl lg:hidden">
+        <div id="mobile-navigation" className="animate-slide-down border-t border-white/[0.08] bg-[#0c0d1b]/95 backdrop-blur-2xl lg:hidden">
           <div className="site-container py-5">
             <nav className="flex flex-col" aria-label="Mobile navigation">
               {navigation.map((item) => (

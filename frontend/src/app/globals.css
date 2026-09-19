@@ -191,6 +191,27 @@ a {
   .glass-card {
     @apply rounded-3xl border border-white/[0.08] bg-[#13152c]/75 backdrop-blur-xl shadow-2xl;
   }
+
+  .card-hover {
+    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:border-purple-500/40 hover:shadow-glow-purple;
+  }
+
+  .interactive-scale {
+    @apply transition-transform duration-200 ease-out hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .animate-stagger-1 {
+    animation-delay: 80ms;
+  }
+  .animate-stagger-2 {
+    animation-delay: 160ms;
+  }
+  .animate-stagger-3 {
+    animation-delay: 240ms;
+  }
+  .animate-stagger-4 {
+    animation-delay: 320ms;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -44,34 +44,34 @@ export default function HomePage() {
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0c0d1b]/60 via-[#0c0d1b]/80 to-[#0c0d1b]" />
         
         {/* Ambient luminous glow in hero */}
-        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -z-10 h-[450px] w-[750px] rounded-full bg-gradient-to-r from-purple-600/20 via-pink-600/15 to-orange-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -z-10 h-[450px] w-[750px] rounded-full bg-gradient-to-r from-purple-600/20 via-pink-600/15 to-orange-500/15 blur-3xl animate-float-slow" />
 
         <div className="site-container flex min-h-[700px] items-center py-20">
           <div className="max-w-4xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-orange-300 backdrop-blur-md">
+            <div className="flex flex-wrap items-center gap-3 animate-fade-in">
+              <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-orange-300 backdrop-blur-md shadow-sm">
                 AUSA prototype
               </span>
               <span className="text-sm font-medium text-slate-300">Built for Azerbaijani students</span>
             </div>
             
-            <h1 className="mt-8 max-w-3xl font-sans text-5xl font-extrabold leading-[1.05] tracking-[-0.035em] text-white sm:text-6xl lg:text-7xl">
+            <h1 className="mt-8 max-w-3xl font-sans text-5xl font-extrabold leading-[1.05] tracking-[-0.035em] text-white sm:text-6xl lg:text-7xl animate-slide-up">
               A clearer route to the{" "}
               <span className="bg-gradient-to-r from-purple-300 via-pink-300 to-orange-400 bg-clip-text text-transparent">
                 right programme.
               </span>
             </h1>
             
-            <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl">
+            <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl animate-slide-up animate-stagger-1">
               Enter what you hold and what you scored. See every route it opens, what each costs in time and money, and the universities that document accepting it — quoted from their own admissions pages.
             </p>
             
-            <div className="mt-9 flex flex-wrap items-center gap-4 sm:gap-5">
-              <Link className="button-primary min-h-14 px-8 text-base shadow-[0_0_25px_rgba(255,107,0,0.35)]" href="/plan">
+            <div className="mt-9 flex flex-wrap items-center gap-4 sm:gap-5 animate-slide-up animate-stagger-2">
+              <Link className="button-primary min-h-14 px-8 text-base shadow-[0_0_25px_rgba(255,107,0,0.35)] interactive-scale" href="/plan">
                 Plan my route
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
-              <Link className="button-secondary min-h-14 px-7 text-base" href="/target">
+              <Link className="button-secondary min-h-14 px-7 text-base interactive-scale" href="/target">
                 Target University
               </Link>
               <span className="text-sm text-slate-400">Free, and no account needed.</span>
@@ -96,9 +96,9 @@ export default function HomePage() {
                 return (
                   <article
                     key={capability.href}
-                    className="group rounded-3xl border border-white/[0.08] bg-[#13152c]/75 p-6 backdrop-blur-xl shadow-xl transition-all duration-300 hover:border-purple-500/40 hover:bg-[#13152c]/90 sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-6"
+                    className="group card-hover rounded-3xl border border-white/[0.08] bg-[#13152c]/75 p-6 backdrop-blur-xl shadow-xl sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-6"
                   >
-                    <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-orange-400 transition-transform duration-300 group-hover:scale-105 group-hover:border-purple-500/30 group-hover:text-orange-300 sm:mb-0">
+                    <div className="mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-orange-400 transition-transform duration-300 group-hover:scale-110 group-hover:border-purple-500/30 group-hover:text-orange-300 sm:mb-0">
                       <Icon size={24} strokeWidth={1.75} aria-hidden="true" />
                     </div>
                     <div>
@@ -108,7 +108,7 @@ export default function HomePage() {
                       </div>
                       <p className="mt-2 text-sm leading-6 text-slate-400">{capability.description}</p>
                     </div>
-                    <Link className="button-secondary mt-4 shrink-0 sm:mt-0" href={capability.href}>
+                    <Link className="button-secondary mt-4 shrink-0 sm:mt-0 interactive-scale" href={capability.href}>
                       Open
                       <ArrowRight size={16} aria-hidden="true" />
                     </Link>
@@ -134,7 +134,7 @@ export default function HomePage() {
             ].map(([number, title, description]) => (
               <li
                 key={number}
-                className="rounded-3xl border border-white/[0.08] bg-[#13152c]/60 p-8 backdrop-blur-xl shadow-xl transition-all duration-300 hover:border-white/20 hover:bg-[#13152c]/80"
+                className="card-hover rounded-3xl border border-white/[0.08] bg-[#13152c]/60 p-8 backdrop-blur-xl shadow-xl"
               >
                 <span className="font-sans text-4xl font-extrabold bg-gradient-to-r from-purple-400 to-orange-400 bg-clip-text text-transparent">
                   {number}
@@ -145,7 +145,7 @@ export default function HomePage() {
             ))}
           </ol>
           <div className="mt-10">
-            <Link className="button-primary px-7 text-base shadow-[0_0_20px_rgba(255,107,0,0.3)]" href="/plan">
+            <Link className="button-primary px-7 text-base shadow-[0_0_20px_rgba(255,107,0,0.3)] interactive-scale" href="/plan">
               Plan my route
               <ArrowRight size={17} aria-hidden="true" />
             </Link>

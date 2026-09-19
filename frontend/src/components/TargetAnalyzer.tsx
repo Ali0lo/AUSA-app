@@ -354,7 +354,7 @@ export function TargetAnalyzer({
             type="button"
             onClick={() => handleAnalyze()}
             disabled={loading || !universityInput.trim()}
-            className="button-primary flex items-center gap-2 px-7 shadow-[0_0_25px_rgba(255,107,0,0.35)] min-h-12 text-sm"
+            className="button-primary interactive-scale flex items-center gap-2 px-7 shadow-[0_0_25px_rgba(255,107,0,0.35)] min-h-12 text-sm"
           >
             {loading ? (
               <>
@@ -373,7 +373,7 @@ export function TargetAnalyzer({
 
       {/* Error state */}
       {error && (
-        <div className="notice-error">
+        <div className="notice-error animate-fade-in">
           <p className="font-semibold">Unable to assess target</p>
           <p className="mt-1 text-sm">{error}</p>
         </div>
@@ -381,7 +381,7 @@ export function TargetAnalyzer({
 
       {/* Results panel */}
       {result && (
-        <div className="space-y-6" data-testid="target-results">
+        <div className="space-y-6 animate-slide-up" data-testid="target-results">
           {/* Honest Uncurated Fallback State Banner (D2) */}
           {!result.found && (
             <div className="rounded-3xl border border-amber-500/30 bg-amber-500/[0.08] p-6 backdrop-blur-xl shadow-2xl">
