@@ -6,6 +6,7 @@ import "@fontsource/ibm-plex-serif/500.css";
 import "@fontsource/ibm-plex-serif/600.css";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
+import { ScrollProgressBar } from "@/components/ScrollProgressBar";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 
@@ -21,6 +22,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" data-scroll-behavior="smooth" className="dark">
       <body className="relative flex min-h-screen flex-col bg-[#0c0d1b] text-white selection:bg-orange-500/30 selection:text-white">
+        <ScrollProgressBar />
+
         {/* Ambient background glow layers */}
         <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
           <div className="absolute -top-40 left-1/2 h-[550px] w-[850px] -translate-x-1/2 rounded-full bg-gradient-to-b from-purple-600/15 via-pink-600/10 to-transparent blur-3xl" />
