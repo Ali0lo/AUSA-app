@@ -206,7 +206,7 @@ markets before writing any model code.
 
 ### B4 🟡 Who on the team does what?
 
-Four people: Irada Nuraliyeva, Əli İskəndərli, Fariz Əkbərzadə, Turan Əlizadə. The work
+Four people: Fariz Əkbərzadə, Əli İskəndərli, Turan Əlizadə, Irada Nuraliyeva. The work
 splits cleanly into four tracks — data collection/curation, ML pipeline, backend/API,
 frontend.
 

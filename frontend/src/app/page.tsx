@@ -27,7 +27,7 @@ const capabilities = [
   }
 ];
 
-const team = ["Irada Nuraliyeva", "Əli İskəndərli", "Fariz Əkbərzadə", "Turan Əlizadə"];
+const team = ["Fariz Əkbərzadə", "Əli İskəndərli", "Turan Əlizadə", "Irada Nuraliyeva"];
 
 export default function HomePage() {
   return (
