@@ -432,7 +432,18 @@ def calculate_total_dim_score(req: DimCalculationRequest) -> DimScoreBreakdown:
         buraxilis_total = min(300.0, max(0.0, buraxilis_total))
 
     # 2. Blok calculations
-    blok_inp = req.blok or get_default_blok_input(req.group, req.subgroup)
+    def_blok = get_default_blok_input(req.group, req.subgroup)
+    if req.blok is not None:
+        blok_inp = req.blok
+        if blok_inp.subject_1 and blok_inp.subject_1.max_scaled_points == 100.0 and def_blok.subject_1:
+            blok_inp.subject_1.max_scaled_points = def_blok.subject_1.max_scaled_points
+        if blok_inp.subject_2 and blok_inp.subject_2.max_scaled_points == 100.0 and def_blok.subject_2:
+            blok_inp.subject_2.max_scaled_points = def_blok.subject_2.max_scaled_points
+        if blok_inp.subject_3 and blok_inp.subject_3.max_scaled_points == 100.0 and def_blok.subject_3:
+            blok_inp.subject_3.max_scaled_points = def_blok.subject_3.max_scaled_points
+    else:
+        blok_inp = def_blok
+
     blok_subjects: List[SubjectScoreResult] = []
 
     if blok_inp.subject_1:
