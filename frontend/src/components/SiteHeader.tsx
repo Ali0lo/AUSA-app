@@ -13,6 +13,7 @@ const navigation = [
   { href: "/plan", label: "Plan my route" },
   { href: "/target", label: "Target University" },
   { href: "/finance", label: "Finances & Visa" },
+  { href: "/scholarships", label: "Scholarships" },
   { href: "/azerbaijan", label: "Azerbaijan DİM" },
   { href: "/advisor", label: "AI advisor" },
   { href: "/application", label: "Application" },

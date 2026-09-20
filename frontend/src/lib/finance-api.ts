@@ -616,3 +616,4 @@ export async function fetchDestinationComparison(req: DestinationCompareRequest)
   }
   return compareDestinationsLocal(req);
 }
+
