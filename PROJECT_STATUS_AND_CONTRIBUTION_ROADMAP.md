@@ -11,22 +11,22 @@ To achieve the goal of becoming the **#1 all-time contributor to the AUSA reposi
 
 | Contributor | Total Commits | Lines Added (+) | Lines Removed (-) | Net Impact (LOC) | Current Rank |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **farizakb** *(Fariz Akbarzada)* | 95 *(88 + 7)* | 34,593 | 9,647 | +24,946 | **#1** |
-| **Ali0lo / Ali** *(You)* | **63** *(62 + 1)* | **26,251** | **2,118** | **+24,133** | **#2** |
+| **Ali0lo / Ali** *(You)* | **70** *(69 + 1)* | **29,559** | **2,146** | **+27,413** | **#1 (Net LOC) / #2 (Commits)** |
+| **farizakb** *(Fariz Akbarzada)* | 95 *(88 + 7)* | 34,593 | 9,647 | +24,946 | **#1 (Commits) / #2 (Net LOC)** |
 | **The Guitar** | 8 | 18,532 | 3,173 | +15,359 | **#3** |
 | **damaske** | 11 | 737 | 20 | +717 | **#4** |
 
-### Target Gap to Reach #1
+### Target Gap to Reach #1 in All Categories
 
 ```
   Metric                  Current (Ali0lo)   Target (Leader + Margin)     Gap Remaining
   ───────────────────────────────────────────────────────────────────────────────────────
-  Commits to Land         63 commits         96–100 commits               +33 commits
-  Lines of Code Added     26,251 lines       35,000+ lines                +8,749+ lines
-  Net Code Impact         +24,133 LOC        +25,500+ LOC                 +813 LOC (Almost #1!)
+  Net Code Impact         +27,413 LOC        +25,000+ LOC                 ACHIEVED (#1 by +2,467 LOC!)
+  Commits to Land         70 commits         96–100 commits               +25 commits
+  Lines of Code Added     29,559 lines       35,000+ lines                +5,441+ lines
 ```
 
-> 🎯 **Strategy**: Delivering high-value, structured commits containing genuine, production-grade features, comprehensive dataset expansions, simulators, and tests will easily add the remaining **8,750+ lines** cleanly while making AUSA the most feature-complete study-abroad and domestic university advisory platform in Azerbaijan. Phase 1 and Phase 2 are complete!
+> 🎯 **Milestone Update**: You are now officially **#1 in Net Impact (27,413 LOC vs 24,946 LOC)** across the entire repository! Delivering Phases 4 & 5 will completely surpass the remaining 5,441 added lines and 25 commits to become #1 in every metric. Phase 1, Phase 2, and Phase 3 are complete!
 
 ---
 
@@ -108,13 +108,13 @@ To hit **+15,000 lines added** and **+35 commits**, we break down work into modu
   ───────────────────────────────────────────────────────────────────────────────────────
   Phase 1   Visa, Blocked Account & Living Cost Simulator [DONE]  +3,259 LOC      2 commits
   Phase 2   Comprehensive Global Scholarship Engine [DONE]        +3,271 LOC      2 commits
-  Phase 3   DİM Sub-Exam Score Calculator & Specialty Matcher     ~2,600 LOC      6 commits
+  Phase 3   DİM Sub-Exam Score Calculator & Specialty Matcher[DONE]+3,308 LOC     6 commits
   Phase 4   Statement of Purpose (SOP) & CV Reviewer              ~2,200 LOC      5 commits
   Phase 5   Admissions Timeline, Calendar & Milestone Tracker     ~2,000 LOC      5 commits
   Phase 6   Student Application Portal & Document Manager         ~1,800 LOC      4 commits
   Phase 7   AUSA CLI Utility & Expanded Test Suites (100+ tests)  ~1,500 LOC      4 commits
   ───────────────────────────────────────────────────────────────────────────────────────
-  TOTAL                                                           ~16,630 LOC     28 commits
+  TOTAL                                                           ~17,338 LOC     28 commits
 ```
 
 ### Detailed Breakdown of Proposed Modules
@@ -153,22 +153,32 @@ To hit **+15,000 lines added** and **+35 commits**, we break down work into modu
   - Frontend Route: [`frontend/src/app/scholarships/page.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/app/scholarships/page.tsx) (16 lines)
   - Frontend Vitest Suite: [`frontend/src/components/ScholarshipExplorer.test.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/components/ScholarshipExplorer.test.tsx) (85 lines, 7 tests)
 
-#### 3. DİM Sub-Exam Score Calculator & Specialty Recommender (6 commits, ~2,600 LOC)
-- **Problem**: DİM applicants take 3 specialty sub-exams plus graduation exams (attestat exam). They don't know their total 700-point breakdown.
-- **Features**:
-  - **Interactive DİM Score Simulator**:
-    - Input correct/incorrect questions for:
-      - Block 1 (Attestat): Azerbaijani language (30 questions), Math (25 questions), Foreign Language (30 questions).
-      - Block 2 (Specialty): Group 1 (Math, Physics, Chemistry), Group 2 (Math, Geography, History), etc.
-    - Accurately calculates scaled raw scores out of 700.
-  - **Eligible Specialty Matcher**: Instantly cross-references the student's calculated score against all 2,578 historical cutoffs in the database to show which programmes they qualify for under State Funding (dövlət sifarişli) or Paid Education.
-- **Files**:
-  - `backend/app/domain/dim_calculator.py`
-  - `backend/app/api/v1/dim_calculator.py`
-  - `backend/tests/test_dim_calculator.py`
-  - `frontend/src/app/dim-calculator/page.tsx`
-  - `frontend/src/components/DimScoreSimulator.tsx`
-  - `frontend/src/components/SpecialtyRecommendationTable.tsx`
+#### 3. DİM Sub-Exam Score Calculator & Specialty Recommender [COMPLETED: +3,308 LOC, 6 commits, 26 tests]
+- **Status**: **SHIPPED & TESTED (100% Green)**.
+- **Components**:
+  - **700-Point DİM Score Simulator**:
+    * Buraxılış exam (Max 300): Ana Dili (100), Riyaziyyat (100), Xarici Dil (100).
+    * Blok exam (Max 400): Groups I (RK/Rİ), II, III (DT/TC), IV, V.
+    * 4-wrong-penalty rule applied to closed questions (`net_closed = max(0, correct - incorrect * 0.25)`).
+    * Direct score override support for known results.
+  - **Historical Specialty Recommender**:
+    * Cross-references candidate score against all 2,578 historical DİM cutoffs (2023–2025).
+    * Opportunity Tiers: SAFE ($\Delta \ge +30$), REALISTIC ($0 \le \Delta < 30$), TARGET ($-35 \le \Delta < 0$), ASPIRATIONAL ($\Delta < -35$).
+    * Baku Higher Oil School (BANM / BHOS) 650+ full scholarship rule enforcement.
+    * 3-year cutoff trajectory indicator ($\Delta_{2024 \to 2025}$).
+  - **UI & Visualization**:
+    * Interactive Group tabs & sub-group switchers.
+    * Real-time SVG circular gauge showing score out of 700 with dynamic gradient.
+    * University filter chips (BANM, ADA, UNEC, BDU, BMU, ADNSU, ATU) & chance level filters.
+- **Delivered Artifacts**:
+  - Backend domain: [`backend/app/domain/dim_calculator.py`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/backend/app/domain/dim_calculator.py) (745 lines)
+  - Backend API: [`backend/app/api/v1/dim_calculator.py`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/backend/app/api/v1/dim_calculator.py) (180 lines)
+  - Backend Pytest Suite: [`backend/tests/test_dim_calculator.py`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/backend/tests/test_dim_calculator.py) (380 lines, 19 tests)
+  - Frontend Client: [`frontend/src/lib/dim-api.ts`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/lib/dim-api.ts) (688 lines)
+  - Frontend UI Component: [`frontend/src/components/DimScoreSimulator.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/components/DimScoreSimulator.tsx) (592 lines)
+  - Frontend Route: [`frontend/src/app/dim-calculator/page.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/app/dim-calculator/page.tsx) (30 lines)
+  - Frontend Navigation: [`frontend/src/components/SiteHeader.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/components/SiteHeader.tsx)
+  - Frontend Vitest Suite: [`frontend/src/components/DimScoreSimulator.test.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/components/DimScoreSimulator.test.tsx) (94 lines, 7 tests)
 
 #### 4. Statement of Purpose (SOP) & CV Rubric Checker (5 commits, ~2,200 LOC)
 - **Problem**: Azerbaijani applicants struggle with international application essays and format mistakes.
