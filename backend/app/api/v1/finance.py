@@ -385,3 +385,4 @@ async def compare_study_destinations(payload: DestinationCompareRequest):
         highest_liquidity_country=res.highest_liquidity_country,
         summary_verdict=res.summary_verdict,
     )
+

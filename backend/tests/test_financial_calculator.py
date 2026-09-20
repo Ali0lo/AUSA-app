@@ -387,3 +387,4 @@ async def test_api_compare_endpoint():
         assert len(data["destinations"]) == 4
         assert "most_affordable_country" in data
         assert "summary_verdict" in data
+
