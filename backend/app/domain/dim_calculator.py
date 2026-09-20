@@ -135,8 +135,8 @@ class BuraxilisInput(BaseModel):
 
 class BlokInput(BaseModel):
     """Inputs for the specialty examination (max 400 points)."""
-    subject_1: SubjectQuestionInput
-    subject_2: SubjectQuestionInput
+    subject_1: Optional[SubjectQuestionInput] = None
+    subject_2: Optional[SubjectQuestionInput] = None
     subject_3: Optional[SubjectQuestionInput] = None
     direct_total_score: Optional[float] = Field(
         default=None, ge=0.0, le=400.0, description="Direct total Blok score if already known"
