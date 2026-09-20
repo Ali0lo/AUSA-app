@@ -14,6 +14,7 @@ const navigation = [
   { href: "/target", label: "Target University" },
   { href: "/finance", label: "Finances & Visa" },
   { href: "/scholarships", label: "Scholarships" },
+  { href: "/dim-calculator", label: "DİM Kalkulyator" },
   { href: "/azerbaijan", label: "Azerbaijan DİM" },
   { href: "/advisor", label: "AI advisor" },
   { href: "/application", label: "Application" },
