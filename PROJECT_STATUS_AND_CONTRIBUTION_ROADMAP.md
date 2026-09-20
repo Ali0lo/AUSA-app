@@ -12,7 +12,7 @@ To achieve the goal of becoming the **#1 all-time contributor to the AUSA reposi
 | Contributor | Total Commits | Lines Added (+) | Lines Removed (-) | Net Impact (LOC) | Current Rank |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **farizakb** *(Fariz Akbarzada)* | 95 *(88 + 7)* | 34,593 | 9,647 | +24,946 | **#1** |
-| **Ali0lo / Ali** *(You)* | **59** *(58 + 1)* | **22,321** | **2,118** | **+20,203** | **#2** |
+| **Ali0lo / Ali** *(You)* | **63** *(62 + 1)* | **26,251** | **2,118** | **+24,133** | **#2** |
 | **The Guitar** | 8 | 18,532 | 3,173 | +15,359 | **#3** |
 | **damaske** | 11 | 737 | 20 | +717 | **#4** |
 
@@ -21,12 +21,12 @@ To achieve the goal of becoming the **#1 all-time contributor to the AUSA reposi
 ```
   Metric                  Current (Ali0lo)   Target (Leader + Margin)     Gap Remaining
   ───────────────────────────────────────────────────────────────────────────────────────
-  Commits to Land         59 commits         96–100 commits               +36 commits
-  Lines of Code Added     22,321 lines       34,600+ lines                +12,272+ lines
-  Net Code Impact         +20,203 LOC        +25,000+ LOC                 +4,797+ LOC
+  Commits to Land         63 commits         96–100 commits               +33 commits
+  Lines of Code Added     26,251 lines       35,000+ lines                +8,749+ lines
+  Net Code Impact         +24,133 LOC        +25,500+ LOC                 +813 LOC (Almost #1!)
 ```
 
-> 🎯 **Strategy**: Delivering 35–40 high-value, structured commits containing genuine, production-grade features, comprehensive dataset expansions, simulators, and tests will add **15,000+ lines** cleanly while making AUSA the most feature-complete study-abroad and domestic university advisory platform in Azerbaijan.
+> 🎯 **Strategy**: Delivering high-value, structured commits containing genuine, production-grade features, comprehensive dataset expansions, simulators, and tests will easily add the remaining **8,750+ lines** cleanly while making AUSA the most feature-complete study-abroad and domestic university advisory platform in Azerbaijan. Phase 1 and Phase 2 are complete!
 
 ---
 
@@ -107,14 +107,14 @@ To hit **+15,000 lines added** and **+35 commits**, we break down work into modu
   Phase     Module Description                                  Target LOC      Commits
   ───────────────────────────────────────────────────────────────────────────────────────
   Phase 1   Visa, Blocked Account & Living Cost Simulator [DONE]  +3,259 LOC      2 commits
-  Phase 2   Comprehensive Global Scholarship Engine (7 Grants)    ~3,200 LOC      7 commits
+  Phase 2   Comprehensive Global Scholarship Engine [DONE]        +3,271 LOC      2 commits
   Phase 3   DİM Sub-Exam Score Calculator & Specialty Matcher     ~2,600 LOC      6 commits
   Phase 4   Statement of Purpose (SOP) & CV Reviewer              ~2,200 LOC      5 commits
   Phase 5   Admissions Timeline, Calendar & Milestone Tracker     ~2,000 LOC      5 commits
   Phase 6   Student Application Portal & Document Manager         ~1,800 LOC      4 commits
   Phase 7   AUSA CLI Utility & Expanded Test Suites (100+ tests)  ~1,500 LOC      4 commits
   ───────────────────────────────────────────────────────────────────────────────────────
-  TOTAL                                                           ~16,559 LOC     32 commits
+  TOTAL                                                           ~16,630 LOC     28 commits
 ```
 
 ### Detailed Breakdown of Proposed Modules
@@ -137,24 +137,21 @@ To hit **+15,000 lines added** and **+35 commits**, we break down work into modu
   - Frontend Route: [`frontend/src/app/finance/page.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/app/finance/page.tsx) (16 lines)
   - Frontend Vitest Suite: [`frontend/src/components/FinanceSimulator.test.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/components/FinanceSimulator.test.tsx) (100 lines, 9 tests)
 
-#### 2. Comprehensive Global Scholarship Engine (7 commits, ~3,200 LOC)
-- **Problem**: Currently only 4 scholarships exist in the database.
-- **Expansions**:
-  1. **Chevening Scholarship (UK)**: 100% tuition + stipend + flights; 2-year post-study return rule; 2,800-hour work experience calculator.
-  2. **Fulbright Foreign Student Program (US)**: Full tuition, stipend, health insurance, J-1 two-year home residency requirement.
-  3. **Turkiye Burslari (YTB - Turkey)**: Undergraduate (70% minimum GPA) & Master (75% minimum GPA), full coverage + Turkish language year.
-  4. **Italian DSU / EDISU / ER.GO Regional Scholarships**: Means-tested income brackets (< €25,000 ISEE), tuition waiver + up to €7,200 stipend.
-  5. **Hungarian Stipendium Hungaricum**: Bilateral Azerbaijan-Hungary agreement; 100% tuition, monthly stipend, dormitory housing.
-  6. **French Eiffel Excellence Scholarship**: Master & PhD funding for engineering, law, and economics.
-  7. **Polish NAWA Banach Scholarship**: Engineering and technical programmes for Azerbaijani citizens.
-- **Files**:
-  - `backend/app/domain/scholarship_evaluator.py`
-  - `backend/app/api/v1/scholarships.py`
-  - `backend/scripts/seed_global_scholarships.py`
-  - `backend/tests/test_scholarship_evaluator.py`
-  - `frontend/src/app/scholarships/page.tsx`
-  - `frontend/src/components/ScholarshipCard.tsx`
-  - `frontend/src/components/ScholarshipFilter.tsx`
+#### 2. Comprehensive Global Scholarship Engine [COMPLETED: +3,271 LOC, 2 commits, 23 tests]
+- **Status**: **SHIPPED & TESTED (100% Green)**.
+- **Components**:
+  - **14 International & Bilateral Scholarship Instruments**: State Programme 2022–2026, Chevening (UK), Fulbright (US), Türkiye Bursları (YTB), Stipendium Hungaricum (Hungary), Italian DSU (Italy), DAAD (Germany), Eiffel Excellence (France), Stefan Banach (NAWA Poland), Chinese Government Scholarship (CSC China), Erasmus Mundus Joint Masters, GREAT Scholarships (UK), SOCAR Overseas, and Baku Higher Oil School Full State Scholarship.
+  - **Discrete Qualification Gate Evaluator**: Honest diagnosis of Level match, age ceilings (YTB bachelor < 21, master < 30; Eiffel master < 25), work experience (Chevening 2,800 hours), academic GPA, IELTS/TOEFL, employer verification (SOCAR), BHOS 650+ DİM score, and Italian DSU €25k ISEE-U economic ceiling.
+  - **Database Seeding**: Added fixtures 205–214 into PostgreSQL `scholarships` table.
+  - **Glassmorphic Explorer & Drawer**: Multi-filter chip bar, instant search, dynamic profile evaluation drawer with status badges (`OPEN`, `UNLOCKABLE`, `BLOCKED`), and detailed application dossier modal.
+- **Delivered Artifacts**:
+  - Backend domain: [`backend/app/domain/global_scholarships.py`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/backend/app/domain/global_scholarships.py) (1,077 lines)
+  - Backend API: [`backend/app/api/v1/scholarships.py`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/backend/app/api/v1/scholarships.py) (301 lines)
+  - Backend Pytest Suite: [`backend/tests/test_global_scholarships.py`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/backend/tests/test_global_scholarships.py) (304 lines, 16 tests)
+  - Frontend Client: [`frontend/src/lib/scholarships-api.ts`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/lib/scholarships-api.ts) (720 lines)
+  - Frontend UI Component: [`frontend/src/components/ScholarshipExplorer.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/components/ScholarshipExplorer.tsx) (630 lines)
+  - Frontend Route: [`frontend/src/app/scholarships/page.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/app/scholarships/page.tsx) (16 lines)
+  - Frontend Vitest Suite: [`frontend/src/components/ScholarshipExplorer.test.tsx`](file:///Users/aliiskandarli/Documents/Coding/holberton_last_project/AUSA/frontend/src/components/ScholarshipExplorer.test.tsx) (85 lines, 7 tests)
 
 #### 3. DİM Sub-Exam Score Calculator & Specialty Recommender (6 commits, ~2,600 LOC)
 - **Problem**: DİM applicants take 3 specialty sub-exams plus graduation exams (attestat exam). They don't know their total 700-point breakdown.
