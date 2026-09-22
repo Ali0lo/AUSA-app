@@ -28,7 +28,6 @@ const COUNTRY_FILTERS = [
 ];
 
 export function AdmissionsTimeline() {
-  const [schedule, setSchedule] = useState<TimelineSchedule>(() => getLocalTimelineSchedule());
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<DegreeLevel>("all");
@@ -44,24 +43,15 @@ export function AdmissionsTimeline() {
   const [customNotes, setCustomNotes] = useState("");
   const [customDaysBefore, setCustomDaysBefore] = useState(3);
 
-  useEffect(() => {
-    let isMounted = true;
-    const filters: MilestoneFilter = {
+  const schedule = useMemo(() => {
+    return getLocalTimelineSchedule({
       country_code: selectedCountry || undefined,
       degree_level: selectedLevel !== "all" ? selectedLevel : undefined,
       intake: selectedIntake !== "all" ? (selectedIntake as IntakeSeason) : undefined,
       urgency: selectedUrgency !== "all" ? (selectedUrgency as UrgencyLevel) : undefined,
       is_state_programme_eligible: stateProgrammeOnly ? true : undefined,
       search_query: searchQuery.trim() || undefined,
-    };
-
-    fetchMilestones(filters).then((res) => {
-      if (isMounted) setSchedule(res);
     });
-
-    return () => {
-      isMounted = false;
-    };
   }, [searchQuery, selectedCountry, selectedLevel, selectedIntake, selectedUrgency, stateProgrammeOnly]);
 
   const handleExportAll = () => {
