@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# AUSA CLI Executable Wrapper
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHON_BIN="${SCRIPT_DIR}/.venv/bin/python"
+
+if [ ! -f "$PYTHON_BIN" ]; then
+    PYTHON_BIN="python3"
+fi
+
+exec "$PYTHON_BIN" -m backend.cli.ausa_cli "$@"
