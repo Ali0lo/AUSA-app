@@ -12,6 +12,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.domain.application_tracker import (
+    CURATED_COMPARISON_DB,
+    AdmissionTier,
+    ComparisonRequest,
+    ComparisonResult,
+    DocumentChecklistRequest,
+    DocumentChecklistResult,
+    TierClassificationRequest,
+    TierClassificationResult,
+    classify_application_tier,
+    compare_universities,
+    generate_document_checklist,
+)
 from app.models.application import StudentApplication as ApplicationModel
 from app.models.student import Student
 
@@ -273,3 +286,122 @@ async def update_application_stage(
 
     await db.refresh(app)
     return _to_response(app)
+
+
+# -------------------------------------------------------------
+# Comparison Workbench & Prerequisite Checklist Endpoints
+# -------------------------------------------------------------
+@router.post(
+    "/compare",
+    response_model=ComparisonResult,
+    summary="Generate multi-variable comparison matrix for target universities",
+)
+async def compare_target_universities(req: ComparisonRequest) -> ComparisonResult:
+    """Computes a side-by-side comparison of up to 5 universities:
+    - Annual tuition & monthly living costs.
+    - Blocked account / maintenance deposit requirements.
+    - Post-Study Work Visa (PSWR) duration and conditions.
+    - Minimum language score gates (IELTS/TOEFL).
+    - Dream / Target / Safety classification against student profile.
+    """
+    try:
+        return compare_universities(req)
+    except Exception as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Error comparing universities: {str(err)}",
+        )
+
+
+@router.post(
+    "/checklist",
+    response_model=DocumentChecklistResult,
+    summary="Generate verified document checklist by destination and funding program",
+)
+async def get_document_checklist(req: DocumentChecklistRequest) -> DocumentChecklistResult:
+    """Returns official prerequisite document requirements:
+    - Academic transcripts and apostille rules.
+    - Country-specific certificates (Uni-Assist VPD, DOV/CIMEA, CAS proof of funds).
+    - State Programme 2022-2026 repatriation and medical forms.
+    """
+    try:
+        return generate_document_checklist(req)
+    except Exception as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Error generating document checklist: {str(err)}",
+        )
+
+
+@router.post(
+    "/classify-tier",
+    response_model=TierClassificationResult,
+    summary="Classify target application into Dream, Target, or Safety",
+)
+async def classify_tier(req: TierClassificationRequest) -> TierClassificationResult:
+    """Classifies an application into Dream, Target, or Safety based on:
+    - Program selectivity & QS ranking.
+    - Candidate GPA, language scores, and prerequisite alignment.
+    - Strictly ADR-0008 compliant (no synthetic percentage weights).
+    """
+    try:
+        return classify_application_tier(req)
+    except Exception as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Error classifying tier: {str(err)}",
+        )
+
+
+@router.get(
+    "/curated-options",
+    summary="Get curated university programs available for instant comparison",
+)
+async def get_curated_options() -> List[Dict[str, Any]]:
+    """Returns list of curated benchmark universities available for comparison."""
+    return [
+        {
+            "id": val["id"],
+            "university_name": val["university_name"],
+            "country_code": val["country_code"],
+            "country_name": val["country_name"],
+            "flag": val["flag"],
+            "city": val["city"],
+            "qs_rank": val.get("qs_rank"),
+            "program_name": val["program_name"],
+            "degree_level": val.get("degree_level", "master"),
+            "tuition_eur_annual": val["tuition_eur_annual"],
+            "post_study_work_visa_duration_months": val["post_study_work_visa_duration_months"],
+            "state_programme_eligible": val.get("state_programme_eligible", True),
+        }
+        for val in CURATED_COMPARISON_DB.values()
+    ]
+
+
+@router.get(
+    "/tiers",
+    summary="Get admission tier guidelines and rubric criteria",
+)
+async def get_tier_guidelines() -> Dict[str, Any]:
+    """Returns definitions and selection strategy for Dream, Target, and Safety tiers."""
+    return {
+        "DREAM": {
+            "title": "Xəyal / Yüksək Rəqabətli (Dream)",
+            "description": "Dünya reytinqində Top-50, qəbul faizi 15%-dən aşağı olan və ya tələbənin GPA göstəricisinin rəqabətli aralığın aşağı həddində olduğu proqramlar.",
+            "recommended_count": "1-2 universitet",
+            "strategy": "Güclü motivasiya məktubu, tədqiqat və ya sənaye layihələri ilə kompensasiya edilməlidir.",
+        },
+        "TARGET": {
+            "title": "Hədəf Universitet (Target)",
+            "description": "Tələbənin GPA və dil göstəricilərinin keçən illərin qəbul olunmuş namizədlərinin orta statistik göstəricilərinə tam uyğun olduğu proqramlar.",
+            "recommended_count": "2-3 universitet",
+            "strategy": "Kafedranın laboratoriyalarına və fənlərinə xüsusi uyğunlaşdırılmış müraciət faylı.",
+        },
+        "SAFETY": {
+            "title": "Təminatlı Seçim (Safety)",
+            "description": "Tələbənin akademik göstəricilərinin minimum həddi aydın şəkildə üstələdiyi və qəbul şansının yüksək olduğu proqramlar.",
+            "recommended_count": "1-2 universitet",
+            "strategy": "Erkən müraciət edərək departament təqaüdləri üçün zəmanət əldə etmək.",
+        },
+    }
+
