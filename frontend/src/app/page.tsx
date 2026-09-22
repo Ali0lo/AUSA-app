@@ -1,8 +1,11 @@
+"use client";
+
 import { ArrowRight, BookOpenText, FileCheck2, LineChart, Route } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FeatureTag } from "@/components/FeatureTag";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { useLanguage } from "@/lib/i18n";
 
 const capabilities = [
   {
@@ -38,6 +41,7 @@ const capabilities = [
 const team = ["Fariz Əkbərzadə", "Əli İskəndərli", "Turan Əlizadə", "Irada Nuraliyeva"];
 
 export default function HomePage() {
+  const { t } = useLanguage();
   return (
     <>
       <section className="relative isolate min-h-[700px] overflow-hidden bg-[#0c0d1b] text-white">
@@ -96,8 +100,8 @@ export default function HomePage() {
         <div className="site-container">
           <div className="grid gap-10 lg:grid-cols-[0.8fr_1.4fr]">
             <ScrollReveal direction="up" distance={20}>
-              <p className="eyebrow">Current build</p>
-              <h2 id="capabilities-heading" className="section-heading mt-3">Working surfaces, clearly labelled.</h2>
+              <p className="eyebrow">{t("currentBuild")}</p>
+              <h2 id="capabilities-heading" className="section-heading mt-3">{t("workingSurfaces")}</h2>
               <p className="mt-5 max-w-md text-base leading-7 text-slate-400">
                 Every area below maps to an endpoint or workflow already present in the repository. Demo and experimental states are shown openly.
               </p>
@@ -113,13 +117,13 @@ export default function HomePage() {
                       </div>
                       <div>
                         <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="font-sans text-xl font-bold text-white">{capability.title}</h3>
+                          <h3 className="font-sans text-xl font-bold text-white">{capability.href === "/azerbaijan" ? t("azerbaijan") : capability.title}</h3>
                           <FeatureTag state={capability.state} />
                         </div>
-                        <p className="mt-2 text-sm leading-6 text-slate-400">{capability.description}</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-400">{capability.href === "/azerbaijan" ? t("azerbaijanDescription") : capability.description}</p>
                       </div>
                       <Link className="button-secondary mt-4 shrink-0 sm:mt-0 interactive-scale" href={capability.href}>
-                        Open
+                        {t("open")}
                         <ArrowRight size={16} aria-hidden="true" />
                       </Link>
                     </article>

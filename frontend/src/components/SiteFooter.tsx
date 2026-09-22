@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n";
 
 export function SiteFooter() {
+  const { t } = useLanguage();
   return (
     <footer className="border-t border-white/[0.08] bg-[#090a15]/90 backdrop-blur-xl text-slate-300">
       <div className="site-container grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
@@ -16,27 +20,27 @@ export function SiteFooter() {
           </p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Product</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{t("product")}</p>
           <div className="mt-4 flex flex-col items-start gap-3 text-sm">
-            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/plan">Route planning</Link>
-            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/target">Target University</Link>
-            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/azerbaijan">Azerbaijan DİM cutoffs</Link>
-            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/advisor">AI advisor</Link>
-            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/application">Application assistant</Link>
+            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/plan">{t("routePlanning")}</Link>
+            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/target">{t("targetUniversity")}</Link>
+            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/azerbaijan">{t("azerbaijan")}</Link>
+            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/advisor">{t("aiAdvisor")}</Link>
+            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/application">{t("applicationAssistant")}</Link>
           </div>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Information</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{t("information")}</p>
           <div className="mt-4 flex flex-col items-start gap-3 text-sm">
-            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/#method">How it works</Link>
-            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/#about">About the project</Link>
+            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/#method">{t("howItWorks")}</Link>
+            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/#about">{t("aboutProject")}</Link>
             <a
               className="text-slate-300 transition-colors hover:text-orange-400"
               href="https://unsplash.com/photos/a-library-filled-with-lots-of-books-and-people-sitting-at-tables-gdZ9GPNi_VM"
               target="_blank"
               rel="noreferrer"
             >
-              Hero photo credit
+              {t("heroPhotoCredit")}
             </a>
           </div>
         </div>

@@ -9,6 +9,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { ScrollProgressBar } from "@/components/ScrollProgressBar";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { LanguageProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: {
@@ -31,12 +32,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="absolute bottom-10 -left-24 h-[500px] w-[500px] rounded-full bg-orange-600/[0.06] blur-3xl" />
         </div>
 
-        <AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
           <a href="#main-content" className="skip-link">Skip to content</a>
           <SiteHeader />
           <main id="main-content" className="flex-1">{children}</main>
           <SiteFooter />
-        </AuthProvider>
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

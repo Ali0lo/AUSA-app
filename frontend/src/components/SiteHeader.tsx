@@ -5,26 +5,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { NavAuthButton } from "@/components/NavAuthButton";
+import { languageLabels, useLanguage, type Language } from "@/lib/i18n";
 
 const navigation = [
   // First, and deliberately. This is the surface backed by the real route engine and real
   // curated requirements, and since the weighted-score prototype was deleted it is also
   // the only place a student gets an answer about universities.
-  { href: "/plan", label: "Plan my route" },
-  { href: "/target", label: "Target University" },
-  { href: "/dashboard", label: "Tətbiq Paneli" },
-  { href: "/finance", label: "Finances & Visa" },
-  { href: "/scholarships", label: "Scholarships" },
-  { href: "/dim-calculator", label: "DİM Kalkulyator" },
-  { href: "/sop-checker", label: "SOP & CV Yoxlayıcı" },
-  { href: "/timeline", label: "Qəbul Təqvimi" },
-  { href: "/azerbaijan", label: "Azerbaijan DİM" },
-  { href: "/advisor", label: "AI advisor" },
-  { href: "/application", label: "Application" },
-  { href: "/applications", label: "My Tracker" }
+  { href: "/plan", label: "plan" },
+  { href: "/target", label: "target" },
+  { href: "/dashboard", label: "applications" },
+  { href: "/finance", label: "finance" },
+  { href: "/scholarships", label: "scholarships" },
+  { href: "/dim-calculator", label: "dimCalculator" },
+  { href: "/sop-checker", label: "sopChecker" },
+  { href: "/timeline", label: "timeline" },
+  { href: "/azerbaijan", label: "azerbaijan" },
+  { href: "/advisor", label: "advisor" },
+  { href: "/application", label: "application" },
+  { href: "/applications", label: "applications" }
 ];
 
 export function SiteHeader() {
+  const { language, setLanguage, t } = useLanguage();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -40,7 +42,7 @@ export function SiteHeader() {
               AUSA
             </span>
             <span className="mt-1 block text-[0.62rem] font-semibold uppercase tracking-[0.16em] bg-gradient-to-r from-purple-400 to-orange-400 bg-clip-text text-transparent">
-              University advisor
+              {t("universityAdvisor")}
             </span>
           </span>
         </Link>
@@ -59,7 +61,7 @@ export function SiteHeader() {
                 }`}
                 aria-current={active ? "page" : undefined}
               >
-                {item.label}
+                {t(item.label as Parameters<typeof t>[0])}
                 {active && (
                   <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 shadow-[0_0_8px_rgba(255,122,0,0.5)] animate-fade-in" />
                 )}
@@ -72,10 +74,24 @@ export function SiteHeader() {
           <NavAuthButton />
         </div>
 
+        <div className="hidden items-center gap-1 rounded-xl border border-white/10 bg-white/[0.05] p-1 lg:flex" aria-label={t("language")}>
+          {(Object.keys(languageLabels) as Language[]).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setLanguage(option)}
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${language === option ? "bg-white/15 text-white" : "text-slate-400 hover:text-white"}`}
+              aria-pressed={language === option}
+            >
+              {languageLabels[option]}
+            </button>
+          ))}
+        </div>
+
         <button
           type="button"
           className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white hover:bg-white/10 transition-transform active:scale-95 lg:hidden"
-          aria-label={open ? "Close navigation" : "Open navigation"}
+          aria-label={open ? t("closeNavigation") : t("openNavigation")}
           aria-expanded={open}
           aria-controls="mobile-navigation"
           onClick={() => setOpen((value) => !value)}
@@ -95,10 +111,15 @@ export function SiteHeader() {
                   className="border-b border-white/[0.06] py-3.5 text-base font-medium text-slate-200 hover:text-white"
                   onClick={() => setOpen(false)}
                 >
-                  {item.label}
+                  {t(item.label as Parameters<typeof t>[0])}
                 </Link>
               ))}
             </nav>
+            <div className="mt-5 flex items-center gap-2" aria-label={t("language")}>
+              {(Object.keys(languageLabels) as Language[]).map((option) => (
+                <button key={option} type="button" onClick={() => setLanguage(option)} className={`rounded-lg border px-3 py-2 text-xs font-semibold ${language === option ? "border-orange-400 text-white" : "border-white/10 text-slate-400"}`} aria-pressed={language === option}>{languageLabels[option]}</button>
+              ))}
+            </div>
             <div className="mt-5">
               <NavAuthButton mobile />
             </div>

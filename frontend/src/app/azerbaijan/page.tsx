@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAzerbaijanPredictions, type AzerbaijanPrediction, ApiError } from "@/lib/api";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { useLanguage } from "@/lib/i18n";
 
 function verdict(row: AzerbaijanPrediction, score: number | null) {
   if (score === null) return null;
@@ -24,6 +25,7 @@ const POPULAR_UNIVERSITIES = [
 ];
 
 export default function AzerbaijanPage() {
+  const { language } = useLanguage();
   const [university, setUniversity] = useState("");
   const [group, setGroup] = useState("");
   const [score, setScore] = useState("");
@@ -31,6 +33,11 @@ export default function AzerbaijanPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const scoreValue = score === "" ? null : Number(score);
+  const copy = language === "ru"
+    ? { eyebrow: "Азербайджан · DİM", title: "Каким может быть следующий проходной балл?", intro: "Прогноз опубликованных проходных баллов DİM для государственных программ азербайджанских университетов на основе истории поступления.", filter: "Фильтр прогнозов Азербайджана", university: "Университет", group: "Группа DİM", allGroups: "Все группы", score: "Ваш балл DİM (необязательно)", search: "Поиск университета", noResults: "Нет прогнозов, соответствующих вашему поиску.", scholarship: "Полная стипендия" }
+    : language === "az"
+      ? { eyebrow: "Azərbaycan · DİM", title: "Növbəti keçid balı nə qədər ola bilər?", intro: "Azərbaycan universitetlərində dövlət sifarişli proqramlar üçün DİM keçid ballarını qəbul tarixçəsinə əsasən proqnozlaşdırır.", filter: "Azərbaycan proqnozlarını filtrlə", university: "Universitet", group: "DİM qrupu", allGroups: "Bütün qruplar", score: "DİM balınız (istəyə bağlı)", search: "Universitet axtar", noResults: "Axtarışınıza uyğun proqnoz tapılmadı.", scholarship: "Tam təqaüd" }
+      : { eyebrow: "Azerbaijan · DİM Admissions", title: "What may the next cutoff be?", intro: "Predicts published DİM cutoffs for state-funded programmes at Azerbaijani universities from official cutoff history.", filter: "Filter Azerbaijan predictions", university: "University", group: "DİM group", allGroups: "All groups", score: "Your DİM score (optional)", search: "Search a university", noResults: "No Azerbaijan cutoff predictions are available matching your search.", scholarship: "Full Scholarship" };
 
   useEffect(() => {
     setLoading(true);
@@ -52,11 +59,10 @@ export default function AzerbaijanPage() {
     <div className="app-page">
       <ScrollReveal direction="down" duration={600}>
         <header className="max-w-3xl">
-          <p className="eyebrow">Azerbaijan · DİM Admissions</p>
-          <h1 className="page-heading mt-3">What may the next cutoff be?</h1>
+          <p className="eyebrow">{copy.eyebrow}</p>
+          <h1 className="page-heading mt-3">{copy.title}</h1>
           <p className="body-large mt-6">
-            Predicts published DİM cutoffs for state-funded programmes at Azerbaijani universities from official
-            cutoff history. For all full scholarships (dövlət sifarişli), the standard cutoff score is <strong>650+ DİM score</strong> if not specifically indicated by a competitive specialty.
+            {copy.intro} {language === "en" && <>For all full scholarships, the standard cutoff score is <strong>650+ DİM score</strong> if not specifically indicated by a competitive specialty.</>}
           </p>
         </header>
       </ScrollReveal>
@@ -79,7 +85,7 @@ export default function AzerbaijanPage() {
       </ScrollReveal>
 
       <ScrollReveal direction="up" delay={150} duration={600}>
-        <section className="mt-8 border-y border-line py-7" aria-label="Filter Azerbaijan predictions">
+        <section className="mt-8 border-y border-line py-7" aria-label={copy.filter}>
           {/* Quick chips */}
           <div className="mb-5 flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-slate-400">Quick Filter:</span>
@@ -101,18 +107,18 @@ export default function AzerbaijanPage() {
 
           <div className="grid gap-5 md:grid-cols-3">
             <label>
-              <span className="field-label">University</span>
+              <span className="field-label">{copy.university}</span>
               <input
                 className="field"
                 value={university}
                 onChange={(event) => setUniversity(event.target.value)}
-                placeholder="Search a university (e.g. Baku Higher Oil School, ADA)"
+                placeholder={`${copy.search} (e.g. Baku Higher Oil School, ADA)`}
               />
             </label>
             <label>
-              <span className="field-label">DİM group</span>
+              <span className="field-label">{copy.group}</span>
               <select className="field" value={group} onChange={(event) => setGroup(event.target.value)}>
-                <option value="">All groups</option>
+                <option value="">{copy.allGroups}</option>
                 <option value="I qrup">Group 1</option>
                 <option value="II qrup">Group 2</option>
                 <option value="III qrup">Group 3</option>
@@ -121,7 +127,7 @@ export default function AzerbaijanPage() {
               </select>
             </label>
             <label>
-              <span className="field-label">Your DİM score (optional)</span>
+              <span className="field-label">{copy.score}</span>
               <input
                 className="field"
                 type="number"
@@ -143,7 +149,7 @@ export default function AzerbaijanPage() {
       
       {!error && !loading && rows.length === 0 && (
         <p className="notice notice-info mt-8">
-          No Azerbaijan cutoff predictions are available matching your search. Try searching for “Baku Higher Oil School”, “BHOS”, or “ADA”.
+          {copy.noResults} Try searching for “Baku Higher Oil School”, “BHOS”, or “ADA”.
         </p>
       )}
 
@@ -165,7 +171,7 @@ export default function AzerbaijanPage() {
                         {row.department_name || "Unnamed programme"}
                       </h2>
                       <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">
-                        {row.scholarship_type || "Dövlət Sifarişli (Full Scholarship)"}
+                        {row.scholarship_type || copy.scholarship}
                       </span>
                     </div>
                     <p className="mt-1 text-muted">
