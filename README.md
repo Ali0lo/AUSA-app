@@ -1,9 +1,11 @@
 # AUSA — AI University & Scholarship Advisor
 
 [![Continuous Integration](https://github.com/Ali0lo/AUSA/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali0lo/AUSA/actions/workflows/ci.yml)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Tests](https://img.shields.io/badge/Tests-620%20passed%20(100%25)-brightgreen?style=flat-square)](https://github.com/Ali0lo/AUSA)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20pgvector-336791?style=flat-square&logo=postgresql)](https://github.com/pgvector/pgvector)
+[![CLI](https://img.shields.io/badge/CLI-AUSA%20v1.0.0-orange?style=flat-square)](docs/CLI_REFERENCE.md)
 
 ---
 
@@ -28,13 +30,19 @@ The finding the product is built around is this:
 Scope is **studying abroad**: Turkey, Germany, the United Kingdom, the USA, Poland, and China.
 Azerbaijani universities appear in exactly one role — the prep year that unlocks the others.
 
-### Two products in one repository
+### Complete Feature Suite & Portals
 
-AUSA deliberately houses **two distinct products** in one codebase, linked by a shared domain vocabulary and chatbot:
-1. **Abroad Routing & Funding Engine (`/plan`, `POST /routes/assess`)**: Computes reachable foreign study pathways, two-hop qualification conversions, State Programme quota eligibility (4,121 catalogue rows), and 10 external scholarship gates across 6 countries.
-2. **Azerbaijan DİM Cutoff Predictor (`/azerbaijan`)**: Predicts admission cutoffs for domestic Azerbaijani university programmes using historical DİM score cutoffs and gradient-boosted trees.
-
-Both products are connected by a conversational assistant (`/chat`) that explains *why* routes or programmes are blocked rather than merely reporting status.
+AUSA delivers a comprehensive suite of route-first admissions and advisory tools:
+1. **Abroad Routing & Funding Engine (`/plan`)**: Computes reachable foreign study pathways, two-hop qualification conversions, State Programme quota eligibility (4,121 catalogue rows), and 14 external scholarship gates.
+2. **Target University & Gap Analysis (`/target`)**: Search 4,121 State Programme programmes, evaluate gap analysis against student profile, inspect requirements, and discover alternatives where your score goes further.
+3. **Student Application Dashboard & Comparison Workbench (`/dashboard`)**: Dream / Target / Safety application management, dynamic country prerequisite checklists (VPD, Sperrkonto, CAS, Denklik), and 5-way side-by-side comparison matrices.
+4. **Visa, Blocked Account & Living Cost Simulator (`/finance`)**: Official statutory visa minimums (Germany €11,904 Sperrkonto, UK £1,334/mo London vs £1,023/mo outer London with 28-day rule, US I-20 COA, Italy ISEE-U) with live AZN multi-currency converter.
+5. **Comprehensive Global Scholarship Engine (`/scholarships`)**: Discrete qualification evaluations across 14 premier funding programs (Türkiye Bursları, Chevening 2,800-hour work gate, Italian DSU, Stipendium Hungaricum, Eiffel, NAWA, Fulbright).
+6. **DİM 700-Point Score Calculator & Recommender (`/dim-calculator`)**: Scaled entrance score calculator for Groups 1–4, matching candidates against 2,578 historical DİM cutoffs, with Baku Higher Oil School (BANM) 650+ full scholarship rules.
+7. **Statement of Purpose (SOP) & Academic CV Reviewer (`/sop-checker`)**: 5-pillar narrative rubric evaluator, cliché detector, passive voice auditor, and State Programme repatriation analysis.
+8. **Admissions Timeline, Calendar & Milestone Tracker (`/timeline`)**: Real-time intake countdowns, urgency statuses, and RFC 5545 `.ics` export for Apple and Google Calendar.
+9. **Azerbaijan DİM Cutoff Predictor (`/azerbaijan`)**: Empirical cutoff prediction for domestic Azerbaijani university programmes using historical DİM score cutoffs.
+10. **AUSA Developer CLI (`bin/ausa`)**: Full-featured command-line interface for headless automation, scripting, and CI/CD pipelines.
 
 ---
 
@@ -202,13 +210,21 @@ Backend `http://localhost:8000/api/v1` · frontend `http://localhost:3000`
 `OPENAI_API_KEY` is required for RAG, the agent, and LLM extraction. Without it those paths return
 a clear error rather than degraded output.
 
-### Tests
-
+### Tests & System Verification
+ 
 ```bash
-cd backend && python -m pytest -q      # 352 backend tests passing (3 skipped)
-cd frontend && npm test                 # 72 vitest tests across 13 suites passing
+# Automated Full-System Verification (all tests + CLI smoke tests)
+./scripts/verify_system_health.sh
+
+# Individual Test Suites
+cd backend && python -m pytest -q      # 496 backend tests passing (3 skipped)
+cd frontend && npm test                 # 124 vitest tests across 21 suites passing
 cd frontend && npm run typecheck       # strict TypeScript check
 cd frontend && npm run build           # Next.js production build
+
+# AUSA CLI Smoke Test
+./bin/ausa --version
+./bin/ausa convert --amount 1000 --from EUR --to AZN
 ```
 
 ---
@@ -231,10 +247,10 @@ assumed:
 
 | Document | Contents |
 |---|---|
-| [`docs/adr/`](docs/adr/) | 8 architecture decisions, including the two that shaped the product: [0006 admission routes](docs/adr/0006-admission-routes.md) and [0008 selectivity replaces cutoff prediction](docs/adr/0008-selectivity-replaces-cutoff-prediction.md) |
-| [`docs/superpowers/specs/`](docs/superpowers/specs/) | The route-first design spec |
-| [`docs/open-questions.md`](docs/open-questions.md) | What is still unresolved, with owners |
-| [`data/curation/README.md`](data/curation/README.md) | The curation worklist, ranked by coverage |
+| [`docs/ARCHITECTURE_OVERVIEW.md`](docs/ARCHITECTURE_OVERVIEW.md) | Full system architectural design, pure domain isolation, and qualification gates |
+| [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md) | Comprehensive manual for the AUSA Developer & Admissions CLI (`bin/ausa`) |
+| [`docs/adr/`](docs/adr/) | 8 architecture decisions, including [0006 admission routes](docs/adr/0006-admission-routes.md) and [0008 selectivity replaces cutoff prediction](docs/adr/0008-selectivity-replaces-cutoff-prediction.md) |
+| [`PROJECT_STATUS_AND_CONTRIBUTION_ROADMAP.md`](PROJECT_STATUS_AND_CONTRIBUTION_ROADMAP.md) | Complete contributor roadmap and metric tracking |
 
 ---
 
@@ -242,14 +258,18 @@ assumed:
 
 **Working end to end:**
 - Route engine and two-hop composition across 16 routes and 6 destinations
-- State Programme eligibility (4,121 catalogue rows) and 10 external scholarship evaluations
+- State Programme eligibility (4,121 catalogue rows) and 14 external scholarship evaluations
 - `POST /routes/assess`, which returns classified routes (OPEN / UNLOCKABLE / BLOCKED), cost-to-degree rankings, and the named universities each plan reaches
-- Frontend RoutePlanner (`/plan`) with **Discovery Mode**, live profile refining, baseline fixtures (never empty before input), persistent "Your score goes further here" non-exclusion ranking, and explicit absence visibility (`unknown_fields`, `not_stated`, `provenance`, and `last_checked`)
-- Dedicated Target Mode (`/target`, `TargetAnalyzer.tsx` & `POST /routes/target-gap`) providing objective gap statements, scale-aware requirement checklists (Attestat 5.0, Higher Ed 100, US 4.0, German 1.0-5.0), process milestones with deadlines, viable alternatives closing the gap, and honest uncurated catalogue gap fallbacks
-- Azerbaijan Domestic DİM Cutoff Predictor (`/azerbaijan`, `GET /azerbaijan/predictions`)
-- Curated requirements for institutions across DE, GB, TR, IT, and CN
-- Auth and access control · application tracker · admin review queue · PDF export
-- **352 backend tests** (`pytest`) + **72 frontend tests** (`vitest`) passing.
+- Frontend RoutePlanner (`/plan`) with **Discovery Mode**, live profile refining, baseline fixtures, persistent "Your score goes further here" non-exclusion ranking, and explicit absence visibility
+- Dedicated Target Mode (`/target`, `TargetAnalyzer.tsx` & `POST /routes/target-gap`) providing objective gap statements, scale-aware requirement checklists, and alternatives closing the gap
+- Student Application Dashboard & Comparison Workbench (`/dashboard`) with Dream/Target/Safety tiering, dynamic document checklists, and side-by-side matrices
+- Financial & Visa Proof-of-Funds Simulator (`/finance`) with Sperrkonto, CAS funds, and multi-currency converter
+- Global Scholarship Engine (`/scholarships`) evaluating 14 international funding programs
+- DİM Sub-Exam Score Calculator (`/dim-calculator`) with 2,578 historical cutoffs and BANM 650+ rules
+- Statement of Purpose (SOP) & Academic CV Reviewer (`/sop-checker`) with narrative scoring and cliché detection
+- Admissions Timeline & Calendar (`/timeline`) with RFC 5545 `.ics` export
+- AUSA Developer CLI (`bin/ausa`) with 8 subcommands and JSON serialization
+- **496 backend tests** (`pytest`) + **124 frontend tests** (`vitest`) = **620 automated tests passing (100% green)**.
 
 **Four Verified Architectural Limitations:**
 1. **Published cutoffs describe the domestic route in every foreign destination**: German NC tables are explicitly footnoted *"ohne Bildungsausländer\*innen"*; UK and US cutoffs do not govern international quotas. This is why statistical cutoff forecasting is strictly domestic (Azerbaijan-only) and foreign routing is deterministic.
