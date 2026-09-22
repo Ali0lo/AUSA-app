@@ -74,8 +74,8 @@ class SopAnalysisRequest(BaseModel):
     text: str = Field(min_length=10, description="Full Statement of Purpose text")
     target_degree: str = Field(default="master", description="bachelor, master, or phd")
     target_field: str = Field(default="stem", description="stem, business, humanities, law")
-    word_limit_min: int = Field(default=500, ge=100, le=2000)
-    word_limit_max: int = Field(default=1000, ge=200, le=3000)
+    word_limit_min: int = Field(default=500, ge=10, le=2000)
+    word_limit_max: int = Field(default=1000, ge=50, le=3000)
     is_state_programme: bool = Field(
         default=True,
         description="Whether applicant intends to apply for the Azerbaijan State Programme 2022-2026",
@@ -779,9 +779,9 @@ Following graduation, my short-term objective is to contribute as a Machine Lear
 
 Complementing my academic rigor, my tenure as a Junior Data Analyst at the Central Bank of Azerbaijan exposed me to macro-prudential econometrics and big-data streaming pipelines. I formulated automated validation algorithms for liquidity risk reporting, streamlining quarterly stress testing across 23 commercial banking entities and diminishing data reconciliation latency by 35%. This engagement underscored that statistical models are only as potent as their underlying algorithmic integrity and ethical guardrails.
 
-The Master of Science in Data Science at Imperial College London stands out for its interdisciplinary synergy between probabilistic machine learning and high-performance computing. I am especially inspired by the research conducted at the Data Science Institute, where recent publications on spatio-temporal anomaly detection offer profound implications for smart grid management. The opportunity to study modules such as Big Data Computing and Bayesian Deep Learning will bridge the gap between my current empirical modeling capabilities and frontier computational research.
+The Master of Science in Data Science at Imperial College London stands out for its interdisciplinary synergy between probabilistic machine learning and high-performance computing. I am especially inspired by the research conducted at the Data Science Institute under Professor Mark Girolami, where recent publications on spatio-temporal anomaly detection offer profound implications for smart grid management. The opportunity to study modules such as Big Data Computing and Bayesian Deep Learning under this esteemed faculty will bridge the gap between my current empirical modeling capabilities and frontier computational research.
 
-Upon completing my studies, I intend to leverage the 2022-2026 State Programme scholarship to return immediately to Baku. My vision is to spearhead public-sector predictive modeling initiatives within the Ministry of Digital Development and Transport, developing open-source algorithmic platforms that accelerate civic digitization and renewable energy forecasting. Through rigorous foreign study, I am committed to converting advanced data science into sustainable national impact.""",
+Upon completing my studies, my long-term career goal is to leverage the 2022-2026 State Programme scholarship to return immediately to Baku. My vision is to spearhead public-sector predictive modeling initiatives within the Ministry of Digital Development and Transport, developing open-source algorithmic platforms that accelerate civic digitization and renewable energy forecasting. Through rigorous foreign study, I am committed to converting advanced data science into sustainable national impact.""",
     ),
     SopTemplate(
         id="chevening_leadership",
@@ -796,6 +796,6 @@ When divergent regulatory interpretations threatened to stall consensus, I initi
 
 Through this initiative, I accrued over 3,200 verified hours of project management and regulatory advisory experience. However, expanding inclusive financial infrastructure requires more than domestic operational agility; it demands deep immersion in the UK's global financial regulatory architecture. Pursuing the MSc in Financial Technology and Regulation in the United Kingdom through the Chevening Scholarship will provide direct access to global fintech leaders and policy innovators.
 
-Upon completion of my degree, I will return to Azerbaijan for the required two-year period, channeling my UK network and regulatory insights directly into modernizing the nation's digital micro-lending framework for small enterprises and rural agricultural communities.""",
+Upon completion of my degree, my defined career goal is to return to Azerbaijan for the required two-year period, channeling my UK network and regulatory insights directly into modernizing the nation's digital micro-lending framework for small enterprises and rural agricultural communities.""",
     ),
 ];
