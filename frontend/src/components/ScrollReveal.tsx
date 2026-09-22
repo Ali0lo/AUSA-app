@@ -26,6 +26,10 @@ export function ScrollReveal({
 
   useEffect(() => {
     if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      // Feature detection is only possible on the client, so this cannot move into the
+      // initial state: the server would have to guess, and guessing wrong leaves the
+      // content permanently invisible. Without an observer we reveal everything at once.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsVisible(true);
       return;
     }

@@ -33,8 +33,8 @@ export default function AzerbaijanPage() {
   const scoreValue = score === "" ? null : Number(score);
 
   useEffect(() => {
-    setLoading(true);
     const timer = window.setTimeout(() => {
+      setLoading(true);
       getAzerbaijanPredictions({ university, group })
         .then((result) => {
           setRows(result.items);

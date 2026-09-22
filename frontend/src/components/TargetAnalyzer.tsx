@@ -91,16 +91,19 @@ export function TargetAnalyzer({
     };
   }, [level]);
 
-  // Adjust default qualification when level changes
-  useEffect(() => {
-    if (level === "master" && qualification === "attestat") {
+  // Changing the level moves the default qualification with it, but only while the student
+  // is still on the default: someone who has picked "foundation_year" keeps their choice.
+  // Done in the handler rather than an effect so the two land in one render.
+  function handleLevelChange(next: "bachelor" | "master") {
+    setLevel(next);
+    if (next === "master" && qualification === "attestat") {
       setQualification("bachelor_degree");
       setGpaScale("100");
-    } else if (level === "bachelor" && qualification === "bachelor_degree") {
+    } else if (next === "bachelor" && qualification === "bachelor_degree") {
       setQualification("attestat");
       setGpaScale("5.0");
     }
-  }, [level, qualification]);
+  }
 
   // Auto-run evaluation if initialUniversity is provided
   useEffect(() => {
@@ -245,7 +248,7 @@ export function TargetAnalyzer({
                 </label>
                 <select
                   value={level}
-                  onChange={(e) => setLevel(e.target.value as "bachelor" | "master")}
+                  onChange={(e) => handleLevelChange(e.target.value as "bachelor" | "master")}
                   className="field mt-1 text-xs"
                 >
                   <option value="bachelor" className="bg-[#13152c] text-white">Bachelor</option>

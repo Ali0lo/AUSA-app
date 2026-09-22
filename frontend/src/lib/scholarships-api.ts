@@ -86,7 +86,7 @@ export interface EvaluationItemResponse {
 }
 
 export interface ScholarshipEvaluationResponse {
-  profile_summary: Record<string, any>;
+  profile_summary: Record<string, unknown>;
   total_evaluated: number;
   open_count: number;
   unlockable_count: number;
