@@ -18,6 +18,14 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+# The rules below are box-drawing characters, and a Windows console still defaults to
+# cp1252, which has no code point for them. Without this the script dies on its first
+# rule with a UnicodeEncodeError -- so the docstring's "reproduces on any teammate's
+# machine" held only on Linux and macOS.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8")
+
 REPO = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO / "backend"))
 
