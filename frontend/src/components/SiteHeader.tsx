@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -25,10 +25,14 @@ const navigation = [
   { href: "/applications", label: "applications" }
 ];
 
+const desktopNavigation = navigation.filter((item) => ["plan", "target", "azerbaijan", "advisor"].includes(item.label));
+const moreNavigation = navigation.filter((item) => !desktopNavigation.includes(item));
+
 export function SiteHeader() {
   const { language, setLanguage, t } = useLanguage();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#0c0d1b]/80 backdrop-blur-xl transition-all">
@@ -47,8 +51,8 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
-          {navigation.map((item) => {
+        <nav className="hidden min-w-0 items-center gap-1 lg:flex" aria-label="Primary navigation">
+          {desktopNavigation.map((item) => {
             const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}`));
             return (
               <Link
@@ -68,6 +72,19 @@ export function SiteHeader() {
               </Link>
             );
           })}
+          <div className="relative">
+            <button type="button" className="relative inline-flex min-h-11 items-center gap-1 px-4 py-3 text-sm font-medium text-slate-400 transition-colors hover:text-white" aria-expanded={moreOpen} onClick={() => setMoreOpen((value) => !value)}>
+              {t("more")} <ChevronDown size={15} className={moreOpen ? "rotate-180 transition-transform" : "transition-transform"} aria-hidden="true" />
+            </button>
+            {moreOpen && (
+              <div className="absolute right-0 top-full z-50 mt-2 min-w-56 rounded-2xl border border-white/10 bg-[#13152c] p-2 shadow-2xl backdrop-blur-xl">
+                {moreNavigation.map((item) => {
+                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)} className={`block rounded-xl px-3 py-2.5 text-sm ${active ? "bg-white/10 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"}`}>{t(item.label as Parameters<typeof t>[0])}</Link>;
+                })}
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="hidden lg:block">
