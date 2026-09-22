@@ -251,3 +251,27 @@ def test_cli_sop_check_json():
     assert "overall_score" in data
     assert "letter_grade" in data
     assert data["word_count"] > 20
+
+
+# ==============================================================================
+# 9. Multi-Currency Converter Tests
+# ==============================================================================
+
+def test_cli_convert_currency():
+    code, out = run_cli_args(["convert", "--amount", "1000", "--from", "EUR", "--to", "AZN", "--buffer", "2.5"])
+    assert code == 0
+    assert "AUSA Valyuta Konvertasiyası" in out
+    assert "1,000.00 EUR" in out
+    assert "1,900.35 AZN" in out
+
+
+def test_cli_convert_json():
+    code, out = run_cli_args(["--json", "convert", "--amount", "500", "--from", "USD", "--to", "AZN"])
+    assert code == 0
+    data = json.loads(out)
+    assert data["amount"] == 500.0
+    assert data["from_currency"] == "USD"
+    assert data["to_currency"] == "AZN"
+    assert data["exchange_rate"] == 1.7
+    assert data["converted_amount"] == 850.0
+

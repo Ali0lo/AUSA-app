@@ -49,6 +49,8 @@ try:
         calculate_us_funds,
         calculate_italy_funds,
         compare_study_destinations_finance,
+        convert_amount,
+        get_exchange_rate,
     )
     from app.domain.global_scholarships import (
         ALL_GLOBAL_SCHOLARSHIPS,
@@ -95,6 +97,8 @@ except ImportError:
         calculate_us_funds,
         calculate_italy_funds,
         compare_study_destinations_finance,
+        convert_amount,
+        get_exchange_rate,
     )
     from backend.app.domain.global_scholarships import (
         ALL_GLOBAL_SCHOLARSHIPS,
@@ -345,6 +349,39 @@ def cmd_finance(args: argparse.Namespace) -> int:
         print(f"  Təxmini İllik Nağd Stipendiya: €{res.estimated_dsu_cash_stipend_eur:,.2f}")
         print(f"  Xalis İlk İl Xərci: {GREEN}€{res.net_first_year_cost_eur:,.2f}{RESET} ({res.net_first_year_cost_azn:,.2f} AZN)")
 
+    return 0
+
+
+def cmd_convert(args: argparse.Namespace) -> int:
+    """Handles multi-currency conversions using official CBAR benchmark rates."""
+    from_curr = Currency(args.from_curr.upper())
+    to_curr = Currency(args.to_curr.upper())
+    converted = convert_amount(
+        amount=args.amount,
+        from_currency=from_curr,
+        to_currency=to_curr,
+        safety_buffer_pct=args.buffer,
+    )
+    rate = get_exchange_rate(from_curr, to_curr)
+
+    if args.json:
+        payload = {
+            "amount": float(args.amount),
+            "from_currency": from_curr.value,
+            "to_currency": to_curr.value,
+            "exchange_rate": float(rate),
+            "safety_buffer_pct": float(args.buffer),
+            "converted_amount": float(converted),
+        }
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0
+
+    print(f"\n{BOLD}AUSA Valyuta Konvertasiyası (Mərkəzi Bank CBAR Əsaslı):{RESET}")
+    print(f"  Məbləğ: {args.amount:,.2f} {from_curr.value}")
+    print(f"  Məzənnə (1 {from_curr.value} =): {rate:.4f} {to_curr.value}")
+    if args.buffer > 0:
+        print(f"  Təhlükəsizlik Buferi: +{args.buffer:.1f}%")
+    print(f"  {GREEN}{BOLD}Yekun Məbləğ: {converted:,.2f} {to_curr.value}{RESET}\n")
     return 0
 
 
@@ -627,6 +664,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_sop.add_argument("--country", type=str, default="DE", help="Destination country code")
     p_sop.add_argument("--state-programme", action="store_true", help="Include State Programme contribution check")
 
+    # 8. convert
+    p_conv = subparsers.add_parser("convert", help="Convert currencies with CBAR baseline rates & safety buffer")
+    p_conv.add_argument("--amount", type=float, default=1000.0, help="Amount to convert")
+    p_conv.add_argument("--from", dest="from_curr", type=str, default="EUR", choices=[c.value for c in Currency], help="Source currency (AZN, EUR, USD, GBP, TRY, PLN, HUF)")
+    p_conv.add_argument("--to", dest="to_curr", type=str, default="AZN", choices=[c.value for c in Currency], help="Target currency (AZN, EUR, USD, GBP, TRY, PLN, HUF)")
+    p_conv.add_argument("--buffer", type=float, default=0.0, help="Safety buffer percentage (e.g. 2.5 for 2.5%% cushion)")
+
     return parser
 
 
@@ -642,6 +686,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     handlers = {
         "dim-calc": cmd_dim_calc,
         "finance": cmd_finance,
+        "convert": cmd_convert,
         "scholarships": cmd_scholarships,
         "timeline": cmd_timeline,
         "compare": cmd_compare,

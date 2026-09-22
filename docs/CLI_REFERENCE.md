@@ -166,6 +166,26 @@ Audits Statement of Purpose (SOP) essays against 5 core narrative pillars, flags
 
 ---
 
+### `convert` — Multi-Currency Converter with CBAR Baseline Rates
+Performs multi-currency conversions against the Central Bank of Azerbaijan (CBAR) reference rates with optional safety cushion buffers for exchange rate volatility.
+
+#### Flags:
+- `--amount <float>`: Amount to convert (default: 1,000.0).
+- `--from <currency>`: Source currency: `AZN`, `EUR`, `USD`, `GBP`, `TRY`, `PLN`, `HUF` (default: `EUR`).
+- `--to <currency>`: Target currency (default: `AZN`).
+- `--buffer <float>`: Safety volatility buffer percentage (e.g. `2.5` for +2.5% cushion).
+
+#### Examples:
+```bash
+# Convert 1,000 EUR to AZN with 2.5% volatility buffer
+./bin/ausa convert --amount 1000 --from EUR --to AZN --buffer 2.5
+
+# Convert 15,000 USD to AZN with JSON output
+./bin/ausa --json convert --amount 15000 --from USD --to AZN
+```
+
+---
+
 ## 3. Scripting & Piping with `--json`
 
 Use `jq` to parse structured outputs in shell scripts:
