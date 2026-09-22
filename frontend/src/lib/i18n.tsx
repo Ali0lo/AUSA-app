@@ -34,8 +34,12 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<Language>("en");
 
+  // Restore the saved language on mount. This cannot become a lazy initial state: the
+  // server render has no localStorage and would emit "en", so reading the saved value
+  // during the first client render would produce a hydration mismatch.
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved === "az" || saved === "ru") setLanguage(saved);
   }, []);
 
