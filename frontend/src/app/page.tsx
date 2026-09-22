@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpenText, FileCheck2, Route } from "lucide-react";
+import { ArrowRight, BookOpenText, FileCheck2, LineChart, Route } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FeatureTag } from "@/components/FeatureTag";
@@ -18,6 +18,13 @@ const capabilities = [
     href: "/advisor",
     state: "experimental" as const,
     icon: BookOpenText
+  },
+  {
+    title: "Azerbaijan DİM cutoffs",
+    description: "Explore projected domestic DİM cutoffs from Azerbaijan admission history, including full-scholarship benchmarks and uncertainty bands.",
+    href: "/azerbaijan",
+    state: "available" as const,
+    icon: LineChart
   },
   {
     title: "Application assistant",

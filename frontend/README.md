@@ -4,6 +4,16 @@ This folder is the complete Next.js frontend for the current AUSA repository. It
 
 The interface does not convert unavailable backend work into decorative controls. A user action either changes local state, navigates to a real route, calls an existing endpoint, or displays a specific unavailable or error state.
 
+## Deployment configuration
+
+The Azerbaijan DİM predictor is available at `/azerbaijan` and calls
+`GET /api/v1/azerbaijan/predictions`. In a hosted frontend, set the server-side
+`AUSA_API_URL` to the public FastAPI base URL, for example
+`https://ausa-backend.example.com/api/v1`. Browser requests use the same-origin
+Next.js proxy, so visitors do not need a direct API URL. Do not leave the example
+`localhost` value in a hosted deployment: it means the frontend server itself,
+not the visitor's intended backend.
+
 ## Status and scope
 
 | Area | Route | Current status | Source of truth |
@@ -13,6 +23,7 @@ The interface does not convert unavailable backend work into decorative controls
 | Student sign-in | `/sign-in` | Backend-dependent | `POST /auth/login`, `GET /auth/me`, and NextAuth |
 | Programme matching | `/match` | Prototype | `POST /matching/evaluate` |
 | AI document advisor | `/advisor` | Experimental | `POST /chat/ask` |
+| Azerbaijan DİM cutoff predictor | `/azerbaijan` | Backend-dependent | `GET /azerbaijan/predictions` |
 | Application assistant | `/application` | Demonstration | `GET /chat/agent/state` and `POST /chat/agent` |
 | Earlier dashboard URL | `/dashboard` | Compatibility redirect | Opens `/match` |
 

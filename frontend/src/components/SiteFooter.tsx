@@ -20,6 +20,7 @@ export function SiteFooter() {
           <div className="mt-4 flex flex-col items-start gap-3 text-sm">
             <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/plan">Route planning</Link>
             <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/target">Target University</Link>
+            <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/azerbaijan">Azerbaijan DİM cutoffs</Link>
             <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/advisor">AI advisor</Link>
             <Link className="text-slate-300 transition-colors hover:text-orange-400" href="/application">Application assistant</Link>
           </div>
