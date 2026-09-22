@@ -15,9 +15,13 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, ConfigDict
+import logging
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.models.qualifications import ProgramRequirement
 from app.domain.process_definitions import PROCESS_BY_ROUTE_KEY
 from app.domain.route_definitions import ALL_ROUTES
 from app.domain.routes import StudentRouteProfile
@@ -40,6 +44,8 @@ from app.services.university_requirements import (
     qualification_delivered,
     universities_accepting,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/routes", tags=["Route Planning"])
 
@@ -608,14 +614,22 @@ async def list_target_catalog(
                 )
             )
     except Exception:
-        pass
+        # The fallback below reads the same cited CSVs the database is loaded from, so
+        # serving them substitutes nothing and is worth more to a student than a 500.
+        # What was wrong here was the silence: `except Exception: pass` hid a NameError
+        # on `select` for as long as this endpoint has existed, so the database branch
+        # never once ran and nobody could see that. Catch broadly, record loudly.
+        logger.exception("catalogue database unavailable; serving the curated CSVs")
 
     if not items:
-        # Offline fallback to curated CSV
-        from pathlib import Path
+        # Offline fallback to the curated CSVs -- every file in the catalogue, not just
+        # the first. Track A holds all 30 master rows and the only US and Polish rows.
         import csv
-        csv_path = Path(__file__).resolve().parents[4] / "data" / "curation" / "program_requirements_2026.csv"
-        if csv_path.exists():
+        from scripts.load_program_requirements import CATALOGUE_FILES
+
+        for csv_path in CATALOGUE_FILES:
+            if not csv_path.exists():
+                continue
             with open(csv_path, mode="r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
@@ -710,14 +724,21 @@ async def assess_target_gap(
         res = await db.execute(stmt)
         row = res.scalars().first()
     except Exception:
-        pass
+        # The fallback below reads the same cited CSVs the database is loaded from, so
+        # serving them substitutes nothing and is worth more to a student than a 500.
+        # What was wrong here was the silence: `except Exception: pass` hid a NameError
+        # on `select` for as long as this endpoint has existed, so the database branch
+        # never once ran and nobody could see that. Catch broadly, record loudly.
+        logger.exception("catalogue database unavailable; serving the curated CSVs")
 
     # Offline fallback to CSV if row not in DB
     if not row:
-        from pathlib import Path
         import csv
-        csv_path = Path(__file__).resolve().parents[4] / "data" / "curation" / "program_requirements_2026.csv"
-        if csv_path.exists():
+        from scripts.load_program_requirements import CATALOGUE_FILES
+
+        for csv_path in CATALOGUE_FILES:
+            if row or not csv_path.exists():
+                continue
             with open(csv_path, mode="r", encoding="utf-8-sig") as f:
                 for r in csv.DictReader(f):
                     if (

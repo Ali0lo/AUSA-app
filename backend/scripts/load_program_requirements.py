@@ -44,6 +44,12 @@ from app.services.catalogue_evidence import content_fingerprint  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FILE = REPO_ROOT / "data" / "curation" / "program_requirements_2026.csv"
 
+# The catalogue ships as two files: the original 2026 curation, and Track A, which is
+# where the master rows and the US and Polish coverage landed. Anything that reads "the
+# catalogue" reads both. A reader that takes only the first reports Track A as absent,
+# which is a claim about our data that the data does not support.
+CATALOGUE_FILES = (DEFAULT_FILE, DEFAULT_FILE.with_name("program_requirements_track_a.csv"))
+
 # ADR-0007 §5. 'human-verified' is deliberately unreachable from a file: see _check_provenance.
 VALID_PROVENANCE = {"seed", "claude-extracted", "human-verified"}
 
