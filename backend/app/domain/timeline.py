@@ -734,7 +734,8 @@ def filter_milestones(
                 continue
         if filters.search_query:
             query = filters.search_query.lower()
-            text_corpus = f"{m.title} {m.description} {m.portal_name} {m.country_name}".lower()
+            reqs = " ".join(m.requirements_summary)
+            text_corpus = f"{m.title} {m.description} {m.portal_name} {m.country_name} {m.deadline_time} {reqs}".lower()
             if query not in text_corpus:
                 continue
 
