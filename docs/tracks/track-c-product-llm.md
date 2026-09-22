@@ -1,6 +1,8 @@
 # Track C — Product and the LLM
 
-**One person. ~3.25 days.** C1, C3, C4 and most of C2 are **done** (5 September).
+**One person. ~3.25 days.** C1, C2, C3 and C4 are **done** (C2.5 landed 16 September).
+The only Track C item deliberately left undone is the motivation letter, which is a
+decision rather than a task — see *Deliberately not in this track*.
 
 ---
 
@@ -15,13 +17,13 @@
 | **C2.2** | Free-text intake, plus `POST /routes/parse` | *this branch* |
 | **C2.3** | The numeral guard | `907e8b4` |
 | **C2.4** | System prompt rewritten around the contract and the DİM boundary | `907e8b4` |
+| **C2.5** | The document process library, its agent tool and `GET /routes/{route_key}/process` | *this branch* |
 
 C1 surfaced a finding now carried as Track A's first task: the prep-year path to Germany
 resolves to **zero universities**, because all three curated German rows are
 `feststellungspruefung`.
 
-**Still open in C2: step 5 (the process library).**
-`services/agent/route_tools.py` also does not reach the universities a plan lands on —
+`services/agent/route_tools.py` does not reach the universities a plan lands on —
 `university_requirements` needs a database session and those tools are deliberately sync
 and I/O-free, so a caller that needs universities calls `POST /routes/assess`.
 
@@ -124,11 +126,49 @@ feststellungspruefung, a_level, ib. You hold: attestat."* The LLM's job is to tu
 a sentence a 17-year-old reads, in Azerbaijani, **without adding a fact**. Rewriting a
 computed reason cannot fabricate; that is why this is the first surface to build.
 
-**5 · Application walkthrough** — the "agent to help apply" half
+**5 · Application walkthrough** ✅ — `backend/app/domain/process_definitions.py`,
+`services/agent/process_tools.py`, `GET /routes/{route_key}/process`
 
-A **curated** per-country process library: documents, apostille, translation, portal,
-deadlines. Curated, because process steps are qualitative claims and the contract says
-cite-or-drop. Not generated.
+A curated library of what a student must do **to their Azerbaijani documents** to make them
+usable in the destination. Curated, not generated: process steps are qualitative claims and
+the contract says cite-or-drop.
+
+**It is keyed on the route, not on the country.** The brief originally said "per-country",
+and that is wrong in a way that would have shipped a confidently merged checklist. Germany
+takes an attestat holder through a Studienkolleg and a prep-year holder through a transcript
+of completed university study — same country, same level, different paperwork. `(country,
+level)` would have flattened `de-bachelor-studienkolleg` and `de-bachelor-direct` into one
+list, and one of the two students would have been handed a checklist missing the document
+their route actually turns on.
+
+**It owns one layer and points at the other three.** Three facts a walkthrough obviously
+needs already have a home, and a fact with two homes drifts:
+
+| Fact | Owner |
+|---|---|
+| The visa deposit (Sperrkonto) | `Route.proof_of_funds` |
+| Portal, fee, document list, deadline | the catalogue row |
+| A funder's application window | `Scholarship.window` |
+
+The tool returns `see_also` naming the tool that holds each, and a test asserts the
+Sperrkonto figure never appears in a step.
+
+**Coverage, and the honest shape of it.** Seven routes curated from primary pages read on
+16 September (three German, three Turkish, plus the prep year). The nine routes into the UK,
+the USA, Poland and China are recorded `not_collected` — a named absence, never an empty
+list that reads as "no documents needed". Filling a country later is a data-only change.
+
+**What we could not reach is recorded, not worked around.** `scripts.check_sources_robots`
+refused `denklik.meb.gov.tr` (DNS did not resolve) and `mfa.gov.az` (SSL verification
+failed), and `studyinturkiye.gov.tr`'s deep paths answer HTTP 418 to an automated client.
+So the Turkish *denklik* certificate and the Azerbaijani apostille are **not written as
+steps**. They sit in `known_gaps`, which the prompt instructs the model to state as
+something to ask the university about — never as a requirement. Both URLs are in
+`sources.csv` marked `NOT READ`.
+
+Notice what Germany does *not* require: uni-assist's own document pages mention neither an
+apostille nor an APS certificate. That absence is deliberate. Adding an apostille step "to
+be safe" would send a student to pay for a legalisation no page we read asks for.
 
 ### Done when
 
