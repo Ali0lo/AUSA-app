@@ -13,11 +13,13 @@ from typing import List, Optional, Literal
 from dataclasses import replace
 import json
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.domain.process_definitions import PROCESS_BY_ROUTE_KEY
+from app.domain.route_definitions import ALL_ROUTES
 from app.domain.routes import StudentRouteProfile
 from app.services.agent.intake import intake_as_dict, parse_intake
 from app.services.dp_eligibility import (
@@ -968,3 +970,71 @@ async def assess_target_gap(
         notes=getattr(row, "notes", None),
     )
 
+class ProcessStepResponse(BaseModel):
+    """One act the student performs on a document, with the page that requires it."""
+    key: str
+    title: str
+    detail: str
+    # 'before_applying' | 'after_offer' | 'after_graduation'. Not a date: the deadline
+    # belongs to the programme row, and a step's position is stable while a deadline is not.
+    when: str
+    authority: str
+    citation: str
+    provenance: str
+    last_checked: str
+
+
+class RouteProcessResponse(BaseModel):
+    """The paperwork for one route, or a statement that nobody has collected it.
+
+    `status` is the field the client must branch on. `not_collected` with an empty `steps`
+    means our catalogue has a gap, NEVER that the route needs no documents -- rendering the
+    two the same way is the blank-means-permission error (ADR-0004).
+    """
+    route_key: str
+    country_code: str
+    level: str
+    status: str
+    steps: List[ProcessStepResponse]
+    # Procedures we believe exist but could not verify. Show them; never state one as a
+    # requirement. Kept apart from `steps` so the distinction survives to the screen.
+    known_gaps: List[str]
+    note: str
+
+
+@router.get(
+    "/{route_key}/process",
+    response_model=RouteProcessResponse,
+    status_code=status.HTTP_200_OK,
+    summary="The document legalisation and recognition steps for one route",
+)
+async def route_process(route_key: str) -> RouteProcessResponse:
+    """What a student must do to their Azerbaijani documents to use them on this route.
+
+    Curated data, so it answers with no language model and no API key -- the same reason
+    `/parse` exists. It deliberately does not restate the visa deposit (on the route), the
+    portal and deadline (on the programme row) or a funder's window (on the scholarship):
+    each already has one home, and a second copy drifts from it.
+
+    404 means we hold no such route. A route we hold but have not curated answers 200 with
+    `status: not_collected`, because "nobody checked" and "no such route" are different
+    facts and only one of them is about the student.
+    """
+    key = route_key.strip().lower()
+    route = next((r for r in ALL_ROUTES if r.key == key), None)
+    if route is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"We hold no route with key '{route_key}'.",
+        )
+
+    process = PROCESS_BY_ROUTE_KEY[route.key]
+    return RouteProcessResponse(
+        route_key=route.key,
+        country_code=route.country_code,
+        level=route.level,
+        status=process.status,
+        steps=[ProcessStepResponse(**vars(step)) for step in process.steps],
+        known_gaps=list(process.known_gaps),
+        note=process.note,
+    )
