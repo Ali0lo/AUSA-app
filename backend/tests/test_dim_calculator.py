@@ -4,7 +4,9 @@
 from fastapi.testclient import TestClient
 import pytest
 
+from app.domain import dim_calculator
 from app.domain.dim_calculator import (
+    CUTOFF_HISTORY_CSV as CUTOFF_CSV,
     BlokInput,
     BuraxilisInput,
     ChanceLevel,
@@ -186,9 +188,76 @@ class TestDimDomainLogic:
         assert res_650.clears_bhos_benchmark is True
 
 
+class TestCutoffCorpusAvailability:
+    """An empty recommendation list has two causes that must not look the same.
+
+    Either the student's score matched nothing, or we hold no cutoff history to match
+    against. `azerbaijan_cutoff_history.csv` is gitignored, so the second case is the
+    normal state of a fresh clone and of CI -- which makes it exactly the case a student
+    could hit on a fresh deployment. ADR-0004 rule 1: an unknown must never read as a
+    finding.
+
+    These two tests write their own CSV, so unlike `test_load_cutoff_records` they run
+    everywhere, including in CI where the real corpus is absent.
+    """
+
+    @staticmethod
+    def _candidate():
+        return calculate_total_dim_score(
+            DimCalculationRequest(
+                group=DimGroup.GROUP_1,
+                subgroup=SubGroup.RI,
+                buraxilis=BuraxilisInput(direct_total_score=260.0),
+                blok=BlokInput(direct_total_score=340.0),
+            )
+        )
+
+    @staticmethod
+    def _point_loader_at(monkeypatch, path):
+        monkeypatch.setattr(dim_calculator, "CUTOFF_HISTORY_CSV", path)
+        monkeypatch.setattr(dim_calculator, "_CACHED_CUTOFF_SERIES", None)
+        monkeypatch.setattr(dim_calculator, "_CORPUS_STATUS", None)
+
+    def test_a_missing_corpus_is_named_instead_of_reported_as_no_matches(
+        self, monkeypatch, tmp_path
+    ):
+        """Without this the page says "no specialties match your score" when the truth is
+        that we have no data at all -- a blank wearing the shape of an answer."""
+        self._point_loader_at(monkeypatch, tmp_path / "absent.csv")
+
+        result = get_specialty_recommendations(self._candidate())
+
+        assert result.recommendations == []
+        assert result.corpus_status == "unavailable"
+        assert result.corpus_note.strip(), "an empty list must arrive with the reason it is empty"
+
+    def test_a_present_corpus_reports_itself_available_and_still_matches(
+        self, monkeypatch, tmp_path
+    ):
+        """The status must be read off the data, not hardcoded to one value."""
+        csv_path = tmp_path / "hist.csv"
+        csv_path.write_text(
+            "source_program_code,university_name,department_name,score_type,"
+            "scholarship_type,intake_year,cutoff_value\n"
+            "P1,BDU,Kompüter elmləri,I qrup,dövlət sifarişli,2025,550.0\n",
+            encoding="utf-8",
+        )
+        self._point_loader_at(monkeypatch, csv_path)
+
+        result = get_specialty_recommendations(self._candidate())
+
+        assert result.corpus_status == "available"
+        assert result.corpus_note is None
+        assert [r.program_code for r in result.recommendations] == ["P1"]
+
+
 class TestSpecialtyRecommendations:
     """Tests for the historical cutoff matching and chance tier categorization."""
 
+    @pytest.mark.skipif(
+        not CUTOFF_CSV.exists(),
+        reason="azerbaijan_cutoff_history.csv is gitignored; see data/README.md to fetch it",
+    )
     def test_load_cutoff_records(self):
         records = load_cutoff_history_records()
         assert len(records) > 2000

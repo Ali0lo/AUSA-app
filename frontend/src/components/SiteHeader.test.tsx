@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,7 +14,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next/link", () => ({
-  default: ({ children, href, onClick, ...rest }: any) => (
+  default: ({ children, href, onClick, ...rest }: ComponentProps<"a">) => (
     <a
       href={href}
       onClick={(e) => {

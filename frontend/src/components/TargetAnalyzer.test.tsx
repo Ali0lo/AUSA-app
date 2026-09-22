@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TargetAnalyzer } from "./TargetAnalyzer";
@@ -139,6 +139,41 @@ describe("TargetAnalyzer Component", () => {
 
     expect(await screen.findByRole("button", { name: "Technical University of Munich" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Middle East Technical University" })).toBeInTheDocument();
+  });
+
+  it("blocks the qualification that cannot go with the chosen level, and says so in the option", async () => {
+    // The original guard reverted the student's pick the instant they made it, which reads
+    // as the dropdown being broken. The combination is still refused -- it is refused
+    // visibly, before the click, instead of silently after it.
+    const user = userEvent.setup();
+    render(<TargetAnalyzer />);
+
+    const level = screen.getByLabelText(/Degree Level/i);
+    const held = screen.getByLabelText(/Qualification Held/i);
+    const attestat = within(held).getByRole("option", { name: /Attestat/i }) as HTMLOptionElement;
+    const bachelorDegree = within(held).getByRole("option", { name: /Bachelor Degree/i }) as HTMLOptionElement;
+
+    expect(attestat.disabled).toBe(false);
+    expect(bachelorDegree.disabled).toBe(true);
+
+    await user.selectOptions(level, "master");
+
+    expect(attestat.disabled).toBe(true);
+    expect(bachelorDegree.disabled).toBe(false);
+  });
+
+  it("moves the default qualification with the level, as before", async () => {
+    const user = userEvent.setup();
+    render(<TargetAnalyzer />);
+
+    const qualification = screen.getByLabelText(/Qualification Held/i) as HTMLSelectElement;
+    expect(qualification.value).toBe("attestat");
+
+    await user.selectOptions(screen.getByLabelText(/Degree Level/i), "master");
+    expect(qualification.value).toBe("bachelor_degree");
+
+    await user.selectOptions(screen.getByLabelText(/Degree Level/i), "bachelor");
+    expect(qualification.value).toBe("attestat");
   });
 
   it("analyzes target university and renders gap analysis, checklist, process milestones, and alternatives", async () => {

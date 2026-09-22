@@ -32,6 +32,9 @@ export function DimScoreSimulator() {
   // Recommendations state
   const [recommendations, setRecommendations] = useState<SpecialtyRecommendation[]>([]);
   const [totalMatched, setTotalMatched] = useState<number>(0);
+  // Set only when the cutoff history was missing or the API was unreachable. Held apart
+  // from the recommendation list so an empty list can say WHY it is empty.
+  const [corpusNote, setCorpusNote] = useState<string | null>(null);
   const [chanceFilter, setChanceFilter] = useState<ChanceLevel | "ALL">("ALL");
   const [selectedUniversity, setSelectedUniversity] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -85,9 +88,9 @@ export function DimScoreSimulator() {
   // Load recommendations
   useEffect(() => {
     let isMounted = true;
-    setIsLoadingRecs(true);
 
     const timer = setTimeout(async () => {
+      setIsLoadingRecs(true);
       const res = await fetchSpecialtyRecommendations(
         {
           group: selectedGroup,
@@ -104,6 +107,7 @@ export function DimScoreSimulator() {
       if (isMounted) {
         setRecommendations(res.recommendations);
         setTotalMatched(res.total_matched);
+        setCorpusNote(res.corpus_status && res.corpus_status !== "available" ? res.corpus_note ?? null : null);
         setIsLoadingRecs(false);
       }
     }, 200);
@@ -598,6 +602,14 @@ export function DimScoreSimulator() {
           })}
         </div>
 
+        {/* Rows drawn from the offline excerpt rather than the full cutoff history must
+            say so, or the student reads a dozen programmes as the whole picture. */}
+        {corpusNote && recommendations.length > 0 ? (
+          <p className="rounded-2xl border border-amber-400/30 bg-amber-400/5 px-4 py-3 text-xs text-amber-200">
+            {corpusNote}
+          </p>
+        ) : null}
+
         {/* Recommendations Table / Grid */}
         {isLoadingRecs ? (
           <div className="rounded-3xl border border-white/10 bg-[#121327]/60 p-12 text-center text-slate-400">
@@ -605,8 +617,19 @@ export function DimScoreSimulator() {
           </div>
         ) : recommendations.length === 0 ? (
           <div className="rounded-3xl border border-white/10 bg-[#121327]/60 p-12 text-center space-y-2">
-            <p className="text-base text-slate-300 font-semibold">Heç bir ixtisas tapılmadı</p>
-            <p className="text-xs text-slate-500">Filtrləri və ya axtarış sorğusunu dəyişib yenidən yoxlayın.</p>
+            {corpusNote ? (
+              <>
+                {/* The list is empty for want of data, not for want of a match. Saying
+                    "no specialties found" here would state a finding we cannot support. */}
+                <p className="text-base text-amber-300 font-semibold">Keçid balı tarixçəsi mövcud deyil</p>
+                <p className="text-xs text-slate-400">{corpusNote}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-base text-slate-300 font-semibold">Heç bir ixtisas tapılmadı</p>
+                <p className="text-xs text-slate-500">Filtrləri və ya axtarış sorğusunu dəyişib yenidən yoxlayın.</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#121327]/80 backdrop-blur-xl shadow-2xl">

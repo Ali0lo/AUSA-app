@@ -84,10 +84,13 @@ export function ApplicationDashboard() {
   const [customTier, setCustomTier] = useState<AdmissionTier>("TARGET");
   const [customDeadline, setCustomDeadline] = useState("2026-07-15");
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount. This cannot become a lazy initial state: the server
+  // render has no localStorage and would emit the defaults, so reading the saved list
+  // during the first client render would produce a hydration mismatch.
   useEffect(() => {
     const saved = loadSavedApplications();
     if (saved && saved.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setApplications(saved);
     }
   }, []);

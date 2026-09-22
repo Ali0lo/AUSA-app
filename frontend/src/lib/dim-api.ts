@@ -84,8 +84,18 @@ export interface SpecialtyRecommendation {
   requires_650_rule: boolean;
 }
 
+/** Where the cutoffs behind a recommendation list came from.
+ *
+ * An empty list has more than one cause, and they are not interchangeable: the score may
+ * have matched nothing, the deployment may hold no cutoff history at all, or the API may
+ * have been unreachable and left us on the small offline excerpt. Rendering all three as
+ * "no specialties found" states a finding we have not earned. */
+export type CutoffCorpusStatus = "available" | "unavailable" | "fallback";
+
 export interface DimRecommendationResponse {
   score_breakdown: DimScoreBreakdown;
+  corpus_status?: CutoffCorpusStatus;
+  corpus_note?: string | null;
   total_matched: number;
   safe_count: number;
   realistic_count: number;
@@ -1051,6 +1061,12 @@ export async function fetchSpecialtyRecommendations(
 
   return {
     score_breakdown: breakdown,
+    // The API did not answer, so these came from the offline excerpt below, not from the
+    // full cutoff history. The student is told rather than left to assume otherwise.
+    corpus_status: "fallback",
+    corpus_note:
+      "Keçid balı bazası ilə əlaqə qurulmadı. Aşağıdakılar kiçik oflayn siyahıdan götürülüb " +
+      "(mənbə: sec.az/kecid-ballari), tam bazadan deyil.",
     total_matched: adjusted.length,
     safe_count: safeCount,
     realistic_count: realisticCount,

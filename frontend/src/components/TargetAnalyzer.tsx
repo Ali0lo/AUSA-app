@@ -91,16 +91,19 @@ export function TargetAnalyzer({
     };
   }, [level]);
 
-  // Adjust default qualification when level changes
-  useEffect(() => {
-    if (level === "master" && qualification === "attestat") {
+  // Changing the level moves the default qualification with it, but only while the student
+  // is still on the default: someone who has picked "foundation_year" keeps their choice.
+  // Done in the handler rather than an effect so the two land in one render.
+  function handleLevelChange(next: "bachelor" | "master") {
+    setLevel(next);
+    if (next === "master" && qualification === "attestat") {
       setQualification("bachelor_degree");
       setGpaScale("100");
-    } else if (level === "bachelor" && qualification === "bachelor_degree") {
+    } else if (next === "bachelor" && qualification === "bachelor_degree") {
       setQualification("attestat");
       setGpaScale("5.0");
     }
-  }, [level, qualification]);
+  }
 
   // Auto-run evaluation if initialUniversity is provided
   useEffect(() => {
@@ -240,12 +243,13 @@ export function TargetAnalyzer({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-400">
+                <label htmlFor="target-level" className="block text-xs font-semibold text-slate-400">
                   Degree Level
                 </label>
                 <select
+                  id="target-level"
                   value={level}
-                  onChange={(e) => setLevel(e.target.value as "bachelor" | "master")}
+                  onChange={(e) => handleLevelChange(e.target.value as "bachelor" | "master")}
                   className="field mt-1 text-xs"
                 >
                   <option value="bachelor" className="bg-[#13152c] text-white">Bachelor</option>
@@ -254,18 +258,34 @@ export function TargetAnalyzer({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400">
+                <label htmlFor="target-qualification" className="block text-xs font-semibold text-slate-400">
                   Qualification Held
                 </label>
                 <select
+                  id="target-qualification"
                   value={qualification}
                   onChange={(e) =>
                     setQualification(e.target.value as RouteQualification)
                   }
                   className="field mt-1 text-xs"
                 >
-                  <option value="attestat" className="bg-[#13152c] text-white">Attestat (11-year)</option>
-                  <option value="bachelor_degree" className="bg-[#13152c] text-white">Bachelor Degree</option>
+                  {/* A qualification that cannot go with the chosen level is refused before
+                      the click rather than reverted after it. The pairing is the same one
+                      the effect used to enforce; only the moment it is applied has moved. */}
+                  <option
+                    value="attestat"
+                    disabled={level === "master"}
+                    className="bg-[#13152c] text-white"
+                  >
+                    Attestat (11-year)
+                  </option>
+                  <option
+                    value="bachelor_degree"
+                    disabled={level === "bachelor"}
+                    className="bg-[#13152c] text-white"
+                  >
+                    Bachelor Degree
+                  </option>
                   <option value="ib_diploma" className="bg-[#13152c] text-white">IB Diploma</option>
                   <option value="a_levels" className="bg-[#13152c] text-white">A-Levels</option>
                 </select>

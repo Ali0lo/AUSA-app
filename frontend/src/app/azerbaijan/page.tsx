@@ -40,8 +40,8 @@ export default function AzerbaijanPage() {
       : { eyebrow: "Azerbaijan · DİM Admissions", title: "What may the next cutoff be?", intro: "Predicts published DİM cutoffs for state-funded programmes at Azerbaijani universities from official cutoff history.", filter: "Filter Azerbaijan predictions", university: "University", group: "DİM group", allGroups: "All groups", score: "Your DİM score (optional)", search: "Search a university", noResults: "No Azerbaijan cutoff predictions are available matching your search.", scholarship: "Full Scholarship" };
 
   useEffect(() => {
-    setLoading(true);
     const timer = window.setTimeout(() => {
+      setLoading(true);
       getAzerbaijanPredictions({ university, group })
         .then((result) => {
           setRows(result.items);

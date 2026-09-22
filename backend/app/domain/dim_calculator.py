@@ -28,6 +28,14 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
+CORPUS_AVAILABLE = "available"
+CORPUS_UNAVAILABLE = "unavailable"
+
+CORPUS_UNAVAILABLE_NOTE = (
+    "We hold no DİM cutoff history on this deployment, so no specialty could be compared "
+    "against your score. This is a gap in our data, not a finding that nothing matches."
+)
+
 
 class DimGroup(str, Enum):
     GROUP_1 = "I qrup"
@@ -191,6 +199,11 @@ class SpecialtyRecommendation(BaseModel):
 class DimRecommendationResponse(BaseModel):
     """Response containing calculated score and ranked eligible specialties."""
     score_breakdown: DimScoreBreakdown
+    # 'available' or 'unavailable'. The client must branch on this before rendering an
+    # empty list: with no corpus, "no specialties match" is a claim we have not earned.
+    corpus_status: str = CORPUS_AVAILABLE
+    # Why the list is empty, when it is empty for want of data rather than want of a match.
+    corpus_note: Optional[str] = None
     total_matched: int
     safe_count: int
     realistic_count: int
@@ -481,23 +494,41 @@ def calculate_total_dim_score(req: DimCalculationRequest) -> DimScoreBreakdown:
     )
 
 
+# The corpus is gitignored, so it is absent in a fresh clone and in CI.
+CUTOFF_HISTORY_CSV = (
+    Path(__file__).resolve().parents[3] / "data" / "processed" / "azerbaijan_cutoff_history.csv"
+)
+
 # In-memory cached dataset from azerbaijan_cutoff_history.csv
 _CACHED_CUTOFF_SERIES: Optional[List[Dict[str, Any]]] = None
+# Whether the corpus was on disk when it was last loaded. Kept apart from the record list
+# because an empty list has two causes -- no data, or no match -- and reporting them the
+# same way is the blank-means-answer error (ADR-0004 rule 1).
+_CORPUS_STATUS: Optional[str] = None
+
+
+def cutoff_corpus_status() -> str:
+    """Whether the cutoff history is present at all, loading it once if needed."""
+    if _CORPUS_STATUS is None:
+        load_cutoff_history_records()
+    return _CORPUS_STATUS or CORPUS_UNAVAILABLE
 
 
 def load_cutoff_history_records() -> List[Dict[str, Any]]:
     """Loads and caches 2,578 historical DİM cutoff records from CSV for offline/instant evaluation."""
-    global _CACHED_CUTOFF_SERIES
+    global _CACHED_CUTOFF_SERIES, _CORPUS_STATUS
     if _CACHED_CUTOFF_SERIES is not None:
         return _CACHED_CUTOFF_SERIES
 
-    csv_path = Path(__file__).resolve().parents[3] / "data" / "processed" / "azerbaijan_cutoff_history.csv"
+    csv_path = CUTOFF_HISTORY_CSV
     records: List[Dict[str, Any]] = []
 
     if not csv_path.exists():
         _CACHED_CUTOFF_SERIES = []
+        _CORPUS_STATUS = CORPUS_UNAVAILABLE
         return []
 
+    _CORPUS_STATUS = CORPUS_AVAILABLE
     with open(csv_path, mode="r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -642,8 +673,14 @@ def get_specialty_recommendations(
     }
     recommendations.sort(key=lambda x: (tier_order[x.chance_level], -x.cutoff_2025))
 
+    corpus_status = cutoff_corpus_status()
+
     return DimRecommendationResponse(
         score_breakdown=score_breakdown,
+        corpus_status=corpus_status,
+        corpus_note=(
+            CORPUS_UNAVAILABLE_NOTE if corpus_status == CORPUS_UNAVAILABLE else None
+        ),
         total_matched=len(recommendations),
         safe_count=safe_c,
         realistic_count=realistic_c,
