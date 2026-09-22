@@ -11,6 +11,7 @@ from app.api.v1.azerbaijan import router as azerbaijan_router
 from app.api.v1.finance import router as finance_router
 from app.api.v1.scholarships import router as scholarships_router
 from app.api.v1.dim_calculator import router as dim_router
+from app.api.v1.sop import router as sop_router
 
 api_router = APIRouter()
 
@@ -26,4 +27,6 @@ api_router.include_router(azerbaijan_router)
 api_router.include_router(finance_router)
 api_router.include_router(scholarships_router)
 api_router.include_router(dim_router)
+api_router.include_router(sop_router)
+
 
