@@ -240,3 +240,96 @@ def test_api_post_compare_endpoint():
     assert "lowest_cost_university" in data
     assert "longest_pswr_university" in data
     assert len(data["comparison_summary_notes"]) >= 2
+
+
+# ==============================================================================
+# Extended Integration & Edge-Case Tests
+# ==============================================================================
+
+def test_compare_universities_non_existent_id_fallback():
+    """Verifies that nonexistent university IDs trigger fallback gracefully to curated items."""
+    res = compare_universities(ComparisonRequest(university_ids=["unknown_fake_id_123"]))
+    assert len(res.items) >= 3
+    u_ids = [item.id for item in res.items]
+    assert "tum_cs" in u_ids
+    assert "oxford_cs" in u_ids
+    assert res.lowest_cost_university is not None
+
+
+def test_checklist_for_all_target_countries():
+    """Verifies checklist generation across all key study destinations."""
+    countries = ["DE", "GB", "IT", "TR", "US", "HU"]
+    for country in countries:
+        res = generate_document_checklist(DocumentChecklistRequest(country_code=country))
+        assert res.total_documents >= 5
+        assert res.mandatory_count >= 5
+        assert len(res.country_name) > 0
+        doc_categories = {d.category for d in res.documents}
+        assert DocumentCategory.ACADEMIC in doc_categories
+        assert DocumentCategory.LEGAL_IMMIGRATION in doc_categories
+
+
+def test_checklist_mandatory_counts_and_validation():
+    """Verifies that mandatory documents and metadata are correctly set for Germany."""
+    res = generate_document_checklist(DocumentChecklistRequest(country_code="DE", degree_level="master"))
+    assert res.mandatory_count == res.total_documents
+    assert all(d.is_mandatory for d in res.documents)
+    assert any("Sperrkonto" in d.title for d in res.documents)
+    assert any("VPD" in d.title for d in res.documents)
+
+
+def test_tier_classification_safety_high_gpa():
+    """Verifies that high GPA and safe ranking correctly categorizes as SAFETY tier."""
+    res = classify_application_tier(
+        TierClassificationRequest(
+            university_name="Istanbul Technical University",
+            country_code="TR",
+            qs_rank=404,
+            student_gpa=3.85,
+            student_gpa_max=4.0,
+            student_ielts=7.5,
+        )
+    )
+    assert res.tier == AdmissionTier.SAFETY
+    assert "Təminatlı" in res.badge_label
+
+
+def test_tier_classification_dream_reach():
+    """Verifies that top-50 QS universities are classified as DREAM."""
+    res = classify_application_tier(
+        TierClassificationRequest(
+            university_name="Carnegie Mellon University",
+            country_code="US",
+            qs_rank=28,
+            student_gpa=3.5,
+            student_gpa_max=4.0,
+            student_ielts=7.0,
+        )
+    )
+    assert res.tier == AdmissionTier.DREAM
+    assert len(res.risk_factors) >= 1
+    assert any("IELTS" in r or "GPA" in r for r in res.risk_factors)
+
+
+def test_compare_pswr_longest_duration():
+    """Verifies that comparing US, UK, and Germany correctly identifies US 36 months STEM OPT."""
+    res = compare_universities(ComparisonRequest(university_ids=["cmu_software", "tum_cs", "oxford_cs"]))
+    assert len(res.items) == 3
+    assert "Carnegie Mellon" in res.longest_pswr_university
+
+
+def test_api_compare_with_custom_profile_updates_tier():
+    """Tests POST /api/v1/applications/compare evaluates tiers dynamically with student GPA."""
+    payload = {
+        "university_ids": ["oxford_cs", "itu_engineering"],
+        "student_gpa": 3.9,
+        "student_ielts": 8.0,
+    }
+    res = client.post("/api/v1/applications/compare", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    tiers = {item["id"]: item["admission_tier"] for item in data["items"]}
+    assert tiers["oxford_cs"] == "DREAM"
+    assert tiers["itu_engineering"] == "SAFETY"
+
+
