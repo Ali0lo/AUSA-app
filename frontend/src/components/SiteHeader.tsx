@@ -15,6 +15,7 @@ const navigation = [
   { href: "/finance", label: "Finances & Visa" },
   { href: "/scholarships", label: "Scholarships" },
   { href: "/dim-calculator", label: "DİM Kalkulyator" },
+  { href: "/sop-checker", label: "SOP & CV Yoxlayıcı" },
   { href: "/azerbaijan", label: "Azerbaijan DİM" },
   { href: "/advisor", label: "AI advisor" },
   { href: "/application", label: "Application" },
