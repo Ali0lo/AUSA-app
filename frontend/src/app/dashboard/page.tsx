@@ -1,23 +1,16 @@
-"use client";
+import type { Metadata } from "next";
+import { ApplicationDashboard } from "@/components/ApplicationDashboard";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+export const metadata: Metadata = {
+  title: "Tətbiq Paneli & Universitet Müqayisəsi · AUSA",
+  description:
+    "Xəyal, hədəf və təhlükəsiz universitet seçimlərinizi izləyin, tələb olunan sənədlərin yoxlama siyahısını idarə edin və qəbul şansınızı sistemli şəkildə artırın.",
+};
 
 export default function DashboardPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/plan");
-  }, [router]);
-
   return (
-    <div className="app-page" role="status" aria-live="polite">
-      <div className="panel mx-auto max-w-2xl p-8">
-        <p className="eyebrow">Route updated</p>
-        <h1 className="mt-3 font-serif text-3xl font-semibold">Opening route planning.</h1>
-        <p className="mt-4 text-muted">The earlier dashboard route now maps to route planning. <Link className="text-link" href="/plan">Open route planning directly.</Link></p>
-      </div>
+    <div className="app-page">
+      <ApplicationDashboard />
     </div>
   );
 }

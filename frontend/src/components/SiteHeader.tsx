@@ -12,6 +12,7 @@ const navigation = [
   // the only place a student gets an answer about universities.
   { href: "/plan", label: "Plan my route" },
   { href: "/target", label: "Target University" },
+  { href: "/dashboard", label: "Tətbiq Paneli" },
   { href: "/finance", label: "Finances & Visa" },
   { href: "/scholarships", label: "Scholarships" },
   { href: "/dim-calculator", label: "DİM Kalkulyator" },

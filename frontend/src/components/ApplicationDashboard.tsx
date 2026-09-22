@@ -612,6 +612,7 @@ export function ApplicationDashboard() {
                   Hazır Benchmark Universitetlər
                 </label>
                 <select
+                  aria-label="Hazır Benchmark Universitetlər"
                   value={selectedBenchmark}
                   onChange={(e) => {
                     setSelectedBenchmark(e.target.value);
