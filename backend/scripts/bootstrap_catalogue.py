@@ -18,12 +18,10 @@ except ImportError:
         if _cwd is not None:
             sys.path.insert(0, _cwd)
 from app.core.database import AsyncSessionLocal, engine
-from scripts.load_program_requirements import DEFAULT_FILE, KEY_FIELDS, read_rows, load_program_requirements
+from scripts.load_program_requirements import CATALOGUE_FILES, DEFAULT_FILE, KEY_FIELDS, read_rows, load_program_requirements
 from scripts.collect_dp_catalogue import DEFAULT_DESTINATION, RESOURCES
 from scripts.load_dp_catalogue import load_csv, rows_from_csv
 from scripts.adopt_legacy_schema import adopt_legacy_schema
-
-CATALOGUE_FILES = (DEFAULT_FILE, DEFAULT_FILE.with_name("program_requirements_track_a.csv"))
 
 
 def validate_catalogue(paths=CATALOGUE_FILES):
