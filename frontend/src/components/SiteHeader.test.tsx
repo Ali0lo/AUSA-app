@@ -45,39 +45,45 @@ describe("SiteHeader Component", () => {
     expect(brandLink).toHaveAttribute("href", "/");
   });
 
-  it("renders all primary navigation links on desktop", () => {
+  it("renders primary navigation links on desktop and more dropdown", async () => {
+    const user = userEvent.setup();
     render(<SiteHeader />);
     const primaryNav = screen.getByRole("navigation", { name: "Primary navigation" });
     expect(primaryNav).toBeInTheDocument();
 
     expect(screen.getByRole("link", { name: "Plan my route" })).toHaveAttribute("href", "/plan");
     expect(screen.getByRole("link", { name: "Target University" })).toHaveAttribute("href", "/target");
-    expect(screen.getByRole("link", { name: "Tətbiq Paneli" })).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByRole("link", { name: "Azerbaijan DİM" })).toHaveAttribute("href", "/azerbaijan");
+    expect(screen.getByRole("link", { name: "AI advisor" })).toHaveAttribute("href", "/advisor");
+
+    // Open More dropdown
+    const moreBtn = screen.getByRole("button", { name: /More/i });
+    expect(moreBtn).toBeInTheDocument();
+    await user.click(moreBtn);
+
     expect(screen.getByRole("link", { name: "Finances & Visa" })).toHaveAttribute("href", "/finance");
     expect(screen.getByRole("link", { name: "Scholarships" })).toHaveAttribute("href", "/scholarships");
-    expect(screen.getByRole("link", { name: "DİM Kalkulyator" })).toHaveAttribute("href", "/dim-calculator");
-    expect(screen.getByRole("link", { name: "SOP & CV Yoxlayıcı" })).toHaveAttribute("href", "/sop-checker");
-    expect(screen.getByRole("link", { name: "Qəbul Təqvimi" })).toHaveAttribute("href", "/timeline");
+    expect(screen.getByRole("link", { name: "DİM Calculator" })).toHaveAttribute("href", "/dim-calculator");
   });
 
   it("highlights the active route based on current pathname", () => {
-    navMock.pathname = "/dashboard";
+    navMock.pathname = "/plan";
     render(<SiteHeader />);
 
-    const dashboardLink = screen.getByRole("link", { name: "Tətbiq Paneli" });
-    expect(dashboardLink).toHaveAttribute("aria-current", "page");
-    expect(dashboardLink.className).toContain("text-white font-semibold");
-
     const planLink = screen.getByRole("link", { name: "Plan my route" });
-    expect(planLink).not.toHaveAttribute("aria-current");
+    expect(planLink).toHaveAttribute("aria-current", "page");
+    expect(planLink.className).toContain("text-white font-semibold");
+
+    const targetLink = screen.getByRole("link", { name: "Target University" });
+    expect(targetLink).not.toHaveAttribute("aria-current");
   });
 
   it("highlights sub-paths matching parent route", () => {
-    navMock.pathname = "/finance/simulator";
+    navMock.pathname = "/plan/explore";
     render(<SiteHeader />);
 
-    const financeLink = screen.getByRole("link", { name: "Finances & Visa" });
-    expect(financeLink).toHaveAttribute("aria-current", "page");
+    const planLink = screen.getByRole("link", { name: "Plan my route" });
+    expect(planLink).toHaveAttribute("aria-current", "page");
   });
 
   it("toggles mobile navigation open and closed on menu button click", async () => {
@@ -109,9 +115,9 @@ describe("SiteHeader Component", () => {
     expect(mobileNav).toBeInTheDocument();
 
     // Click link inside mobile nav
-    const mobileLinks = screen.getAllByRole("link", { name: "Tətbiq Paneli" });
-    const mobileDashboardLink = mobileLinks[mobileLinks.length - 1];
-    await user.click(mobileDashboardLink);
+    const mobileLinks = screen.getAllByRole("link", { name: "Plan my route" });
+    const mobilePlanLink = mobileLinks[mobileLinks.length - 1];
+    await user.click(mobilePlanLink);
 
     // Menu should close
     expect(screen.queryByRole("navigation", { name: "Mobile navigation" })).not.toBeInTheDocument();

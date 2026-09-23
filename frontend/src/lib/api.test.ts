@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  API_BASE_URL,
   ApiError,
   fetchHealth,
   getUserFacingError,
@@ -35,7 +36,7 @@ describe("API compatibility layer", () => {
   it("checks the documented health endpoint and validates its response", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(health));
     await expect(fetchHealth()).resolves.toEqual(health);
-    expect(fetchMock.mock.calls[0][0]).toBe("http://localhost:8000/api/v1/health");
+    expect(fetchMock.mock.calls[0][0]).toBe(`${API_BASE_URL}/health`);
   });
 
   // Response-shape validation now lives in assess-contract.test.ts, against /routes/assess.
