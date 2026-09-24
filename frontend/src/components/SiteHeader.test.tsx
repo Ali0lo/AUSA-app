@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SiteHeader } from "@/components/SiteHeader";
+import { LanguageProvider } from "@/lib/i18n";
 
 const navMock = vi.hoisted(() => ({
   pathname: "/plan",
@@ -121,5 +122,30 @@ describe("SiteHeader Component", () => {
 
     // Menu should close
     expect(screen.queryByRole("navigation", { name: "Mobile navigation" })).not.toBeInTheDocument();
+  });
+
+  it("renders language switcher and switches language correctly", async () => {
+    const user = userEvent.setup();
+    render(
+      <LanguageProvider>
+        <SiteHeader />
+      </LanguageProvider>
+    );
+
+    const enBtn = screen.getByRole("button", { name: "EN" });
+    const azBtn = screen.getByRole("button", { name: "AZ" });
+    const ruBtn = screen.getByRole("button", { name: "RU" });
+
+    expect(enBtn).toHaveAttribute("aria-pressed", "true");
+
+    // Switch to Azerbaijani
+    await user.click(azBtn);
+    expect(azBtn).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("link", { name: "Marşrutumu planla" })).toBeInTheDocument();
+
+    // Switch to Russian
+    await user.click(ruBtn);
+    expect(ruBtn).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("link", { name: "Спланировать маршрут" })).toBeInTheDocument();
   });
 });
