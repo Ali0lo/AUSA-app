@@ -24,8 +24,11 @@ import sys
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-# Ensure repository root is on sys.path
+# Ensure repository root and backend directory are on sys.path
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+BACKEND_DIR = os.path.join(REPO_ROOT, "backend")
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
@@ -77,6 +80,11 @@ try:
         analyze_sop_text,
         analyze_cv_text,
     )
+    from app.domain.process_definitions import (
+        PROCESS_BY_ROUTE_KEY,
+        STATUS_CURATED,
+        STATUS_NOT_COLLECTED,
+    )
 except ImportError:
     from backend.app.domain.dim_calculator import (
         DimGroup,
@@ -124,6 +132,11 @@ except ImportError:
         CvAnalysisRequest,
         analyze_sop_text,
         analyze_cv_text,
+    )
+    from backend.app.domain.process_definitions import (
+        PROCESS_BY_ROUTE_KEY,
+        STATUS_CURATED,
+        STATUS_NOT_COLLECTED,
     )
 
 CLI_VERSION = "1.0.0"
@@ -592,6 +605,75 @@ def cmd_sop_check(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_process(args: argparse.Namespace) -> int:
+    """Inspects curated document legalisation and recognition procedure for an admission route."""
+    route_key = args.route
+    if route_key not in PROCESS_BY_ROUTE_KEY:
+        if args.json:
+            print(json.dumps({
+                "error": f"Unknown route key '{route_key}'",
+                "available_routes": sorted(list(PROCESS_BY_ROUTE_KEY.keys()))
+            }))
+        else:
+            print(f"{RED}Error: Unknown route key '{route_key}'.{RESET}")
+            print(f"Available routes: {', '.join(sorted(PROCESS_BY_ROUTE_KEY.keys()))}")
+        return 1
+
+    proc = PROCESS_BY_ROUTE_KEY[route_key]
+    data = {
+        "route_key": proc.route_key,
+        "status": proc.status,
+        "note": proc.note,
+        "steps_count": len(proc.steps),
+        "steps": [
+            {
+                "key": s.key,
+                "title": s.title,
+                "detail": s.detail,
+                "when": s.when,
+                "authority": s.authority,
+                "citation": s.citation,
+                "provenance": s.provenance,
+                "last_checked": s.last_checked,
+            }
+            for s in proc.steps
+        ],
+        "known_gaps": list(proc.known_gaps),
+    }
+
+    if args.json:
+        print(json.dumps(data, indent=2))
+        return 0
+
+    print_banner()
+    status_color = GREEN if proc.status == STATUS_CURATED else YELLOW
+    print(f"{BOLD}ADMISSION ROUTE DOCUMENT LEGALISATION & RECOGNITION{RESET}")
+    print(f"Route: {CYAN}{proc.route_key}{RESET}")
+    print(f"Status: {status_color}{proc.status.upper()}{RESET}")
+    print(f"Note: {proc.note}\n")
+
+    if proc.steps:
+        print(f"{BOLD}Required Statutory Steps ({len(proc.steps)}):{RESET}")
+        for i, step in enumerate(proc.steps, 1):
+            print(f"  {i}. {CYAN}{step.title}{RESET} ({YELLOW}{step.when}{RESET})")
+            print(f"     Authority: {step.authority}")
+            print(f"     Detail: {step.detail}")
+            print(f"     Citation: {step.citation}")
+            print(f"     Provenance: {step.provenance} (Last checked: {step.last_checked})")
+            print()
+    else:
+        print(f"{YELLOW}No curated legalisation steps recorded yet for this route.{RESET}")
+        print()
+
+    if proc.known_gaps:
+        print(f"{BOLD}Known Procedure Gaps / Verification Notices:{RESET}")
+        for gap in proc.known_gaps:
+            print(f"  • {gap}")
+        print()
+
+    return 0
+
+
 # ==============================================================================
 # Main Parser & CLI Entrypoint
 # ==============================================================================
@@ -671,6 +753,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_conv.add_argument("--to", dest="to_curr", type=str, default="AZN", choices=[c.value for c in Currency], help="Target currency (AZN, EUR, USD, GBP, TRY, PLN, HUF)")
     p_conv.add_argument("--buffer", type=float, default=0.0, help="Safety buffer percentage (e.g. 2.5 for 2.5%% cushion)")
 
+    # 9. process
+    p_proc = subparsers.add_parser("process", help="Inspect document legalisation and recognition procedure by route")
+    p_proc.add_argument("--route", type=str, default="de-bachelor-studienkolleg", help="Admission route key (e.g. de-bachelor-studienkolleg, tr-bachelor-direct, uk-bachelor-direct)")
+
     return parser
 
 
@@ -692,6 +778,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "compare": cmd_compare,
         "checklist": cmd_checklist,
         "sop-check": cmd_sop_check,
+        "process": cmd_process,
     }
 
     handler = handlers.get(args.command)
