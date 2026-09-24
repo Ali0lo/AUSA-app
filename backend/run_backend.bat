@@ -158,8 +158,22 @@ echo Created backend\.env with local development settings.
 
 :environment_ready
 
-echo Migrating the database and loading the admission catalogue...
-"%AUSA_VENV_PYTHON%" -m scripts.bootstrap_catalogue
+rem A SQLite DATABASE_URL is the demo path: no PostgreSQL, no pgvector, and no
+rem alembic, because the migrations carry JSONB and vector columns SQLite cannot
+rem render. Seed the same curated catalogue CSVs into the file instead.
+set "AUSA_DEMO_DB="
+if not defined DATABASE_URL goto :catalogue_mode_chosen
+echo %DATABASE_URL% | findstr /B /I /C:"sqlite" >nul 2>&1
+if not errorlevel 1 set "AUSA_DEMO_DB=1"
+:catalogue_mode_chosen
+
+if defined AUSA_DEMO_DB (
+    echo Seeding the demo catalogue into SQLite...
+    "%AUSA_VENV_PYTHON%" -m scripts.demo_seed
+) else (
+    echo Migrating the database and loading the admission catalogue...
+    "%AUSA_VENV_PYTHON%" -m scripts.bootstrap_catalogue
+)
 
 if errorlevel 1 (
     echo ERROR: Database migration or catalogue loading failed.

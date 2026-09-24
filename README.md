@@ -95,6 +95,25 @@ prints: the open routes, the blocked ones with the requirement that failed, the 
 reaches Germany, State Programme eligibility, the funded programmes actually reachable — and a
 closing section listing what it refuses to answer.
 
+### The same thing in the browser (no PostgreSQL)
+
+`backend\run_backend.bat` provisions PostgreSQL with pgvector, which every teammate would
+otherwise have to install before seeing the product run. For a demo that cost buys nothing:
+the guest walkthrough reads one table.
+
+```bash
+run_demo.bat              # backend on SQLite, seeded from the curated CSVs
+frontend\run.bat          # in a second terminal
+```
+
+Then open `http://localhost:3000`. Routes, target gap, funding, scholarships, timeline, the
+SOP checker, the DİM calculator and the Azerbaijan section all work. The catalogue rows are
+the same 47 the PostgreSQL bootstrap loads — only the engine differs.
+
+**Not covered:** accounts, sign-in and saved applications need PostgreSQL; use
+`backend\run_backend.bat` for those. The chatbot needs `OPENAI_API_KEY` in `backend\.env`
+and reports that search is unavailable without one.
+
 ---
 
 ## Architecture
