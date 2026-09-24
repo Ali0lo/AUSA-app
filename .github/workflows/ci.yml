@@ -84,6 +84,13 @@ jobs:
           cd frontend
           npm run lint
 
+      # The vitest suite ran only on developer machines until now, so a broken
+      # component reached main as long as it still type-checked and built.
+      - name: Run Vitest Suite
+        run: |
+          cd frontend
+          npm test
+
       - name: Run Dry-Run Production Build
         env:
           NEXT_PUBLIC_API_URL: "http://localhost:8000/api/v1"
