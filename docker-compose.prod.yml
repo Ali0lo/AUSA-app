@@ -1,54 +1,132 @@
+# Deployment. Same four services as docker-compose.yml, with nothing defaulted that
+# must not be: this file refuses to start rather than run on a guessable secret.
+#
+#     docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# Write .env.prod beside this file with, at minimum:
+#
+#     POSTGRES_DB=ausa_db
+#     POSTGRES_USER=ausa_user
+#     POSTGRES_PASSWORD=<choose one>
+#     SECRET_KEY=<python -c "import secrets; print(secrets.token_hex(32))">
+#
+# Optional: OPENAI_API_KEY (without it the chat endpoint reports that search is
+# unavailable and everything else works), WEB_PORT (default 80),
+# ACCESS_TOKEN_EXPIRE_MINUTES, BACKEND_CORS_ORIGINS, AUSA_PUBLIC_API_URL.
+#
+# AUSA_PUBLIC_API_URL is baked into the web image at build time (see
+# frontend/Dockerfile), so changing it means rebuilding `web`, not restarting it.
+
 services:
   # -------------------------------------------------------------
-  # PostgreSQL 16 Database with pgvector Extension
+  # PostgreSQL 16 with pgvector.
   # -------------------------------------------------------------
   db:
     image: pgvector/pgvector:pg16
-    container_name: ausa_postgres_db
+    container_name: ausa_postgres_prod
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-ausa_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ausa_secure_password_2026}
-      POSTGRES_DB: ${POSTGRES_DB:-ausa_db}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     volumes:
       - postgres_prod_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ausa_user} -d ${POSTGRES_DB:-ausa_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
     networks:
       - ausa_network
+    # Not published. Only the application network reaches the database.
 
   # -------------------------------------------------------------
-  # FastAPI Application Backend Service
+  # One-shot: migrate, load the catalogue, train the Azerbaijan model.
+  # The API waits for this to exit 0, so a failed migration stops the deploy
+  # instead of bringing up an API over an empty database.
   # -------------------------------------------------------------
-  api:
+  seed:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: ausa_fastapi_backend
-    restart: always
-    ports:
-      - "8000:8000"
+      context: .
+      dockerfile: backend/Dockerfile
+    image: ausa-backend
+    container_name: ausa_seed_prod
     environment:
-      - ENVIRONMENT=${ENVIRONMENT:-production}
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-ausa_user}:${POSTGRES_PASSWORD:-ausa_secure_password_2026}@db:5432/${POSTGRES_DB:-ausa_db}
-      - SECRET_KEY=${SECRET_KEY:-change_this_super_secret_jwt_key_in_production}
-      - ALGORITHM=${ALGORITHM:-HS256}
-      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY to a unique value}
+    # Trains only when the volume has no artifact, so a redeploy does not rewrite
+    # metrics.json under a running API. Remove the volume to force a retrain.
+    command: >
+      sh -c "python -m scripts.bootstrap_catalogue &&
+             if [ -f /app/models/cutoff_coldstart_AZ.joblib ]; then
+               echo 'Azerbaijan model already trained; skipping.';
+             else
+               python -m scripts.train_cutoff_models --country AZ;
+             fi"
+    volumes:
+      - model_artifacts:/app/models
     depends_on:
       db:
         condition: service_healthy
     networks:
       - ausa_network
+    restart: "no"
+
+  # -------------------------------------------------------------
+  # FastAPI backend.
+  # -------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: ausa-backend
+    container_name: ausa_api_prod
+    restart: always
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # config.py refuses to boot in production on the committed development key.
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY to a unique value}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Only needed if something calls the API cross-origin. The frontend does not:
+      # it proxies server-side, so it shares the browser's origin.
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-[]}
+    volumes:
+      - model_artifacts:/app/models
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    networks:
+      - ausa_network
+    # Not published. Reached through `web`, which is the only public surface.
+
+  # -------------------------------------------------------------
+  # Next.js frontend -- the public entry point.
+  # -------------------------------------------------------------
+  web:
+    build:
+      context: ./frontend
+      args:
+        AUSA_API_URL: ${AUSA_PUBLIC_API_URL:-http://api:8000/api/v1}
+    container_name: ausa_web_prod
+    restart: always
+    ports:
+      - "${WEB_PORT:-80}:3000"
+    depends_on:
+      - api
+    networks:
+      - ausa_network
 
 volumes:
   postgres_prod_data:
+    driver: local
+  model_artifacts:
     driver: local
 
 networks:

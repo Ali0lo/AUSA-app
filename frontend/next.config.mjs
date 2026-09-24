@@ -8,6 +8,9 @@ const backendApiUrl = (
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Emits .next/standalone with only the files the server actually imports, so the
+  // runtime image carries no node_modules tree and no build toolchain.
+  output: "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
   devIndicators: false,

@@ -95,6 +95,39 @@ prints: the open routes, the blocked ones with the requirement that failed, the 
 reaches Germany, State Programme eligibility, the funded programmes actually reachable — and a
 closing section listing what it refuses to answer.
 
+### The whole product in the browser
+
+One command, and nothing to install but Docker — no PostgreSQL, no pgvector, no Python
+environment, no Node:
+
+```bash
+docker compose up --build
+```
+
+Then open `http://localhost:3000`. The first run takes a few minutes to build; after that
+it starts in seconds.
+
+This is the real stack, not a subset: PostgreSQL 16 with pgvector, every migration, the 47
+curated requirement rows and the 4,121 State Programme rows, and accounts, sign-in and saved
+applications all working. A one-shot `seed` service migrates the database, loads the
+catalogue and trains the Azerbaijan cutoff model (about fifteen seconds) before the API
+starts, so the model and `metrics.json` always come from the same run.
+
+The browser only ever talks to `localhost:3000`; Next rewrites `/api/v1/*` to the backend
+server-side, so there is one origin and no CORS to configure. The API is also published on
+`localhost:8000` if you want `/docs`.
+
+**The chatbot** additionally needs an `OPENAI_API_KEY`. Put it in a `.env` file beside
+`docker-compose.yml` and it is passed through; without one the chat endpoint reports that
+search is unavailable and the rest of the product is unaffected.
+
+To stop, `docker compose down`; to start over from an empty database,
+`docker compose down -v`.
+
+Running the pieces outside Docker — `backend\run_backend.bat` and `frontend\run.bat` — still
+works and is what you want for an edit-reload loop. It needs a local PostgreSQL with pgvector
+installed, which is the cost Docker removes.
+
 ---
 
 ## Architecture

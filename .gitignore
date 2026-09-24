@@ -53,6 +53,25 @@ data/raw/usa/
 # university's admissions page again. These belong in git.
 !data/curation/*.csv
 
+# The three inputs `docker compose up` cannot run without, 878 KB in total. Without
+# them a fresh clone gets an empty dp_catalogue and an Azerbaijan section that reports
+# itself absent, which is exactly what happened before the compose stack existed:
+# bootstrap_catalogue reads these files, it does not fetch them.
+#
+# They stay reproducible -- collect_dp_catalogue.py re-downloads the DP files from the
+# open-data portal and collect_azerbaijan.py rebuilds the history -- so committing them
+# pins a known-good copy rather than replacing the collection path.
+#
+# `data/raw/*` above excludes the azerbaijan DIRECTORY, and git never looks inside an
+# excluded directory, so a file exception under it cannot match until the directory
+# itself is re-included. Re-including it then needs its own contents re-excluded, or
+# the next collection run commits everything that lands there.
+!data/raw/azerbaijan/
+data/raw/azerbaijan/*
+!data/raw/azerbaijan/dp-bakalavr-2026.csv
+!data/raw/azerbaijan/dp-master-2026.csv
+!data/processed/azerbaijan_cutoff_history.csv
+
 # Trained model artifacts -- regenerate with train_cutoff_models.py.
 # models/metrics.json IS committed: ADR-0004 requires every predicted_cutoff to be
 # traceable to the exact run that produced it.

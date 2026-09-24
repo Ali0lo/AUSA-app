@@ -4,13 +4,31 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
 
+# asyncpg waits 60 seconds for a connection by default, and the OS often waits ~20
+# before that. Neither is a useful answer to "is the database there?" -- the
+# catalogue endpoints hold a curated-CSV fallback and cannot reach it until the
+# connection attempt gives up, so an absent or misconfigured PostgreSQL turns every
+# page into a minute of blank screen instead of an instant answer.
+CONNECT_TIMEOUT_SECONDS = 5
+
+
+def build_engine(database_url: str):
+    """Build the async engine for a database URL, bounding how long a connect may take."""
+    connect_args = {}
+    if database_url.startswith("postgresql"):
+        connect_args["timeout"] = CONNECT_TIMEOUT_SECONDS
+
+    return create_async_engine(
+        database_url,
+        echo=settings.DEBUG,
+        future=True,
+        pool_pre_ping=True,
+        connect_args=connect_args,
+    )
+
+
 # Initialize Async Engine
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    future=True,
-    pool_pre_ping=True,
-)
+engine = build_engine(settings.DATABASE_URL)
 
 # Async Session Factory
 AsyncSessionLocal = async_sessionmaker(
