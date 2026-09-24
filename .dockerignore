@@ -1,0 +1,30 @@
+# Build context for backend/Dockerfile, which is the repository root: the scripts and
+# the prediction service resolve data/ and models/ relative to it, so those must be in
+# the image. Everything below either cannot be in it or would make it enormous.
+
+.git
+.github
+.venv
+**/.venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+
+# The frontend has its own image and its own context.
+frontend
+node_modules
+
+# Collected corpora that train nothing the product serves: 469 MB and ~200 MB.
+data/raw/usa
+data/raw/turkey
+data/raw/**/*.zip
+
+# Trained artifacts are rebuilt by the seed service, never copied in. Copying one
+# would ship a model whose metrics.json describes a different run.
+models/*.joblib
+
+# Local state.
+*.db
+backend/.env
+notebooks
+experiments

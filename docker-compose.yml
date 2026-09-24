@@ -1,8 +1,24 @@
+# The whole product, locally, in one command:
+#
+#     docker compose up --build
+#
+# Then open http://localhost:3000. Nothing else has to be installed: no PostgreSQL,
+# no pgvector, no Python environment, no Node.
+#
+# What you get is the real stack, not a demo subset -- the same PostgreSQL with the
+# same migrations, the same 47 curated rows and 4,121 State Programme rows, and
+# accounts, sign-in and saved applications all working. The chatbot additionally
+# needs OPENAI_API_KEY; without one the chat endpoint reports that search is
+# unavailable and the rest of the product is unaffected.
+
 services:
-  postgres:
+  # -------------------------------------------------------------
+  # PostgreSQL 16 with pgvector already compiled in.
+  # -------------------------------------------------------------
+  db:
     image: pgvector/pgvector:pg16
     container_name: ausa_postgres
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ausa_db}
       POSTGRES_USER: ${POSTGRES_USER:-ausa_user}
@@ -13,9 +29,97 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ausa_user} -d ${POSTGRES_DB:-ausa_db}"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  # -------------------------------------------------------------
+  # One-shot: migrate, load the catalogue, train the Azerbaijan model.
+  #
+  # The model is trained here rather than copied in because models/*.joblib is not in
+  # git. Shipping one that happened to be on someone's disk is how metrics.json came
+  # to describe a training run (sklearn 1.9.1) that no artifact on disk matches
+  # (1.7.2). Training beside the metrics makes them the same run by construction, and
+  # it costs about fifteen seconds.
+  #
+  # Idempotent: alembic upgrades to head, the loaders insert only rows not already
+  # present, and training overwrites its own artifact.
+  #
+  # Note on metrics.json: the trainer writes the file whole, for the countries it was
+  # asked for. Inside the volume it therefore describes the AZ run and nothing else --
+  # which is what this stack actually trained, and all the API reads. The committed
+  # models/metrics.json, which also carries the TR and US comparisons, is untouched.
+  # -------------------------------------------------------------
+  seed:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: ausa-backend
+    container_name: ausa_seed
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ausa_user}:${POSTGRES_PASSWORD:-ausa_password}@db:5432/${POSTGRES_DB:-ausa_db}
+      SECRET_KEY: ${SECRET_KEY:-local_development_only_not_a_production_secret}
+    # Training is skipped when the artifact is already in the volume. Not for speed:
+    # the trainer rewrites metrics.json, and rewriting it under an API that read it at
+    # startup leaves the run_id in served predictions pointing at a run the file no
+    # longer describes. `docker compose down -v` drops the volume and retrains.
+    command: >
+      sh -c "python -m scripts.bootstrap_catalogue &&
+             if [ -f /app/models/cutoff_coldstart_AZ.joblib ]; then
+               echo 'Azerbaijan model already trained; skipping. down -v to retrain.';
+             else
+               python -m scripts.train_cutoff_models --country AZ;
+             fi"
+    volumes:
+      # The API and the seed job read and write the same models directory.
+      - model_artifacts:/app/models
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # -------------------------------------------------------------
+  # FastAPI backend.
+  # -------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: ausa-backend
+    container_name: ausa_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ausa_user}:${POSTGRES_PASSWORD:-ausa_password}@db:5432/${POSTGRES_DB:-ausa_db}
+      SECRET_KEY: ${SECRET_KEY:-local_development_only_not_a_production_secret}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - model_artifacts:/app/models
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+
+  # -------------------------------------------------------------
+  # Next.js frontend. This is the only port a person needs.
+  # -------------------------------------------------------------
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Baked in at build time -- see frontend/Dockerfile. Server-side rewrites
+        # mean the browser only ever talks to localhost:3000.
+        AUSA_API_URL: http://api:8000/api/v1
+    container_name: ausa_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
 
 volumes:
   postgres_data:
+  model_artifacts:
