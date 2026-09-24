@@ -275,3 +275,42 @@ def test_cli_convert_json():
     assert data["exchange_rate"] == 1.7
     assert data["converted_amount"] == 850.0
 
+
+# ==============================================================================
+# 10. Document Legalisation & Recognition Process Tests
+# ==============================================================================
+
+def test_cli_process_curated_route():
+    code, out = run_cli_args(["process", "--route", "de-bachelor-studienkolleg"])
+    assert code == 0
+    assert "ADMISSION ROUTE DOCUMENT LEGALISATION & RECOGNITION" in out
+    assert "de-bachelor-studienkolleg" in out
+    assert "CURATED" in out
+    assert "Required Statutory Steps" in out
+    assert "uni-assist" in out
+
+
+def test_cli_process_not_collected_route():
+    code, out = run_cli_args(["process", "--route", "uk-bachelor-direct"])
+    assert code == 0
+    assert "uk-bachelor-direct" in out
+    assert "NOT_COLLECTED" in out
+    assert "No curated legalisation steps recorded yet" in out
+
+
+def test_cli_process_json_output():
+    code, out = run_cli_args(["--json", "process", "--route", "tr-bachelor-direct"])
+    assert code == 0
+    data = json.loads(out)
+    assert data["route_key"] == "tr-bachelor-direct"
+    assert data["status"] == "curated"
+    assert data["steps_count"] >= 1
+    assert len(data["steps"]) >= 1
+    assert "citation" in data["steps"][0]
+
+
+def test_cli_process_unknown_route():
+    code, out = run_cli_args(["process", "--route", "atlantis-phd-teleport"])
+    assert code == 1
+    assert "Unknown route key" in out
+

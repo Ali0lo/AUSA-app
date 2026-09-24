@@ -186,6 +186,23 @@ Performs multi-currency conversions against the Central Bank of Azerbaijan (CBAR
 
 ---
 
+### `process` — Admission Route Document Legalisation & Recognition Inspector
+Inspects statutory document legalisation and credential recognition procedures for admission routes (sworn translations, uni-assist VPD, diplomas, apostilles, and embassy appointments).
+
+#### Flags:
+- `--route <route_key>`: Route identifier (e.g. `de-bachelor-studienkolleg`, `de-bachelor-direct`, `tr-bachelor-direct`, `uk-bachelor-direct`). Default: `de-bachelor-studienkolleg`.
+
+#### Examples:
+```bash
+# Inspect German Studienkolleg document procedure
+./bin/ausa process --route de-bachelor-studienkolleg
+
+# Output Turkish direct entry process in JSON format
+./bin/ausa --json process --route tr-bachelor-direct
+```
+
+---
+
 ## 3. Scripting & Piping with `--json`
 
 Use `jq` to parse structured outputs in shell scripts:
