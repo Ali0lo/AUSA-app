@@ -203,6 +203,23 @@ Inspects statutory document legalisation and credential recognition procedures f
 
 ---
 
+### `intake` — Free-Text Student Sentence Intake Parser
+Parses a student's free-text sentence (in Azerbaijani or English) into anchored route profile fields (`level_sought`, `qualification_held`, `dim_score`, `ielts`, `gpa`, etc.) with exact substring quotes, while preserving subjects (`interest`) as plain text without inferring a DİM `ixtisas qrupu`.
+
+#### Flags:
+- `--text <string>`: Student sentence in Azerbaijani or English.
+
+#### Examples:
+```bash
+# Parse a free-text sentence in Azerbaijani
+./bin/ausa intake --text "robototexnika oxumaq istəyirəm, attestatım var, bakalavr, DİM balım 520, IELTS 7"
+
+# Output anchored parse result as JSON
+./bin/ausa --json intake --text "I have a bachelor degree, applying for master, GPA 3.7 out of 4, IELTS 7.5"
+```
+
+---
+
 ## 3. Scripting & Piping with `--json`
 
 Use `jq` to parse structured outputs in shell scripts:
@@ -213,3 +230,4 @@ Use `jq` to parse structured outputs in shell scripts:
 # Extract total first-year AZN cost for Germany
 ./bin/ausa --json finance --country DE | jq '.total_first_year_liquidity_azn'
 ```
+

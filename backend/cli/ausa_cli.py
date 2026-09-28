@@ -85,6 +85,10 @@ try:
         STATUS_CURATED,
         STATUS_NOT_COLLECTED,
     )
+    from app.services.agent.intake import (
+        parse_intake,
+        intake_as_dict,
+    )
 except ImportError:
     from backend.app.domain.dim_calculator import (
         DimGroup,
@@ -137,6 +141,10 @@ except ImportError:
         PROCESS_BY_ROUTE_KEY,
         STATUS_CURATED,
         STATUS_NOT_COLLECTED,
+    )
+    from backend.app.services.agent.intake import (
+        parse_intake,
+        intake_as_dict,
     )
 
 CLI_VERSION = "1.0.0"
@@ -675,6 +683,63 @@ def cmd_process(args: argparse.Namespace) -> int:
 
 
 # ==============================================================================
+# 10. Free-Text Student Sentence Intake Parser (intake)
+# ==============================================================================
+
+def cmd_intake(args: argparse.Namespace) -> int:
+    text = (args.text or "").strip()
+    if not text:
+        text = "robototexnika oxumaq istəyirəm, attestatım var, bakalavr, DİM balım 520, IELTS 7"
+
+    intake = parse_intake(text)
+    data = intake_as_dict(intake)
+
+    if args.json:
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+        return 0
+
+    print_banner()
+    print(f"{BOLD}FREE-TEXT STUDENT INTAKE PARSER (ANCHORED EXTRACTION){RESET}")
+    print(f"Input Sentence: {CYAN}{text}{RESET}")
+    ready_color = GREEN if data["ready_to_assess"] else YELLOW
+    print(f"Ready to Assess Routes: {ready_color}{data['ready_to_assess']}{RESET}\n")
+
+    if data["heard"]:
+        print(f"{BOLD}Anchored Fields Heard ({len(data['heard'])}):{RESET}")
+        for item in data["heard"]:
+            print(f"  • {GREEN}{item['field']}{RESET}: {BOLD}{item['value']}{RESET}  (from \"{item['quote']}\")")
+        print()
+    else:
+        print(f"{YELLOW}No anchored values were read from that sentence.{RESET}\n")
+
+    if data["interest"]:
+        print(
+            f"{BOLD}Subject Named:{RESET} {MAGENTA}{data['interest']}{RESET} "
+            f"(carried through as plain text, not mapped to a DİM ixtisas qrupu)\n"
+        )
+
+    if data["still_needed"]:
+        print(f"{BOLD}Still Needed Before Route Assessment:{RESET}")
+        for req in data["still_needed"]:
+            print(f"  • {YELLOW}{req}{RESET}")
+        print()
+
+    if data["worth_asking"]:
+        print(f"{BOLD}Worth Asking Next:{RESET}")
+        for question in data["worth_asking"]:
+            print(f"  • {question}")
+        print()
+
+    if data["notes"]:
+        print(f"{BOLD}Ambiguities / Conflicts:{RESET}")
+        for note in data["notes"]:
+            print(f"  • {RED}{note}{RESET}")
+        print()
+
+    return 0
+
+
+# ==============================================================================
 # Main Parser & CLI Entrypoint
 # ==============================================================================
 
@@ -757,6 +822,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_proc = subparsers.add_parser("process", help="Inspect document legalisation and recognition procedure by route")
     p_proc.add_argument("--route", type=str, default="de-bachelor-studienkolleg", help="Admission route key (e.g. de-bachelor-studienkolleg, tr-bachelor-direct, uk-bachelor-direct)")
 
+    # 10. intake
+    p_intake = subparsers.add_parser("intake", help="Parse free-text student sentence into anchored route profile fields")
+    p_intake.add_argument("--text", type=str, help="Student sentence in Azerbaijani or English")
+
     return parser
 
 
@@ -779,6 +848,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "checklist": cmd_checklist,
         "sop-check": cmd_sop_check,
         "process": cmd_process,
+        "intake": cmd_intake,
     }
 
     handler = handlers.get(args.command)
@@ -791,3 +861,4 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

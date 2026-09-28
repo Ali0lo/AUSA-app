@@ -314,3 +314,46 @@ def test_cli_process_unknown_route():
     assert code == 1
     assert "Unknown route key" in out
 
+
+# ==============================================================================
+# 11. Free-Text Student Sentence Intake Parser Tests
+# ==============================================================================
+
+def test_cli_intake_default_sentence():
+    code, out = run_cli_args(["intake"])
+    assert code == 0
+    assert "FREE-TEXT STUDENT INTAKE PARSER (ANCHORED EXTRACTION)" in out
+    assert "dim_score" in out
+    assert "520" in out
+    assert "robototexnika" in out
+    assert "not mapped to a DİM ixtisas qrupu" in out
+
+
+def test_cli_intake_json_output():
+    code, out = run_cli_args([
+        "--json",
+        "intake",
+        "--text",
+        "I have a bachelor degree, applying for master, GPA 3.7 out of 4, IELTS 7.5",
+    ])
+    assert code == 0
+    data = json.loads(out)
+    assert data["ready_to_assess"] is True
+    assert data["fields"]["level_sought"] == "master"
+    assert data["fields"]["qualification_held"] == "bachelor_degree"
+    assert data["fields"]["gpa"] == 3.7
+    assert data["fields"]["gpa_scale"] == "4.0"
+    assert data["fields"]["ielts"] == 7.5
+
+
+def test_cli_intake_conflicting_values():
+    code, out = run_cli_args([
+        "intake",
+        "--text",
+        "IELTS 6.5 and IELTS 7.0, applying for bachelor",
+    ])
+    assert code == 0
+    assert "Ambiguities / Conflicts:" in out
+    assert "ielts was stated more than once" in out
+
+
