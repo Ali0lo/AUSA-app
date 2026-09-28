@@ -7,9 +7,16 @@ import type { AssessRoutesResponse, RouteUniversity, Scholarship } from "@/types
 const assessRoutes = vi.fn();
 const assessCatalogue = vi.fn().mockResolvedValue({ status: "not_collected", total: 0, items: [] });
 const fetchCatalogue = vi.fn().mockResolvedValue({ status: "not_collected", total: 0, items: [] });
+const parseStudentMessage = vi.fn();
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
-  return { ...actual, assessCatalogue: (...args: unknown[]) => assessCatalogue(...args), fetchCatalogue: (...args: unknown[]) => fetchCatalogue(...args), assessRoutes: (...args: unknown[]) => assessRoutes(...args) };
+  return {
+    ...actual,
+    assessCatalogue: (...args: unknown[]) => assessCatalogue(...args),
+    fetchCatalogue: (...args: unknown[]) => fetchCatalogue(...args),
+    assessRoutes: (...args: unknown[]) => assessRoutes(...args),
+    parseStudentMessage: (...args: unknown[]) => parseStudentMessage(...args)
+  };
 });
 
 function university(overrides: Partial<RouteUniversity> = {}): RouteUniversity {
@@ -533,5 +540,82 @@ describe("RoutePlanner", () => {
     expect(await screen.findByText(/Read from the source page, not yet checked by a person/i)).toBeInTheDocument();
     expect(screen.getByText(/Last checked: 2026-09-02/i)).toBeInTheDocument();
   });
+
+  it("parses a free-text sentence via /routes/parse, fills form fields, and shows heard quotes and plain-text interest without mapping to dim_field_group (D5)", async () => {
+    parseStudentMessage.mockResolvedValueOnce({
+      fields: {
+        level: "bachelor",
+        current_qualification: "attestat",
+        dim_score: 520,
+        ielts: 7
+      },
+      heard: [
+        { field: "current_qualification", value: "attestat", quote: "attestatım var" },
+        { field: "level", value: "bachelor", quote: "bakalavr" },
+        { field: "dim_score", value: 520, quote: "DİM balım 520" },
+        { field: "ielts", value: 7, quote: "IELTS 7" }
+      ],
+      conflicts: [],
+      interest: "robototexnika",
+      ready_to_assess: true,
+      still_needed: [],
+      worth_asking: ["ixtisas qrupu (1–5) — Dövlət Proqramı 1-ci qrupda 400, digərlərində 550 tələb edir"],
+      not_parsed: [],
+      notes: [],
+      instruction: "Call assess_student_routes with fields."
+    });
+
+    render(<RoutePlanner />);
+
+    const input = screen.getByLabelText(/Describe your profile in a sentence/i);
+    await userEvent.type(input, "robototexnika oxumaq istəyirəm, attestatım var, bakalavr, DİM balım 520, IELTS 7");
+    await userEvent.click(screen.getByRole("button", { name: /Read sentence/i }));
+
+    await waitFor(() => expect(parseStudentMessage).toHaveBeenCalledWith(
+      "robototexnika oxumaq istəyirəm, attestatım var, bakalavr, DİM balım 520, IELTS 7"
+    ));
+
+    // Verify heard quotes and plain-text interest are displayed
+    expect(await screen.findByText(/from “DİM balım 520”/i)).toBeInTheDocument();
+    expect(screen.getByText(/from “IELTS 7”/i)).toBeInTheDocument();
+    expect(screen.getByText("robototexnika")).toBeInTheDocument();
+    expect(screen.getByText(/carried through as plain text, not mapped to a DİM ixtisas qrupu/i)).toBeInTheDocument();
+    expect(screen.getByText(/ixtisas qrupu \(1–5\)/i)).toBeInTheDocument();
+
+    // Verify form fields were populated while DİM group stays unmapped ("")
+    expect(screen.getByLabelText(/^DİM$/i)).toHaveValue("520");
+    expect(screen.getByLabelText(/^IELTS$/i)).toHaveValue("7");
+    expect(screen.getByLabelText(/DİM ixtisas qrupu/i)).toHaveValue("");
+  });
+
+  it("displays still_needed and conflict notes when the parsed sentence is incomplete or ambiguous (D5)", async () => {
+    parseStudentMessage.mockResolvedValueOnce({
+      fields: {
+        ielts: 6.5
+      },
+      heard: [
+        { field: "ielts", value: 6.5, quote: "IELTS 6.5" }
+      ],
+      conflicts: ["level"],
+      interest: null,
+      ready_to_assess: false,
+      still_needed: ["level", "current_qualification"],
+      worth_asking: [],
+      not_parsed: [],
+      notes: ["Both bachelor and master were mentioned; ask which degree the student is applying for."],
+      instruction: "Ask for level and current_qualification before calling assess_student_routes."
+    });
+
+    render(<RoutePlanner />);
+
+    const input = screen.getByLabelText(/Describe your profile in a sentence/i);
+    await userEvent.type(input, "IELTS 6.5, bachelor or master");
+    await userEvent.click(screen.getByRole("button", { name: /Read sentence/i }));
+
+    expect(await screen.findByText(/Still needed before assessing routes:/i)).toBeInTheDocument();
+    expect(screen.getByText(/level, current_qualification — select them in the form below\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Both bachelor and master were mentioned/i)).toBeInTheDocument();
+  });
 });
+
 
