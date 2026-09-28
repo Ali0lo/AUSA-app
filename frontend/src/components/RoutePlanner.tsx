@@ -9,13 +9,14 @@ import {
   Sparkles
 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
-import { assessRoutes, getUserFacingError } from "@/lib/api";
+import { assessRoutes, getUserFacingError, parseStudentMessage } from "@/lib/api";
 import baselineFixture from "@/lib/baseline-routes.json";
 import { CatalogueTarget } from "@/components/CatalogueTarget";
 import type {
   AssessRoutesPayload,
   AssessRoutesResponse,
   GradeScaleKey,
+  ParseMessageResponse,
   RoutePlan,
   RouteQualification,
   RouteUniversity,
@@ -562,6 +563,12 @@ export function RoutePlanner() {
   const [error, setError] = useState<{ title: string; message: string } | null>(null);
   const [pending, setPending] = useState(false);
 
+  // D5: Free-text sentence intake state
+  const [intakeSentence, setIntakeSentence] = useState("");
+  const [intakeResult, setIntakeResult] = useState<ParseMessageResponse | null>(null);
+  const [intakePending, setIntakePending] = useState(false);
+  const [intakeError, setIntakeError] = useState<string | null>(null);
+
   // Target university selection
   const [targetUniversity, setTargetUniversity] = useState("Bogazici University");
 
@@ -627,6 +634,41 @@ export function RoutePlanner() {
     setTargetUniversity(uniName);
     setMode("target");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleParseSentence(customText?: string) {
+    const text = (customText ?? intakeSentence).trim();
+    if (!text) return;
+    if (customText !== undefined) setIntakeSentence(customText);
+    setIntakePending(true);
+    setIntakeError(null);
+    try {
+      const parsed = await parseStudentMessage(text);
+      setIntakeResult(parsed);
+      const f = parsed.fields;
+      if (f.level_sought === "bachelor" || f.level_sought === "master") setLevel(f.level_sought);
+      if (f.qualification_held) setQualification(f.qualification_held);
+      if (f.gpa != null) setGpa(String(f.gpa));
+      if (f.gpa_scale) setGpaScale(f.gpa_scale);
+      if (f.ielts != null) setIelts(String(f.ielts));
+      if (f.toefl != null) setToefl(String(f.toefl));
+      if (f.dim_score != null) setDim(String(f.dim_score));
+      if (f.dim_field_group != null) setDimGroup(String(f.dim_field_group));
+      if (f.sat != null) setSat(String(f.sat));
+      if (f.tr_yos != null) setTrYos(String(f.tr_yos));
+      if (f.test_as != null) setTestAs(String(f.test_as));
+      if (f.csca != null) setCsca(String(f.csca));
+      if (f.hsk != null) setHsk(String(f.hsk));
+      if (f.language_certificate_level) setLanguage(f.language_certificate_level);
+      if (f.age != null) setAge(String(f.age));
+      if (f.work_experience_hours != null) setWorkHours(String(f.work_experience_hours));
+      if (f.employer) setEmployer(f.employer);
+      if (f.budget_azn_per_year != null) setBudget(String(f.budget_azn_per_year));
+    } catch (caught) {
+      setIntakeError(getUserFacingError(caught, "Sentence intake").message);
+    } finally {
+      setIntakePending(false);
+    }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -701,6 +743,136 @@ export function RoutePlanner() {
             : "Name a university to check its recorded requirements and application steps."}
         </p>
       </div>
+
+      {/* D5: A sentence is a valid way in (POST /routes/parse) */}
+      {mode === "discovery" && (
+        <section
+          aria-label="Sentence intake"
+          className="mb-8 rounded-3xl border border-white/10 bg-[#13152c]/80 p-5 backdrop-blur-xl sm:p-6"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="eyebrow">Start with a sentence</p>
+              <p className="mt-1 text-xs text-slate-400">
+                Describe what you hold and want in your own words (Azerbaijani or English). Every extracted value is shown beside the exact words it came from so you can verify or edit it in the form below.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                handleParseSentence(
+                  "robototexnika oxumaq istəyirəm, attestatım var, bakalavr, DİM balım 520, IELTS 7"
+                )
+              }
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300 transition-colors hover:border-orange-500/40 hover:text-white"
+            >
+              Try sample sentence
+            </button>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <input
+              id="intake-sentence"
+              aria-label="Describe your profile in a sentence"
+              className="field flex-1"
+              value={intakeSentence}
+              onChange={(event) => setIntakeSentence(event.target.value)}
+              placeholder="e.g. robototexnika oxumaq istəyirəm, DİM balım 520, IELTS 7"
+            />
+            <button
+              type="button"
+              onClick={() => handleParseSentence()}
+              disabled={intakePending || !intakeSentence.trim()}
+              className="btn-primary shrink-0 px-5 py-2.5 text-sm disabled:opacity-50"
+            >
+              {intakePending ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" aria-hidden="true" />
+                  Reading…
+                </>
+              ) : (
+                <>
+                  <Sparkles size={15} aria-hidden="true" />
+                  Read sentence
+                </>
+              )}
+            </button>
+          </div>
+
+          {intakeError && (
+            <p className="mt-3 text-xs text-amber-300" role="status">
+              {intakeError}
+            </p>
+          )}
+
+          {intakeResult && (
+            <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-[#0c0d1b]/70 p-4 text-xs">
+              <div>
+                <p className="font-semibold text-white">
+                  What we read from your sentence (loaded into the form below for you to check or correct):
+                </p>
+                {intakeResult.heard.length > 0 ? (
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {intakeResult.heard.map((item) => (
+                      <li
+                        key={`${item.field}-${item.quote}`}
+                        className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-slate-200"
+                      >
+                        <span className="font-semibold text-emerald-300">{item.field}:</span>{" "}
+                        <span className="font-mono text-white">{String(item.value)}</span>{" "}
+                        <span className="text-slate-400">from &ldquo;{item.quote}&rdquo;</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-1 text-slate-400">
+                    No anchored values were read from that sentence. Everything stays blank until you state it.
+                  </p>
+                )}
+              </div>
+
+              {intakeResult.interest && (
+                <p className="text-slate-300">
+                  <span className="font-semibold text-purple-300">Subject named:</span>{" "}
+                  <span className="text-white">{intakeResult.interest}</span>{" "}
+                  <span className="text-slate-400">
+                    — carried through as plain text, not mapped to a DİM ixtisas qrupu (Group 1 requires 400 for the State Programme vs 550 for other groups).
+                  </span>
+                </p>
+              )}
+
+              {intakeResult.still_needed.length > 0 && (
+                <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3 text-slate-200">
+                  <span className="font-semibold text-orange-300">Still needed before assessing routes: </span>
+                  {intakeResult.still_needed.join(", ")} — select them in the form below.
+                </div>
+              )}
+
+              {intakeResult.worth_asking.length > 0 && (
+                <div>
+                  <p className="font-semibold text-slate-300">Worth specifying so funding gates do not stay unknown:</p>
+                  <ul className="mt-1 list-disc pl-5 space-y-1 text-slate-400">
+                    {intakeResult.worth_asking.map((question) => (
+                      <li key={question}>{question}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {(intakeResult.conflicts.length > 0 || intakeResult.notes.length > 0) && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-slate-200">
+                  <p className="font-semibold text-amber-300">Questions for you to settle in the form:</p>
+                  <ul className="mt-1 list-disc pl-5 space-y-1 text-slate-300">
+                    {intakeResult.notes.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-14">
         {/* Profile Sidebar */}
