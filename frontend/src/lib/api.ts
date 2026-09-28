@@ -6,6 +6,8 @@ import type {
   DocumentSourceInfo,
   FlaggedProgram,
   HealthResponse,
+  HeardField,
+  ParseMessageResponse,
   RegisterPayload,
   RoutePlan,
   RouteUniversity,
@@ -492,6 +494,44 @@ export async function assessRoutes(payload: AssessRoutesPayload): Promise<Assess
     body: JSON.stringify(body)
   });
   assertAssessment(data);
+  return data;
+}
+
+function isHeardField(value: unknown): value is HeardField {
+  return (
+    isRecord(value) &&
+    typeof value.field === "string" &&
+    (typeof value.value === "string" || typeof value.value === "number" || typeof value.value === "boolean") &&
+    typeof value.quote === "string"
+  );
+}
+
+function assertParseMessage(data: unknown): asserts data is ParseMessageResponse {
+  if (
+    !isRecord(data) ||
+    !isRecord(data.fields) ||
+    !Array.isArray(data.heard) ||
+    !data.heard.every(isHeardField) ||
+    !isStringArray(data.conflicts) ||
+    !isOptionalString(data.interest) ||
+    typeof data.ready_to_assess !== "boolean" ||
+    !isStringArray(data.still_needed) ||
+    !isStringArray(data.worth_asking) ||
+    !isStringArray(data.not_parsed) ||
+    !isStringArray(data.notes) ||
+    typeof data.instruction !== "string"
+  ) {
+    invalidResponse("free-text route intake");
+  }
+}
+
+export async function parseStudentMessage(message: string): Promise<ParseMessageResponse> {
+  const data = await request<unknown>("/routes/parse", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message })
+  });
+  assertParseMessage(data);
   return data;
 }
 

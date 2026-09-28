@@ -392,3 +392,22 @@ export interface TargetGapPayload {
   tr_yos?: number;
   test_as?: number;
 }
+
+export interface HeardField {
+  field: string;
+  value: string | number | boolean;
+  quote: string;
+}
+
+export interface ParseMessageResponse {
+  fields: Partial<AssessRoutesPayload>;
+  heard: HeardField[];
+  conflicts: string[];
+  interest: string | null;
+  ready_to_assess: boolean;
+  still_needed: string[];
+  worth_asking: string[];
+  not_parsed: string[];
+  notes: string[];
+  instruction: string;
+}
