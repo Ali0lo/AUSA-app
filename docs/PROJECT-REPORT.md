@@ -86,6 +86,11 @@ AUSA treats missing information as a first-class citizen, categorising absence i
 4. **Provenance & Verification Stamps:** Every requirement displays its provenance (`seed`, `claude-extracted`, or `human-verified`) and `last_checked` date.
 5. **Scale Approximation Warnings (`grade_exact: false`):** Highlights when GPA conversions across disparate educational grading systems are approximate screenings rather than certified conversions.
 
+### D5 · Free-Text Sentence Intake
+- **Anchored Sentence Entry (`POST /routes/parse`):** Students can describe their situation in a sentence (e.g. *"robototexnika oxumaq istəyirəm, attestatım var, bakalavr, DİM balım 520, IELTS 7"*).
+- **Transparent Quote Verification:** Extracted values (`heard`) are loaded into the form alongside the exact words they were read from, never as a silent prefill.
+- **Uninterpreted Subject Interest:** Named subjects (`interest`) are displayed as plain text and never mapped to a DİM `ixtisas qrupu`, because the Dövlət Proqramı threshold shifts by 150 points between Group 1 (400) and other groups (550).
+
 ---
 
 ## 4. Verified System Limitations
@@ -103,12 +108,12 @@ In strict adherence to project honesty and scientific rigour, the system documen
 
 The implementation has been verified through comprehensive automated testing across both frontend and backend suites:
 
-- **Backend Test Suite:** 352 passing unit, domain, and API contract tests (`pytest`, 3 skipped).
-  - Verified route engine transitions and two-hop plan compositions.
-  - Verified State Programme quota algorithms (4,121 catalogue rows).
-  - Verified error handling and contract schemas.
-- **Frontend Test Suite:** 72 passing tests across 13 test suites (`vitest`).
-  - Verified Discovery Flow interactions and status groupings.
+- **Backend Test Suite:** 524 passing unit, domain, and API contract tests (`pytest`, 3 skipped).
+  - Verified route engine transitions, two-hop plan compositions, and anchored free-text sentence parsing (`POST /routes/parse`).
+  - Verified State Programme quota algorithms (4,121 catalogue rows), 14 global scholarships, and curated document legalisation procedures.
+  - Verified Azerbaijan temporal cutoff forecaster (`2023+2024 → 2025`, MAE `19.65`) and 10 CLI subcommands.
+- **Frontend Test Suite:** 131 passing tests across 22 test suites (`vitest`).
+  - Verified Discovery Flow interactions, D5 free-text sentence intake, and status groupings.
   - Verified Target Flow gap analysis and honest catalog gap fallbacks.
   - Verified absence visibility, provenance indicators, and scale flags.
   - Verified API payload contract conformance.

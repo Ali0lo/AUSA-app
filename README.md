@@ -1,7 +1,7 @@
 # AUSA — AI University & Scholarship Advisor
 
 [![Continuous Integration](https://github.com/Ali0lo/AUSA/actions/workflows/ci.yml/badge.svg)](https://github.com/Ali0lo/AUSA/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/Tests-620%20passed%20(100%25)-brightgreen?style=flat-square)](https://github.com/Ali0lo/AUSA)
+[![Tests](https://img.shields.io/badge/Tests-655%20passed%20(100%25)-brightgreen?style=flat-square)](https://github.com/Ali0lo/AUSA)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-16.3-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20pgvector-336791?style=flat-square&logo=postgresql)](https://github.com/pgvector/pgvector)
@@ -209,19 +209,15 @@ mechanical** — a published score threshold the student is measured against. Wh
 committee-decided, AUSA publishes no probability at all
 ([ADR-0008](docs/adr/0008-selectivity-replaces-cutoff-prediction.md)).
 
-| Country | Baseline (department mean) | Model (HistGradientBoosting) | Improvement |
-|---|---|---|---|
-| Turkey | 38.96 MAE | **17.96** | 54% |
-| Azerbaijan | 57.37 MAE | **41.34** | 28% |
-| USA | 112.76 MAE | 95.52 | 15% — too weak to ship |
+| Country | Split | Baseline (department mean) | Model (HistGradientBoosting) | Improvement |
+|---|---|---|---|---|
+| Turkey | GroupKFold by university | 38.96 MAE | **17.96** | 54% |
+| Azerbaijan | Temporal forecast (`2023+2024 → 2025`) | 25.00 MAE | **19.65** | 21% |
+| USA | GroupKFold by university | 112.76 MAE | 95.52 | 15% — too weak to ship |
 
-Reproduce with `backend/scripts/train_cutoff_models.py`; full metrics in `models/metrics.json`,
-which is committed so any predicted number is traceable to the run that produced it.
+Reproduce with `backend/scripts/train_cutoff_models.py`; full metrics in `models/metrics.json` and exploratory analysis in `notebooks/azerbaijan_cutoff_eda.ipynb`.
 
-> **Currently these models are analysis artifacts, not a serving path.** No endpoint loads them.
-> The previous in-process predictor was deleted because it computed a percentage from a hardcoded
-> formula whenever the model files were absent — which, since they are gitignored, was every fresh
-> clone.
+> **Serving architecture:** The Azerbaijan temporal forecaster (`cutoff_azerbaijan.joblib`) is served at `POST /api/v1/azerbaijan/predictions` and rendered on `/azerbaijan` with explicit MAE uncertainty bands (`±19.65` points, never a `P(admit)` probability). If the `.joblib` artifact is absent on a fresh clone before running `train_cutoff_models.py`, the endpoint returns HTTP `503 Service Unavailable` rather than a synthetic fallback formula.
 
 ---
 
@@ -250,8 +246,8 @@ a clear error rather than degraded output.
 ./scripts/verify_system_health.sh
 
 # Individual Test Suites
-cd backend && python -m pytest -q      # 496 backend tests passing (3 skipped)
-cd frontend && npm test                 # 124 vitest tests across 21 suites passing
+cd backend && python -m pytest -q      # 524 backend tests passing (3 skipped)
+cd frontend && npm test                 # 131 vitest tests across 22 suites passing
 cd frontend && npm run typecheck       # strict TypeScript check
 cd frontend && npm run build           # Next.js production build
 
@@ -291,9 +287,9 @@ assumed:
 
 **Working end to end:**
 - Route engine and two-hop composition across 16 routes and 6 destinations
-- State Programme eligibility (4,121 catalogue rows) and 14 external scholarship evaluations
-- `POST /routes/assess`, which returns classified routes (OPEN / UNLOCKABLE / BLOCKED), cost-to-degree rankings, and the named universities each plan reaches
-- Frontend RoutePlanner (`/plan`) with **Discovery Mode**, live profile refining, baseline fixtures, persistent "Your score goes further here" non-exclusion ranking, and explicit absence visibility
+- State Programme eligibility (4,121 catalogue rows) and 14 external scholarship evaluations (`provenance="human-verified"`)
+- `POST /routes/assess` and `POST /routes/parse` (anchored free-text student sentence intake without an LLM)
+- Frontend RoutePlanner (`/plan`) with **Discovery Mode**, **D5 Free-Text Sentence Intake**, live profile refining, baseline fixtures, persistent "Your score goes further here" non-exclusion ranking, and explicit absence visibility
 - Dedicated Target Mode (`/target`, `TargetAnalyzer.tsx` & `POST /routes/target-gap`) providing objective gap statements, scale-aware requirement checklists, and alternatives closing the gap
 - Student Application Dashboard & Comparison Workbench (`/dashboard`) with Dream/Target/Safety tiering, dynamic document checklists, and side-by-side matrices
 - Financial & Visa Proof-of-Funds Simulator (`/finance`) with Sperrkonto, CAS funds, and multi-currency converter
@@ -301,23 +297,20 @@ assumed:
 - DİM Sub-Exam Score Calculator (`/dim-calculator`) with 2,578 historical cutoffs and BANM 650+ rules
 - Statement of Purpose (SOP) & Academic CV Reviewer (`/sop-checker`) with narrative scoring and cliché detection
 - Admissions Timeline & Calendar (`/timeline`) with RFC 5545 `.ics` export
-- AUSA Developer CLI (`bin/ausa`) with 8 subcommands and JSON serialization
-- **496 backend tests** (`pytest`) + **124 frontend tests** (`vitest`) = **620 automated tests passing (100% green)**.
+- Domestic Azerbaijan DİM Cutoff Forecaster (`/azerbaijan` & `POST /api/v1/azerbaijan/predictions`) with temporal validation (`2023+2024 → 2025`, MAE `±19.65`) and exploratory notebook (`notebooks/azerbaijan_cutoff_eda.ipynb`)
+- LangGraph agent wired to `route_tools`, `process_tools`, and `intake_tools`, plus RAG ingestion of curated programme requirements (`scripts/index_catalogue_into_rag.py`)
+- AUSA Developer CLI (`bin/ausa`) with 10 subcommands (`dim-calc`, `finance`, `convert`, `scholarships`, `timeline`, `compare`, `checklist`, `sop-check`, `process`, `intake`) and JSON serialization
+- **524 backend tests** (`pytest`) + **131 frontend tests** (`vitest`) = **655 automated tests passing (100% green)**.
 
 **Four Verified Architectural Limitations:**
 1. **Published cutoffs describe the domestic route in every foreign destination**: German NC tables are explicitly footnoted *"ohne Bildungsausländer\*innen"*; UK and US cutoffs do not govern international quotas. This is why statistical cutoff forecasting is strictly domestic (Azerbaijan-only) and foreign routing is deterministic.
 2. **The ML rests on one country and three intake years**: The gradient-boosted cutoff forecaster is fitted solely to Azerbaijani DİM admission rounds (2023–2025) and cannot generalize to foreign selection mechanisms.
-3. **Every figure in the funding catalogue is `research-brief` provenance until Track A5 lands**: All funding rules reflect official edicts and decrees recorded in curated briefs before human editorial review stamps each row.
-4. **`verified_by` is empty on the DİM training rows until Track A6 lands**: The DİM score history is bulk-extracted from published state gazettes and awaits manual individual audit stamps.
-
-**Built but not yet connected:**
-- The LangGraph agent's tools cannot see routes or the catalogue directly
-- The RAG store holds general documentation but not yet full curated university requirement pages
-- The cutoff models have no serving API path (analysis artifacts)
+3. **Scholarship and funding verification is bounded to published rules**: All 10 route scholarships and 14 global scholarship gates are verified against official funder portals (`provenance="human-verified"`), while committee award rates remain unquantified.
+4. **DİM cutoff provenance is bounded to spot-checked cohorts**: All 2,424 historical DİM rows record their extraction source (`abituryent_journal_4_ocr` or `azerbaijan_universities_json`), with a 20-row multi-institution cohort spot-checked against the printed DİM *Abituriyent* #4 gazette (`verified_by="spot-check-2026-04"`).
 
 **Not built / Deliberately excluded:**
 - Per-programme exact deadlines beyond curated entries
-- Motivation-letter generation (deliberately out of scope)
+- Unverifiable `P(admit)` percentages or hand-tuned `0.5 / 0.3 / 0.2` match scores (prohibited by ADR-0008)
 - Application submission (deliberately out of scope and always will be)
 - Speculative study plans (refused: no empirical data maps uncalibrated study hours to admissions score gains)
 
