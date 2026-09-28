@@ -5,7 +5,7 @@
 - [x] **D2: Target Flow** — Name university, objective gap statements, requirement checklist, process checklist, deadlines, alternatives closing gap, honest uncurated fallback, speculative study plan excluded.
 - [x] **D3: Make Absence Visible** — `unknown_fields` + `not_stated`, distinguish catalogue gap vs country finding, separate `gates_unknown` vs `gates_missing`, `provenance` + `last_checked` on every row, warn on `grade_exact: false`.
 - [x] **D4: Report & README Pass** — Update `README.md`, create `docs/PROJECT-REPORT.md` quoting the four verified limitations verbatim.
-- [ ] **D5: Free-text entry** — `POST /routes/parse` shipped after this brief was closed; the page for it has not been built.
+- [x] **D5: Free-text entry** — `POST /routes/parse` wired into the Discovery flow in `RoutePlanner.tsx`, showing anchored `heard` quotes, editable form prefill, plain-text `interest`, `still_needed`, `worth_asking`, and `conflicts`/`notes`.
 
 ---
 
@@ -49,7 +49,7 @@ One profile step, results refining live, never empty before input.
 8,000 AZN/year — renders Turkey and Poland OPEN, Germany and the UK BLOCKED with both
 unlocks named and costed, and the funded programme set with the band that decided it.
 
-### D5 · A sentence is a valid way in — half a day, **not started**
+### D5 · A sentence is a valid way in — half a day, **COMPLETED**
 
 Arrived after this brief was closed, so it is a new step rather than part of D1.
 `POST /routes/parse` turns *"robototexnika oxumaq istəyirəm, DİM balım 520, IELTS 7"* into
