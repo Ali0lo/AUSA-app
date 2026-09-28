@@ -4,6 +4,7 @@ import {
   ApiError,
   fetchHealth,
   getUserFacingError,
+  parseStudentMessage,
   registerStudent,
   sendChatMessage
 } from "@/lib/api";
@@ -97,4 +98,40 @@ describe("API compatibility layer", () => {
       sources: [{ content_snippet: "Applicants need IELTS 7.0.", source_url: "https://example.edu/rules", page: 4 }]
     });
   });
+
+  it("posts free-text student messages to /routes/parse and validates the response", async () => {
+    const parsePayload = {
+      fields: {
+        level: "bachelor",
+        current_qualification: "attestat",
+        dim_score: 640,
+        ielts: 7.0
+      },
+      heard: [
+        { field: "dim_score", value: 640, quote: "DIM 640" },
+        { field: "ielts", value: 7.0, quote: "IELTS 7.0" }
+      ],
+      conflicts: [],
+      interest: "computer science",
+      ready_to_assess: true,
+      still_needed: [],
+      worth_asking: ["DIM field group (I, II, III or IV)"],
+      not_parsed: [],
+      notes: [],
+      instruction: "Call assess_student_routes with fields."
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse(parsePayload));
+
+    const result = await parseStudentMessage("I have DIM 640 and IELTS 7.0, interested in computer science");
+    expect(result).toEqual(parsePayload);
+    expect(fetchMock.mock.calls[fetchMock.mock.calls.length - 1][0]).toBe(`${API_BASE_URL}/routes/parse`);
+  });
+
+  it("rejects malformed /routes/parse responses with a contract error", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ fields: {}, heard: "invalid" }));
+    await expect(parseStudentMessage("test sentence")).rejects.toThrow(
+      "The backend response for free-text route intake did not match the documented API contract."
+    );
+  });
 });
+
