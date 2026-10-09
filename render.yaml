@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: ausa-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    region: frankfurt
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ausa-db
+          property: connectionString
+      - key: BACKEND_CORS_ORIGINS
+        value: '["https://ausa-app-gamma.vercel.app","http://localhost:3000"]'
+
+databases:
+  - name: ausa-db
+    plan: free
+    region: frankfurt
+    databaseName: ausa_db
+    user: ausa_user

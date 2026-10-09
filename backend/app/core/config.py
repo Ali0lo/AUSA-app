@@ -60,6 +60,16 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://ausa_user:ausa_password@localhost:5432/ausa_db",
         description="Async PostgreSQL Database Connection String"
     )
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                return v.replace("postgres://", "postgresql+asyncpg://", 1)
+            if v.startswith("postgresql://"):
+                return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
     
     # CORS -- exact origins only. Never "*": the API is mounted with
     # allow_credentials=True, and a wildcard there lets any site read a
