@@ -122,7 +122,16 @@ server-side, so there is one origin and no CORS to configure. The API is also pu
 
 **The chatbot** additionally needs an `OPENAI_API_KEY`. Put it in a `.env` file beside
 `docker-compose.yml` and it is passed through; without one the chat endpoint reports that
-search is unavailable and the rest of the product is unaffected.
+search is unavailable and the rest of the product is unaffected. With the key set, build the
+document advisor's knowledge base once (it lives in the database volume, so only
+`down -v` removes it):
+
+```bash
+docker compose exec api python -m scripts.index_documents
+```
+
+It embeds the 47 requirement rows, the 14 scholarships and the State Programme catalogue
+grouped per university, each with its source URL. Nothing in it is hand-written.
 
 To stop, `docker compose down`; to start over from an empty database,
 `docker compose down -v`.

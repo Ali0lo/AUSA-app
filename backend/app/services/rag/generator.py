@@ -12,6 +12,9 @@ If the answer is not contained within the provided context, you must respond str
 "{no_info_msg}"
 
 Do NOT use external knowledge, make assumptions, or fabricate details not present in the context.
+State only what a document says explicitly. A university being on the State Programme funding list says nothing about which qualifications it accepts; never infer admission from it.
+If a document marks a detail "not stated", say it is not stated rather than guessing.
+End the answer with the source URL(s) of the documents you used.
 
 Context:
 ---
