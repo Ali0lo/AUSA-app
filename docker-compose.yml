@@ -117,6 +117,16 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    environment:
+      # The NextAuth route fetches /auth/login and /auth/me itself instead of going
+      # through the proxy, and reads this at runtime. Without it sign-in falls back to
+      # http://localhost:8000, which inside this container is this container.
+      AUSA_API_URL: http://api:8000/api/v1
+      # Signs session JWTs. The code falls back to a string committed to the
+      # repository, so anyone who has read the source could forge a session; this is a
+      # development value and docker-compose.prod.yml demands a real one.
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-local_development_only_not_a_production_secret}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
     depends_on:
       - api
 

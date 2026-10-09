@@ -19,6 +19,13 @@ data/raw/usa
 data/raw/turkey
 data/raw/**/*.zip
 
+# The seed trains AZ only and reads azerbaijan_cutoff_history.csv. The TR and US
+# histories are another 31 MB the image never opens, and they are on the disk of
+# anyone who has run those collection scripts. Excluding the directory and naming the
+# one file back keeps a future processed/ artifact out by default.
+data/processed/*
+!data/processed/azerbaijan_cutoff_history.csv
+
 # Trained artifacts are rebuilt by the seed service, never copied in. Copying one
 # would ship a model whose metrics.json describes a different run.
 models/*.joblib
