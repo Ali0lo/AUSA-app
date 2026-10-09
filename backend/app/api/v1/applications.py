@@ -175,7 +175,9 @@ async def get_my_applications(
 
 
 @router.post(
-    "/",
+    # No trailing slash: Next's proxy strips it (308) and FastAPI would add it back
+    # (307), so a "/" route is unreachable from the browser.
+    "",
     response_model=ApplicationResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Add Program to Application Tracker"

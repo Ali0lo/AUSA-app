@@ -894,7 +894,7 @@ export async function createTrackedApplication(
   },
   token?: string
 ): Promise<TrackedApplication> {
-  const data = await request<unknown>("/applications/", {
+  const data = await request<unknown>("/applications", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

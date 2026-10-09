@@ -166,7 +166,7 @@ async def test_create_application_persists_to_the_database(tracker_env):
     """
     session, headers, owner_id = tracker_env
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-        res = await c.post("/api/v1/applications/", json=CREATE_PAYLOAD, headers=headers)
+        res = await c.post("/api/v1/applications", json=CREATE_PAYLOAD, headers=headers)
 
     assert res.status_code == 201
     data = res.json()
@@ -194,7 +194,7 @@ async def test_create_application_failure_is_reported_not_faked(tracker_env, mon
         "program_name": "M.S. Data Analytics",
     }
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-        res = await c.post("/api/v1/applications/", json=payload, headers=headers)
+        res = await c.post("/api/v1/applications", json=payload, headers=headers)
     assert res.status_code == 503
 
 
@@ -253,7 +253,7 @@ async def test_update_unknown_application_returns_404_not_a_fabricated_record(tr
 
 TRACKER_ROUTES = [
     ("get", "/api/v1/applications/my-applications", None),
-    ("post", "/api/v1/applications/", CREATE_PAYLOAD),
+    ("post", "/api/v1/applications", CREATE_PAYLOAD),
     ("patch", "/api/v1/applications/1/stage", {"stage": "submitted"}),
 ]
 
@@ -275,7 +275,7 @@ def test_student_id_query_parameter_no_longer_grants_access():
 def test_create_cannot_choose_its_own_owner():
     """A student_id in the body must not authenticate or reassign ownership."""
     response = client.post(
-        "/api/v1/applications/",
+        "/api/v1/applications",
         json={**CREATE_PAYLOAD, "student_id": "some-other-student"},
     )
     assert response.status_code == 401
