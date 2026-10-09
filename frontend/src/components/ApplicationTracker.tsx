@@ -21,6 +21,12 @@ const STAGE_COLUMNS = [
 export function ApplicationTracker({ initialApplications, token, onRefresh }: ApplicationTrackerProps) {
   const [applications, setApplications] = useState<TrackedApplication[]>(initialApplications);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  // The page mounts this before its fetch resolves; take each new list it passes down.
+  const [shownList, setShownList] = useState(initialApplications);
+  if (initialApplications !== shownList) {
+    setShownList(initialApplications);
+    setApplications(initialApplications);
+  }
 
   async function handleStageChange(appId: number, nextStage: string) {
     setUpdatingId(appId);

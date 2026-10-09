@@ -11,7 +11,7 @@ import { createTrackedApplication, fetchMyApplications, getUserFacingError, User
 import { TrackedApplication } from "@/types";
 
 export default function ApplicationsTrackerPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [applications, setApplications] = useState<TrackedApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<UserFacingError | null>(null);
@@ -37,6 +37,8 @@ export default function ApplicationsTrackerPage() {
   }
 
   useEffect(() => {
+    // Until the session resolves there is no token yet, and asking without one is a 401.
+    if (status === "loading") return;
     let active = true;
     fetchMyApplications("std_demo", token).then((data) => {
       if (active) { setApplications(data); setError(null); }
@@ -44,7 +46,7 @@ export default function ApplicationsTrackerPage() {
       if (active) { setApplications([]); setError(getUserFacingError(err, "Application tracker loading")); }
     }).finally(() => { if (active) setIsLoading(false); });
     return () => { active = false; };
-  }, [token]);
+  }, [token, status]);
 
   async function handleAddProgram(e: React.FormEvent) {
     e.preventDefault();
