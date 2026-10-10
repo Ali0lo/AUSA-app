@@ -15,6 +15,56 @@ interface ChatBoxProps {
   onProfileUpdate?: (updatedProfile: Partial<StudentProfile>) => void;
 }
 
+function StreamingMessageContent({
+  content,
+  isStreaming,
+  onFinish
+}: {
+  content: string;
+  isStreaming?: boolean;
+  onFinish?: () => void;
+}) {
+  const [displayedText, setDisplayedText] = useState(() => (
+    isStreaming && process.env.NODE_ENV !== "test" ? "" : content
+  ));
+  const [done, setDone] = useState(!isStreaming || process.env.NODE_ENV === "test");
+
+  useEffect(() => {
+    if (!isStreaming || done || process.env.NODE_ENV === "test") {
+      setDisplayedText(content);
+      setDone(true);
+      return;
+    }
+
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      const step = Math.max(2, Math.ceil(content.length / 50));
+      currentIndex = Math.min(content.length, currentIndex + step);
+      setDisplayedText(content.slice(0, currentIndex));
+
+      if (currentIndex >= content.length) {
+        clearInterval(interval);
+        setDone(true);
+        onFinish?.();
+      }
+    }, 16);
+
+    return () => clearInterval(interval);
+  }, [content, isStreaming, done, onFinish]);
+
+  return (
+    <div className="whitespace-pre-wrap text-sm leading-6">
+      {displayedText}
+      {!done && (
+        <span
+          className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-accent align-middle"
+          aria-hidden="true"
+        />
+      )}
+    </div>
+  );
+}
+
 export function ChatBox({
   studentId = "std_demo",
   programId = "prog_101",
@@ -27,6 +77,7 @@ export function ChatBox({
   const [input, setInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<UserFacingError | null>(null);
   const [lastSubmitted, setLastSubmitted] = useState<string | null>(null);
@@ -68,8 +119,9 @@ export function ChatBox({
         response = await sendChatMessage(clean, activeMode, studentId, programId, token);
       }
 
+      const assistantId = `assistant-${Date.now()}`;
       const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
+        id: assistantId,
         role: "assistant",
         content: response.reply,
         timestamp: timestamp(),
@@ -77,6 +129,7 @@ export function ChatBox({
         application_stage: response.applicationStage,
         missing_documents: response.missingDocs
       };
+      setStreamingMessageId(assistantId);
       setMessages((current) => [...current, assistantMessage]);
       setLastSubmitted(null);
       setSelectedFile(null);
@@ -159,7 +212,15 @@ export function ChatBox({
 
         {messages.map((message) => (
           <article key={message.id} className={`max-w-[92%] border p-4 sm:max-w-[82%] ${message.role === "user" ? "ml-auto border-ink bg-ink text-paper" : "border-quiet bg-paper text-ink"}`}>
-            <div className="whitespace-pre-wrap text-sm leading-6">{message.content}</div>
+            {message.role === "assistant" ? (
+              <StreamingMessageContent
+                content={message.content}
+                isStreaming={streamingMessageId === message.id}
+                onFinish={() => setStreamingMessageId(null)}
+              />
+            ) : (
+              <div className="whitespace-pre-wrap text-sm leading-6">{message.content}</div>
+            )}
             {message.sources && message.sources.length > 0 && (
               <div className="mt-4 border-t border-quiet pt-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Sources returned · {message.sources.length}</p>
@@ -192,7 +253,18 @@ export function ChatBox({
           </article>
         ))}
 
-        {isLoading && <p className="text-sm font-semibold text-muted" role="status">Waiting for the backend response...</p>}
+        {isLoading && (
+          <div className="max-w-[92%] border border-quiet bg-paper p-4 text-ink sm:max-w-[82%]" role="status">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-accent animate-bounce [animation-delay:-0.3s]" />
+              <span className="h-2 w-2 rounded-full bg-accent animate-bounce [animation-delay:-0.15s]" />
+              <span className="h-2 w-2 rounded-full bg-accent animate-bounce" />
+              <span className="ml-2 text-xs font-semibold uppercase tracking-wider text-muted">
+                AI Advisor is analyzing...
+              </span>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="border border-danger bg-paper p-5" role="alert">
