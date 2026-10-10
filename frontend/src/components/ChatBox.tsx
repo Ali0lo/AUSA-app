@@ -12,6 +12,8 @@ interface ChatBoxProps {
   programId?: string;
   lockedMode?: "rag" | "agent";
   token?: string;
+  // Ready questions shown as buttons; clicking one fills the box without sending it.
+  examples?: readonly string[];
   onStateUpdate?: (stage: string, missingDocs: string[], draftedLetter?: string) => void;
   onProfileUpdate?: (updatedProfile: Partial<StudentProfile>) => void;
 }
@@ -109,6 +111,7 @@ export function ChatBox({
   programId = "prog_101",
   lockedMode,
   token,
+  examples,
   onStateUpdate,
   onProfileUpdate
 }: ChatBoxProps) {
@@ -355,6 +358,21 @@ export function ChatBox({
             >
               <X size={14} aria-hidden="true" />
             </button>
+          </div>
+        )}
+
+        {examples && examples.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2" aria-label="Example questions">
+            {examples.map((example) => (
+              <button
+                key={example}
+                type="button"
+                onClick={() => setInput(example)}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-left text-xs text-slate-300 transition-colors hover:border-orange-500/40 hover:text-white"
+              >
+                {example}
+              </button>
+            ))}
           </div>
         )}
 

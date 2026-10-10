@@ -259,6 +259,32 @@ describe("TargetAnalyzer Component", () => {
     });
   });
 
+  it("fills the demo example into the form and assesses exactly that profile", async () => {
+    const user = userEvent.setup();
+    render(<TargetAnalyzer />);
+
+    await user.click(screen.getByRole("button", { name: /Try demo example/i }));
+
+    expect(screen.getByLabelText(/Target University/i)).toHaveValue("LMU Munich");
+    expect(screen.getByDisplayValue("6.5")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("610")).toBeInTheDocument();
+    expect(assessTargetGap).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: /Analyze Target Gap/i }));
+
+    await waitFor(() => {
+      expect(assessTargetGap).toHaveBeenCalledWith(
+        expect.objectContaining({
+          university_name: "LMU Munich",
+          level: "bachelor",
+          qualification_held: "attestat",
+          ielts: 6.5,
+          dim_score: 610
+        })
+      );
+    });
+  });
+
   it("renders user-friendly error message when assessment fails", async () => {
     vi.mocked(assessTargetGap).mockRejectedValueOnce(new Error("Network connection lost"));
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAzerbaijanPredictions, type AzerbaijanPrediction, ApiError } from "@/lib/api";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { DEMO_AZERBAIJAN } from "@/lib/demoExamples";
 import { useLanguage } from "@/lib/i18n";
 
 function verdict(row: AzerbaijanPrediction, score: number | null) {
@@ -57,7 +58,8 @@ export default function AzerbaijanPage() {
         group2: "2-я группа",
         group3: "3-я группа",
         group4: "4-я группа",
-        group5: "5-я группа"
+        group5: "5-я группа",
+        demo: "Демо-пример"
       }
     : language === "az"
       ? {
@@ -90,7 +92,8 @@ export default function AzerbaijanPage() {
           group2: "II qrup",
           group3: "III qrup",
           group4: "IV qrup",
-          group5: "V qrup"
+          group5: "V qrup",
+          demo: "Demo nümunəsi"
         }
       : {
           eyebrow: "Azerbaijan · DİM Admissions",
@@ -122,7 +125,8 @@ export default function AzerbaijanPage() {
           group2: "Group 2",
           group3: "Group 3",
           group4: "Group 4",
-          group5: "Group 5"
+          group5: "Group 5",
+          demo: "Try demo example"
         };
 
   const POPULAR_UNIVERSITIES = [
@@ -193,6 +197,17 @@ export default function AzerbaijanPage() {
                 {item.label}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => {
+                setUniversity(DEMO_AZERBAIJAN.university);
+                setGroup(DEMO_AZERBAIJAN.group);
+                setScore(DEMO_AZERBAIJAN.score);
+              }}
+              className="rounded-full border border-dashed border-orange-500/40 px-3.5 py-1.5 text-xs font-medium text-orange-300 transition-all hover:bg-orange-500/10"
+            >
+              {copy.demo}
+            </button>
           </div>
 
           <div className="grid gap-5 md:grid-cols-3">

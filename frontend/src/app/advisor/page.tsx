@@ -5,6 +5,7 @@ import { ChatBox } from "@/components/ChatBox";
 import { FeatureTag } from "@/components/FeatureTag";
 import { Notice } from "@/components/Notice";
 import { ServiceStatus } from "@/components/ServiceStatus";
+import { DEMO_ADVISOR_QUESTIONS } from "@/lib/demoExamples";
 import { useLanguage } from "@/lib/i18n";
 
 export default function AdvisorPage() {
@@ -52,7 +53,7 @@ export default function AdvisorPage() {
             </li>
           </ul>
         </aside>
-        <ChatBox lockedMode="rag" token={session?.user?.accessToken} />
+        <ChatBox lockedMode="rag" token={session?.user?.accessToken} examples={DEMO_ADVISOR_QUESTIONS} />
       </div>
     </div>
   );

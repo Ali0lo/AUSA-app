@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RoutePlanner } from "@/components/RoutePlanner";
+import { DEMO_SENTENCE } from "@/lib/demoExamples";
 import type { AssessRoutesResponse, RouteUniversity, Scholarship } from "@/types";
 
 const assessRoutes = vi.fn();
@@ -539,6 +540,19 @@ describe("RoutePlanner", () => {
 
     expect(await screen.findByText(/Read from the source page, not yet checked by a person/i)).toBeInTheDocument();
     expect(screen.getByText(/Last checked: 2026-09-02/i)).toBeInTheDocument();
+  });
+
+  it("reads the demo sentence when the sample button is clicked", async () => {
+    parseStudentMessage.mockResolvedValueOnce({
+      fields: {}, heard: [], conflicts: [], interest: null, ready_to_assess: false,
+      still_needed: [], worth_asking: [], not_parsed: [], notes: [], instruction: ""
+    });
+    render(<RoutePlanner />);
+
+    await userEvent.click(screen.getByRole("button", { name: /Try demo example/i }));
+
+    await waitFor(() => expect(parseStudentMessage).toHaveBeenCalledWith(DEMO_SENTENCE));
+    expect(screen.getByLabelText(/Describe your profile in a sentence/i)).toHaveValue(DEMO_SENTENCE);
   });
 
   it("parses a free-text sentence via /routes/parse, fills form fields, and shows heard quotes and plain-text interest without mapping to dim_field_group (D5)", async () => {

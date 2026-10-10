@@ -9,6 +9,7 @@ import { DocumentChecklist } from "@/components/DocumentChecklist";
 import { FeatureTag } from "@/components/FeatureTag";
 import { Notice } from "@/components/Notice";
 import { ServiceStatus } from "@/components/ServiceStatus";
+import { DEMO_AGENT_MESSAGE } from "@/lib/demoExamples";
 import { useLanguage } from "@/lib/i18n";
 import { downloadApplicationDossierPdf, fetchAgentState, getUserFacingError, UserFacingError } from "@/lib/api";
 
@@ -214,6 +215,7 @@ export default function ApplicationPage() {
             programId="prog_101"
             lockedMode="agent"
             token={session?.user?.accessToken}
+            examples={[DEMO_AGENT_MESSAGE]}
             onStateUpdate={(nextStage, documents, letter) => {
               setStage(nextStage as ApplicationStage);
               setMissingDocuments(documents);

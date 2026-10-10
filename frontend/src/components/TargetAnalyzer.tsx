@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { DEMO_TARGET } from "@/lib/demoExamples";
 import {
   assessTargetGap,
   fetchTargetCatalog,
@@ -142,6 +143,19 @@ export function TargetAnalyzer({
     } finally {
       setLoading(false);
     }
+  }
+
+  // Fills the checked demo profile; the presenter still clicks Analyze, so the audience sees the input first.
+  function fillDemoExample() {
+    setUniversityInput(DEMO_TARGET.university);
+    setLevel("bachelor");
+    setQualification("attestat");
+    setGpa("");
+    setGpaScale("5.0");
+    setIelts(DEMO_TARGET.ielts);
+    setToefl("");
+    setDimScore(DEMO_TARGET.dimScore);
+    setSat("");
   }
 
   function handleSelectUniversity(name: string) {
@@ -369,7 +383,10 @@ export function TargetAnalyzer({
         </div>
 
         {/* Action button */}
-        <div className="mt-7 flex justify-end">
+        <div className="mt-7 flex flex-wrap justify-end gap-3">
+          <button type="button" className="button-quiet min-h-12 text-sm" onClick={fillDemoExample}>
+            Try demo example
+          </button>
           <button
             type="button"
             onClick={() => handleAnalyze()}

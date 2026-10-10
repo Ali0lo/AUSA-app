@@ -12,6 +12,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { assessRoutes, getUserFacingError, parseStudentMessage } from "@/lib/api";
 import baselineFixture from "@/lib/baseline-routes.json";
 import { CatalogueTarget } from "@/components/CatalogueTarget";
+import { DEMO_SENTENCE } from "@/lib/demoExamples";
 import { useLanguage } from "@/lib/i18n";
 import type {
   AssessRoutesPayload,
@@ -761,14 +762,10 @@ export function RoutePlanner() {
             </div>
             <button
               type="button"
-              onClick={() =>
-                handleParseSentence(
-                  "robototexnika oxumaq istəyirəm, attestatım var, bakalavr, DİM balım 520, IELTS 7"
-                )
-              }
+              onClick={() => handleParseSentence(DEMO_SENTENCE)}
               className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300 transition-colors hover:border-orange-500/40 hover:text-white"
             >
-              Try sample sentence
+              Try demo example
             </button>
           </div>
 

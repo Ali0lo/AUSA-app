@@ -33,6 +33,16 @@ describe("ChatBox", () => {
     expect(screen.queryByRole("link", { name: "Open source" })).not.toBeInTheDocument();
   });
 
+  it("fills the question from an example without sending it", async () => {
+    const user = userEvent.setup();
+    render(<ChatBox lockedMode="rag" examples={["What does Türkiye Bursları cover?"]} />);
+
+    await user.click(screen.getByRole("button", { name: "What does Türkiye Bursları cover?" }));
+
+    expect(screen.getByRole("textbox", { name: "Question" })).toHaveValue("What does Türkiye Bursları cover?");
+    expect(api.sendChatMessage).not.toHaveBeenCalled();
+  });
+
   it("renders the model's markdown instead of showing its symbols, and links only web addresses", async () => {
     const user = userEvent.setup();
     api.sendChatMessage.mockResolvedValue({
