@@ -12,6 +12,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { assessRoutes, getUserFacingError, parseStudentMessage } from "@/lib/api";
 import baselineFixture from "@/lib/baseline-routes.json";
 import { CatalogueTarget } from "@/components/CatalogueTarget";
+import { useLanguage } from "@/lib/i18n";
 import type {
   AssessRoutesPayload,
   AssessRoutesResponse,
@@ -534,6 +535,7 @@ function ScholarshipCard({ scholarship }: { scholarship: Scholarship }) {
 }
 
 export function RoutePlanner() {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<"discovery" | "target">("discovery");
   const [level, setLevel] = useState<"bachelor" | "master">("bachelor");
   const [qualification, setQualification] = useState<RouteQualification>("attestat");
@@ -721,7 +723,7 @@ export function RoutePlanner() {
             }`}
           >
             <Compass size={16} aria-hidden="true" />
-            Discovery: Explore all routes
+            {t("discoveryTab", "Discovery: Explore all routes")}
           </button>
           <button
             type="button"
@@ -733,14 +735,14 @@ export function RoutePlanner() {
             }`}
           >
             <Crosshair size={16} aria-hidden="true" />
-            Target: Check a university
+            {t("targetTab", "Target: Check a university")}
           </button>
         </div>
 
         <p className="text-xs text-slate-400">
           {mode === "discovery"
-            ? "Enter your credentials to see every reachable route."
-            : "Name a university to check its recorded requirements and application steps."}
+            ? t("discoveryTabDesc", "Enter your credentials to see every reachable route.")
+            : t("targetTabDesc", "Name a university to check its recorded requirements and application steps.")}
         </p>
       </div>
 
@@ -773,7 +775,7 @@ export function RoutePlanner() {
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <input
               id="intake-sentence"
-              aria-label="Describe your profile in a sentence"
+              aria-label={t("sentenceIntakeTitle", "Describe your profile in a sentence")}
               className="field flex-1"
               value={intakeSentence}
               onChange={(event) => setIntakeSentence(event.target.value)}
@@ -788,12 +790,12 @@ export function RoutePlanner() {
               {intakePending ? (
                 <>
                   <Loader2 size={15} className="animate-spin" aria-hidden="true" />
-                  Reading…
+                  {t("readingSentence", "Reading…")}
                 </>
               ) : (
                 <>
                   <Sparkles size={15} aria-hidden="true" />
-                  Read sentence
+                  {t("readSentenceBtn", "Read sentence")}
                 </>
               )}
             </button>
@@ -1151,11 +1153,11 @@ export function RoutePlanner() {
             {pending ? (
               <>
                 <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-                Checking routes
+                {t("planningRoutes", "Checking routes")}
               </>
             ) : (
               <>
-                Show my options
+                {t("showOptionsBtn", "Show my options")}
                 <ArrowRight size={16} aria-hidden="true" />
               </>
             )}
@@ -1261,7 +1263,7 @@ export function RoutePlanner() {
               {/* Group 1: OPEN routes */}
               <section className="mt-6">
                 <div className="flex items-center gap-3">
-                  <h3 className="font-sans text-2xl font-bold text-white">Open Routes</h3>
+                  <h3 className="font-sans text-2xl font-bold text-white">{t("openRoutesHeading", "Open Routes")}</h3>
                   <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">Direct entry</span>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
@@ -1289,7 +1291,7 @@ export function RoutePlanner() {
               {/* Group 2: UNLOCKABLE routes */}
               <section className="mt-10">
                 <div className="flex items-center gap-3">
-                  <h3 className="font-sans text-2xl font-bold text-white">Unlockable Routes</h3>
+                  <h3 className="font-sans text-2xl font-bold text-white">{t("unlockableRoutesHeading", "Unlockable Routes")}</h3>
                   <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-orange-400">Pathways available</span>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">

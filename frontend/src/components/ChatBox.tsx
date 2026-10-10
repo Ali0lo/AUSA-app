@@ -4,6 +4,7 @@ import { ArrowUp, ExternalLink, Paperclip, RefreshCw, X } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { getUserFacingError, sendChatMessage, uploadDocumentAndChat, UserFacingError } from "@/lib/api";
 import { safeExternalUrl, timestamp } from "@/lib/format";
+import { useLanguage } from "@/lib/i18n";
 import { ChatMessage, StudentProfile } from "@/types";
 
 interface ChatBoxProps {
@@ -72,6 +73,7 @@ export function ChatBox({
   onStateUpdate,
   onProfileUpdate
 }: ChatBoxProps) {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<"rag" | "agent">(lockedMode || "rag");
   const [input, setInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -170,9 +172,9 @@ export function ChatBox({
     <section className="panel-strong flex min-h-[620px] flex-col overflow-hidden shadow-2xl" aria-label={activeMode === "rag" ? "AI advisor conversation" : "Application assistant conversation"}>
       <div className="flex flex-col gap-4 border-b border-white/10 bg-[#13152c]/90 p-5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-serif text-2xl font-semibold text-white">{activeMode === "rag" ? "Ask the document advisor" : "Application assistant"}</h2>
+          <h2 className="font-serif text-2xl font-semibold text-white">{activeMode === "rag" ? t("askDocumentAdvisor") : t("applicationAssistant")}</h2>
           <p className="mt-1 text-sm text-slate-400">
-            {activeMode === "rag" ? "Answers depend on retrieved university documents." : "Upload academic documents (PDFs, transcripts) to parse metrics and update your profile."}
+            {activeMode === "rag" ? t("advisorSubtext") : t("applicationAssistantDesc")}
           </p>
         </div>
         {!lockedMode && (
@@ -187,7 +189,7 @@ export function ChatBox({
               onClick={() => changeMode("rag")}
               aria-pressed={mode === "rag"}
             >
-              Advisor
+              {t("advisorModeRag")}
             </button>
             <button
               type="button"
@@ -199,7 +201,7 @@ export function ChatBox({
               onClick={() => changeMode("agent")}
               aria-pressed={mode === "agent"}
             >
-              Application
+              {t("advisorModeAgent")}
             </button>
           </div>
         )}
@@ -237,7 +239,7 @@ export function ChatBox({
             )}
             {message.sources && message.sources.length > 0 && (
               <div className="mt-4 border-t border-white/10 pt-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Sources returned · {message.sources.length}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{t("sourcesReturned")} · {message.sources.length}</p>
                 <ul className="mt-3 space-y-3">
                   {message.sources.map((source, index) => {
                     const sourceUrl = safeExternalUrl(source.source_url);
@@ -247,7 +249,7 @@ export function ChatBox({
                         {source.page !== undefined && source.page !== null && <p className="mt-1 font-mono text-[0.7rem] text-slate-400">Page {source.page}</p>}
                         {sourceUrl && (
                           <a className="mt-2 inline-flex items-center gap-1 font-semibold text-accent underline underline-offset-4 hover:text-orange-400" href={sourceUrl} target="_blank" rel="noopener noreferrer">
-                            Open source
+                            {t("openSource")}
                             <ExternalLink size={12} aria-hidden="true" />
                           </a>
                         )}
@@ -274,7 +276,7 @@ export function ChatBox({
               <span className="h-2 w-2 rounded-full bg-accent animate-bounce [animation-delay:-0.15s]" />
               <span className="h-2 w-2 rounded-full bg-accent animate-bounce" />
               <span className="ml-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                AI Advisor is analyzing...
+                {t("advisorThinking")}
               </span>
             </div>
           </div>
@@ -318,7 +320,7 @@ export function ChatBox({
         )}
 
         <label className="field-label" htmlFor={`chat-input-${activeMode}`}>
-          {activeMode === "rag" ? "Question" : "Message to the application agent"}
+          {activeMode === "rag" ? t("questionLabel") : t("messageToAgent")}
         </label>
         <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
           <textarea
@@ -328,8 +330,8 @@ export function ChatBox({
             onChange={(event) => setInput(event.target.value)}
             placeholder={
               activeMode === "rag"
-                ? "What is the IELTS requirement?"
-                : "Ask a question or upload a transcript PDF (📎 button) to auto-update your profile..."
+                ? t("chatRagPlaceholder")
+                : t("chatAgentPlaceholder")
             }
             maxLength={2000}
           />
@@ -351,7 +353,7 @@ export function ChatBox({
               title="Attach document PDF"
             >
               <Paperclip size={18} aria-hidden="true" />
-              <span className="hidden sm:inline">Attach</span>
+              <span className="hidden sm:inline">{t("attach")}</span>
             </button>
             <button
               type="submit"
@@ -359,12 +361,12 @@ export function ChatBox({
               disabled={(!input.trim() && !selectedFile) || isLoading}
             >
               <ArrowUp size={18} aria-hidden="true" />
-              {isLoading ? "Sending" : "Send"}
+              {isLoading ? t("sending") : t("send")}
             </button>
           </div>
         </div>
         <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
-          <span>{activeMode === "rag" ? "No external web knowledge is requested." : "Attach PDF transcript to extract GPA and IELTS scores automatically."}</span>
+          <span>{activeMode === "rag" ? t("noWebKnowledgeNotice") : t("chatAgentPlaceholder")}</span>
           <span>{input.length}/2000</span>
         </div>
       </form>

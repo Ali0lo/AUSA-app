@@ -29,8 +29,10 @@ import {
   X,
   Sparkles,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 export function ScholarshipExplorer() {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("all");
   const [selectedDegree, setSelectedDegree] = useState("all");
@@ -140,14 +142,13 @@ export function ScholarshipExplorer() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-orange-400">
               <Award className="h-3.5 w-3.5" />
-              Comprehensive Global Scholarship Engine
+              {t("scholarshipsBadge", "Comprehensive Global Scholarship Engine")}
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-              Global & Bilateral Scholarships Hub
+              {t("scholarshipsHeading", "Global & Bilateral Scholarships Hub")}
             </h1>
             <p className="max-w-2xl text-sm sm:text-base text-slate-300">
-              Explore 14 official government, bilateral, and state scholarship programmes accessible to Azerbaijani students.
-              Evaluate discrete qualification gates (Chevening work hours, YTB age limits, Italian ISEE-U ceilings) with honest feedback.
+              {t("scholarshipsSubtitle", "Explore 14 official government, bilateral, and state scholarship programmes accessible to Azerbaijani students. Evaluate discrete qualification gates (Chevening work hours, YTB age limits, Italian ISEE-U ceilings) with honest feedback.")}
             </p>
           </div>
 

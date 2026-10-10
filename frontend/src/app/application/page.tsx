@@ -9,12 +9,14 @@ import { DocumentChecklist } from "@/components/DocumentChecklist";
 import { FeatureTag } from "@/components/FeatureTag";
 import { Notice } from "@/components/Notice";
 import { ServiceStatus } from "@/components/ServiceStatus";
+import { useLanguage } from "@/lib/i18n";
 import { downloadApplicationDossierPdf, fetchAgentState, getUserFacingError, UserFacingError } from "@/lib/api";
 
 const initialDocuments = ["official_transcript", "passport_copy", "motivation_letter"];
 
 export default function ApplicationPage() {
   const { data: session } = useSession();
+  const { t } = useLanguage();
   const [stage, setStage] = useState<ApplicationStage>("gathering_info");
   const [missingDocuments, setMissingDocuments] = useState<string[]>(initialDocuments);
   const [draftedLetter, setDraftedLetter] = useState<string | null>(null);
@@ -130,12 +132,12 @@ export default function ApplicationPage() {
       <div className="flex flex-col gap-6 border-b border-line pb-8 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <div className="flex flex-wrap items-center gap-3">
-            <p className="eyebrow">Application preparation</p>
+            <p className="eyebrow">{t("applicationAssistant")}</p>
             <FeatureTag state="demo" label="Demo workflow" />
           </div>
-          <h1 className="page-heading mt-4">Exercise the current application-assistant workflow.</h1>
+          <h1 className="page-heading mt-4">{t("applicationAssistantHeading", "Exercise the current application-assistant workflow.")}</h1>
           <p className="body-large mt-5">
-            This page connects to the existing LangGraph endpoints while identifying the canned document, deadline, and letter data as a demonstration.
+            {t("applicationAssistantDesc", "This page connects to the existing LangGraph endpoints while identifying the canned document, deadline, and letter data as a demonstration.")}
           </p>
         </div>
         <ServiceStatus />

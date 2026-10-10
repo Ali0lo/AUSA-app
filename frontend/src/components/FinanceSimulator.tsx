@@ -36,10 +36,12 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 type ActiveTab = "germany" | "uk" | "usa" | "italy" | "compare" | "converter";
 
 export function FinanceSimulator() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<ActiveTab>("germany");
   const [copied, setCopied] = useState(false);
 
@@ -189,14 +191,13 @@ export function FinanceSimulator() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-orange-400">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Statutory Visa & Funds Simulator
+              {t("financeSimulatorBadge")}
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-              Student Visa, Blocked Account & Living Cost Simulator
+              {t("financeSimulatorHeading")}
             </h1>
             <p className="max-w-2xl text-sm sm:text-base text-slate-300">
-              Compute official statutory bank proof-of-funds for Germany (§ 16b Sperrkonto), UK CAS 28-day maintenance,
-              US Form I-20 Cost of Attendance, and Italy ISEE-U/DSU regional grants with real-time AZN conversion.
+              {t("financeSimulatorSubtitle")}
             </p>
           </div>
 
@@ -207,12 +208,12 @@ export function FinanceSimulator() {
             {copied ? (
               <>
                 <Check className="h-4 w-4 text-emerald-400" />
-                <span className="text-emerald-300">Copied to clipboard</span>
+                <span className="text-emerald-300">{t("copiedToClipboard")}</span>
               </>
             ) : (
               <>
                 <Copy className="h-4 w-4 text-slate-400" />
-                <span>Copy summary</span>
+                <span>{t("copySummaryBtn")}</span>
               </>
             )}
           </button>

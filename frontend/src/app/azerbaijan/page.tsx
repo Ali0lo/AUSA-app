@@ -16,14 +16,6 @@ function verdict(row: AzerbaijanPrediction, score: number | null) {
   return "close";
 }
 
-const POPULAR_UNIVERSITIES = [
-  { label: "All Universities", value: "" },
-  { label: "Baku Higher Oil School (BHOS)", value: "bhos" },
-  { label: "ADA University", value: "ada" },
-  { label: "UNEC", value: "unec" },
-  { label: "BDU", value: "bdu" },
-];
-
 export default function AzerbaijanPage() {
   const { language } = useLanguage();
   const [university, setUniversity] = useState("");
@@ -33,11 +25,113 @@ export default function AzerbaijanPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const scoreValue = score === "" ? null : Number(score);
+
   const copy = language === "ru"
-    ? { eyebrow: "Азербайджан · DİM", title: "Каким может быть следующий проходной балл?", intro: "Прогноз опубликованных проходных баллов DİM для государственных программ азербайджанских университетов на основе истории поступления.", filter: "Фильтр прогнозов Азербайджана", university: "Университет", group: "Группа DİM", allGroups: "Все группы", score: "Ваш балл DİM (необязательно)", search: "Поиск университета", noResults: "Нет прогнозов, соответствующих вашему поиску.", scholarship: "Полная стипендия" }
+    ? {
+        eyebrow: "Азербайджан · DİM",
+        title: "Каким может быть следующий проходной балл?",
+        intro: "Прогноз опубликованных проходных баллов DİM для государственных программ азербайджанских университетов на основе истории поступления.",
+        filter: "Фильтр прогнозов Азербайджана",
+        university: "Университет",
+        group: "Группа DİM",
+        allGroups: "Все группы",
+        allUnis: "Все университеты",
+        score: "Ваш балл DİM (необязательно)",
+        search: "Поиск университета",
+        noResults: "Нет прогнозов, соответствующих вашему поиску.",
+        scholarship: "Полная стипендия (Госзаказ)",
+        bandHelp: "Диапазон отражает интервал устойчивости и неопределённости. «Проходит» означает, что ваш балл превышает прогнозируемый порог.",
+        clears: "проходит",
+        clearsCutoff: "проходит по баллу",
+        close: "на грани прохождения",
+        below: "ниже проходного балла",
+        cutoffLabel: "Проходной балл (Госзаказ)",
+        bandLabel: "Диапазон",
+        projectionYear: "Год прогноза",
+        upcomingIntake: "Ближайший приём",
+        methodology: "Методология",
+        historicalData: "Исторические данные",
+        yearsHistory: "лет приёма",
+        officialStandard: "Официальный стандарт",
+        group1: "1-я группа",
+        group2: "2-я группа",
+        group3: "3-я группа",
+        group4: "4-я группа",
+        group5: "5-я группа"
+      }
     : language === "az"
-      ? { eyebrow: "Azərbaycan · DİM", title: "Növbəti keçid balı nə qədər ola bilər?", intro: "Azərbaycan universitetlərində dövlət sifarişli proqramlar üçün DİM keçid ballarını qəbul tarixçəsinə əsasən proqnozlaşdırır.", filter: "Azərbaycan proqnozlarını filtrlə", university: "Universitet", group: "DİM qrupu", allGroups: "Bütün qruplar", score: "DİM balınız (istəyə bağlı)", search: "Universitet axtar", noResults: "Axtarışınıza uyğun proqnoz tapılmadı.", scholarship: "Tam təqaüd" }
-      : { eyebrow: "Azerbaijan · DİM Admissions", title: "What may the next cutoff be?", intro: "Predicts published DİM cutoffs for state-funded programmes at Azerbaijani universities from official cutoff history.", filter: "Filter Azerbaijan predictions", university: "University", group: "DİM group", allGroups: "All groups", score: "Your DİM score (optional)", search: "Search a university", noResults: "No Azerbaijan cutoff predictions are available matching your search.", scholarship: "Full Scholarship" };
+      ? {
+          eyebrow: "Azərbaycan · DİM",
+          title: "Növbəti keçid balı nə qədər ola bilər?",
+          intro: "Azərbaycan universitetlərində dövlət sifarişli proqramlar üçün DİM keçid ballarını qəbul tarixçəsinə əsasən proqnozlaşdırır.",
+          filter: "Azərbaycan proqnozlarını filtrlə",
+          university: "Universitet",
+          group: "DİM qrupu",
+          allGroups: "Bütün qruplar",
+          allUnis: "Bütün universitetlər",
+          score: "DİM balınız (istəyə bağlı)",
+          search: "Universitet axtar",
+          noResults: "Axtarışınıza uyğun proqnoz tapılmadı.",
+          scholarship: "Tam təqaüd (Dövlət sifarişi)",
+          bandHelp: "Diapazon dayanıqlıq və qeyri-müəyyənlik intervalını əks etdirir. «Keçir» balınızın proqnozlaşdırılan keçid diapazonunu aşdığını bildirir.",
+          clears: "keçir",
+          clearsCutoff: "keçid balını keçir",
+          close: "sərhədə çox yaxındır",
+          below: "keçid balından aşağı",
+          cutoffLabel: "Keçid balı (Dövlət sifarişi)",
+          bandLabel: "Diapazon",
+          projectionYear: "Proqnoz ili",
+          upcomingIntake: "Növbəti qəbul",
+          methodology: "Metodologiya",
+          historicalData: "Tarixi məlumatlar",
+          yearsHistory: "il qəbul tarixi",
+          officialStandard: "Rəsmi standart",
+          group1: "I qrup",
+          group2: "II qrup",
+          group3: "III qrup",
+          group4: "IV qrup",
+          group5: "V qrup"
+        }
+      : {
+          eyebrow: "Azerbaijan · DİM Admissions",
+          title: "What may the next cutoff be?",
+          intro: "Predicts published DİM cutoffs for state-funded programmes at Azerbaijani universities from official cutoff history.",
+          filter: "Filter Azerbaijan predictions",
+          university: "University",
+          group: "DİM group",
+          allGroups: "All groups",
+          allUnis: "All Universities",
+          score: "Your DİM score (optional)",
+          search: "Search a university",
+          noResults: "No Azerbaijan cutoff predictions are available matching your search.",
+          scholarship: "Full Scholarship",
+          bandHelp: "The band reflects the persistence and uncertainty interval. “Clears” means your score exceeds the projected cutoff range.",
+          clears: "clears",
+          clearsCutoff: "clears cutoff",
+          close: "too close to call",
+          below: "below",
+          cutoffLabel: "Cutoff Score (Full Scholarship)",
+          bandLabel: "Band",
+          projectionYear: "Projection Year",
+          upcomingIntake: "Upcoming intake",
+          methodology: "Methodology",
+          historicalData: "Historical Data",
+          yearsHistory: "intake years",
+          officialStandard: "Official standard",
+          group1: "Group 1",
+          group2: "Group 2",
+          group3: "Group 3",
+          group4: "Group 4",
+          group5: "Group 5"
+        };
+
+  const POPULAR_UNIVERSITIES = [
+    { label: copy.allUnis, value: "" },
+    { label: "Baku Higher Oil School (BHOS)", value: "bhos" },
+    { label: "ADA University", value: "ada" },
+    { label: "UNEC", value: "unec" },
+    { label: "BDU", value: "bdu" },
+  ];
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -58,45 +152,41 @@ export default function AzerbaijanPage() {
   return (
     <div className="app-page">
       <ScrollReveal direction="down" duration={600}>
-        <header className="max-w-3xl">
-          <p className="eyebrow">{copy.eyebrow}</p>
-          <h1 className="page-heading mt-3">{copy.title}</h1>
-          <p className="body-large mt-6">
-            {copy.intro} {language === "en" && <>For all full scholarships, the standard cutoff score is <strong>650+ DİM score</strong> if not specifically indicated by a competitive specialty.</>}
-          </p>
-        </header>
-      </ScrollReveal>
-
-      {/* Full scholarship rule highlight notice */}
-      <ScrollReveal direction="up" delay={100} duration={600}>
-        <div className="mt-8 rounded-2xl border border-purple-500/30 bg-purple-950/20 p-5 backdrop-blur-md">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-300">
-              ★
+        <div className="flex flex-col gap-4 border-b border-white/[0.08] pb-8 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1 text-xs font-semibold text-orange-400 backdrop-blur-md">
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-pulse" />
+              {copy.eyebrow}
             </span>
-            <div className="text-sm">
-              <span className="font-semibold text-purple-200">Full Scholarship Standard (Dövlət Sifarişli): </span>
-              <span className="text-slate-300">
-                At Baku Higher Oil School (BANM / BHOS) and partner universities, all full scholarships provide 100% tuition coverage plus monthly government stipends. Where a competitive cutoff is not indicated, the standard benchmark for full scholarship qualification is <strong>650+ points</strong> on the DİM entrance examination.
-              </span>
-            </div>
+            <h1 className="mt-4 font-sans text-3xl font-extrabold tracking-tight text-white md:text-5xl">
+              {copy.title}
+            </h1>
+            <p className="mt-3 text-base leading-relaxed text-slate-300">
+              {copy.intro}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-medium text-slate-300 backdrop-blur-md">
+              Model: Persistence + Band
+            </span>
+            <span className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-medium text-slate-300 backdrop-blur-md">
+              2026 Projections
+            </span>
           </div>
         </div>
       </ScrollReveal>
 
       <ScrollReveal direction="up" delay={150} duration={600}>
-        <section className="mt-8 border-y border-line py-7" aria-label={copy.filter}>
-          {/* Quick chips */}
-          <div className="mb-5 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-400">Quick Filter:</span>
+        <section className="panel mt-8 p-6" aria-label={copy.filter}>
+          <div className="mb-6 flex flex-wrap gap-2">
             {POPULAR_UNIVERSITIES.map((item) => (
               <button
-                key={item.label}
+                key={item.value}
                 type="button"
                 onClick={() => setUniversity(item.value)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                  (university === item.value || (item.value === "bhos" && (university.toLowerCase().includes("oil") || university.toLowerCase().includes("banm"))))
-                    ? "bg-[#FF7A00] text-white shadow-lg shadow-orange-500/20"
+                className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                  university === item.value
+                    ? "bg-gradient-to-r from-orange-500 to-purple-600 font-semibold text-white shadow-md shadow-orange-500/20"
                     : "border border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/10"
                 }`}
               >
@@ -119,11 +209,11 @@ export default function AzerbaijanPage() {
               <span className="field-label">{copy.group}</span>
               <select className="field" value={group} onChange={(event) => setGroup(event.target.value)}>
                 <option value="">{copy.allGroups}</option>
-                <option value="I qrup">Group 1</option>
-                <option value="II qrup">Group 2</option>
-                <option value="III qrup">Group 3</option>
-                <option value="IV qrup">Group 4</option>
-                <option value="V qrup">Group 5</option>
+                <option value="I qrup">{copy.group1}</option>
+                <option value="II qrup">{copy.group2}</option>
+                <option value="III qrup">{copy.group3}</option>
+                <option value="IV qrup">{copy.group4}</option>
+                <option value="V qrup">{copy.group5}</option>
               </select>
             </label>
             <label>
@@ -140,13 +230,13 @@ export default function AzerbaijanPage() {
             </label>
           </div>
           <p className="field-help mt-4">
-            The band reflects the persistence and uncertainty interval. “Clears” means your score exceeds the projected cutoff range.
+            {copy.bandHelp}
           </p>
         </section>
       </ScrollReveal>
 
       {error && <p className="notice notice-warning mt-8" role="alert">{error}</p>}
-      
+
       {!error && !loading && rows.length === 0 && (
         <p className="notice notice-info mt-8">
           {copy.noResults} Try searching for “Baku Higher Oil School”, “BHOS”, or “ADA”.
@@ -160,6 +250,16 @@ export default function AzerbaijanPage() {
           const cutoffDisplay = row.predicted_cutoff != null
             ? `${row.predicted_cutoff.toFixed(1)} pts`
             : "650+ pts (Standard full scholarship)";
+
+          const stateLabel = state === "clears cutoff"
+            ? copy.clearsCutoff
+            : state === "clears"
+            ? copy.clears
+            : state === "close"
+            ? copy.close
+            : state === "below"
+            ? copy.below
+            : state;
 
           return (
             <ScrollReveal key={row.program_code || idx} direction="up" delay={Math.min(idx * 40, 300)} duration={500}>
@@ -188,41 +288,37 @@ export default function AzerbaijanPage() {
                           : "status-experimental"
                       }`}
                     >
-                      {state === "clears cutoff"
-                        ? "clears cutoff"
-                        : state === "close"
-                        ? "too close to call"
-                        : state}
+                      {stateLabel}
                     </span>
                   )}
                 </div>
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-4 border-t border-white/5 pt-4">
                   <div>
-                    <p className="eyebrow">Cutoff Score (Full Scholarship)</p>
+                    <p className="eyebrow">{copy.cutoffLabel}</p>
                     <p className="mt-1 text-2xl font-bold bg-gradient-to-r from-purple-200 via-pink-200 to-orange-200 bg-clip-text text-transparent">
                       {cutoffDisplay}
                     </p>
                     {row.lower_cutoff != null && row.upper_cutoff != null && (
                       <p className="mt-0.5 text-xs text-slate-400">
-                        Band: {row.lower_cutoff.toFixed(0)}–{row.upper_cutoff.toFixed(0)}
+                        {copy.bandLabel}: {row.lower_cutoff.toFixed(0)}–{row.upper_cutoff.toFixed(0)}
                       </p>
                     )}
                   </div>
                   <div>
-                    <p className="eyebrow">Projection Year</p>
+                    <p className="eyebrow">{copy.projectionYear}</p>
                     <p className="mt-1 font-medium text-slate-200">{row.target_year || 2026}</p>
-                    <p className="mt-0.5 text-xs text-slate-400">Upcoming intake</p>
+                    <p className="mt-0.5 text-xs text-slate-400">{copy.upcomingIntake}</p>
                   </div>
                   <div>
-                    <p className="eyebrow">Methodology</p>
+                    <p className="eyebrow">{copy.methodology}</p>
                     <p className="mt-1 font-medium text-slate-200">{row.model || "Persistence"}</p>
                     <p className="mt-0.5 text-xs text-slate-400">{row.prediction_type || "forecast"}</p>
                   </div>
                   <div>
-                    <p className="eyebrow">Historical Data</p>
+                    <p className="eyebrow">{copy.historicalData}</p>
                     <p className="mt-1 font-medium text-slate-200">
-                      {row.history_years ? `${row.history_years} intake years` : "Official standard"}
+                      {row.history_years ? `${row.history_years} ${copy.yearsHistory}` : copy.officialStandard}
                     </p>
                     <p className="mt-0.5 text-xs text-purple-300/80">
                       {row.cutoff_note || "Full scholarship standard (650+)"}

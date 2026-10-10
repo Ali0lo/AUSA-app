@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { Notice } from "@/components/Notice";
 import { ServiceStatus } from "@/components/ServiceStatus";
+import { useLanguage } from "@/lib/i18n";
 
 function safeDestination(value: string): string {
   return value.startsWith("/") && !value.startsWith("//") ? value : "/plan";
@@ -33,6 +34,7 @@ export function SignInForm({
   initialError?: string;
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const { status } = useSession();
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
@@ -87,8 +89,8 @@ export function SignInForm({
           </div>
         </div>
 
-        <form className="panel-strong p-6 sm:p-8" onSubmit={submit} aria-label="Sign in">
-          <h2 className="font-serif text-2xl font-semibold">Account credentials</h2>
+        <form className="panel-strong p-6 sm:p-8" onSubmit={submit} aria-label={t("signIn")}>
+          <h2 className="font-serif text-2xl font-semibold">{t("accountCredentials")}</h2>
           <p className="mt-2 text-sm leading-6 text-muted">Use an account registered with this AUSA backend or your Google account.</p>
 
           {error && (
@@ -121,18 +123,18 @@ export function SignInForm({
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              <span>Sign in with Google</span>
+              <span>{t("signInWithGoogle")}</span>
             </button>
           </div>
 
           <div className="my-6 flex items-center gap-3">
             <div className="flex-1 border-t border-quiet" />
-            <span className="text-xs uppercase tracking-wider text-muted">Or sign in with email</span>
+            <span className="text-xs uppercase tracking-wider text-muted">{t("orSignInWithEmail")}</span>
             <div className="flex-1 border-t border-quiet" />
           </div>
 
           <div>
-            <label className="field-label" htmlFor="sign-in-email">Email address</label>
+            <label className="field-label" htmlFor="sign-in-email">{t("emailAddress")}</label>
             <input
               id="sign-in-email"
               className="field"
@@ -145,7 +147,7 @@ export function SignInForm({
           </div>
 
           <div className="mt-5">
-            <label className="field-label" htmlFor="sign-in-password">Password</label>
+            <label className="field-label" htmlFor="sign-in-password">{t("password")}</label>
             <input
               id="sign-in-password"
               className="field"
@@ -159,12 +161,15 @@ export function SignInForm({
           </div>
 
           <button type="submit" className="button-primary mt-7 w-full" disabled={submitting || status === "loading"}>
-            {submitting ? "Signing in" : "Sign in"}
+            {submitting ? t("signingIn", "Signing in") : t("signIn")}
             {!submitting && <ArrowRight size={17} aria-hidden="true" />}
           </button>
 
           <p className="mt-6 border-t border-quiet pt-5 text-sm text-muted">
-            No account yet? <Link className="text-link" href="/register">Create one with a student profile.</Link>
+            {t("noAccountYet")}{" "}
+            <Link className="text-link" href="/register">
+              {t("createOneHere")}
+            </Link>
           </p>
         </form>
       </div>

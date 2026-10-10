@@ -13,10 +13,10 @@ export function SiteFooter() {
             AUSA
           </p>
           <p className="mt-3 max-w-md text-sm leading-6 text-slate-400">
-            A transparent university and application advisory prototype for Azerbaijani students.
+            {t("footerDisclaimer")}
           </p>
           <p className="mt-5 text-xs leading-5 text-slate-500">
-            Prototype results are informational and are not admission or scholarship guarantees.
+            {t("footerNotice")}
           </p>
         </div>
         <div>
@@ -47,15 +47,15 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-white/[0.06]">
         <div className="site-container flex flex-col gap-2 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <span>© 2026 AUSA team</span>
+          <span>{t("footerCopyright")}</span>
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
-            <span className="text-slate-400">All systems operational</span>
+            <span className="text-slate-400">{t("allSystemsOperational")}</span>
           </div>
-          <span>Frontend build 1.0 · English interface</span>
+          <span>{t("footerBuild")}</span>
         </div>
       </div>
     </footer>

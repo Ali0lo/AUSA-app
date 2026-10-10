@@ -5,35 +5,43 @@ import Image from "next/image";
 import Link from "next/link";
 import { FeatureTag } from "@/components/FeatureTag";
 import { ScrollReveal } from "@/components/ScrollReveal";
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, type TranslationKey } from "@/lib/i18n";
 
-const capabilities = [
+interface CapabilityItem {
+  titleKey: TranslationKey;
+  descKey: TranslationKey;
+  href: string;
+  state: "available" | "experimental" | "demo";
+  icon: typeof Route;
+}
+
+const capabilities: CapabilityItem[] = [
   {
-    title: "Route planning",
-    description: "Enter your qualification and scores and see every route open to you, what each costs in time and money, and the universities that document accepting it — each quoted from its own admissions page.",
+    titleKey: "routePlanning",
+    descKey: "routePlanningDesc",
     href: "/plan",
-    state: "available" as const,
+    state: "available",
     icon: Route
   },
   {
-    title: "Grounded AI advisor",
-    description: "Ask questions against the university-document retrieval endpoint and inspect every source returned with the answer.",
+    titleKey: "aiAdvisor",
+    descKey: "aiAdvisorDesc",
     href: "/advisor",
-    state: "experimental" as const,
+    state: "experimental",
     icon: BookOpenText
   },
   {
-    title: "Azerbaijan DİM cutoffs",
-    description: "Explore projected domestic DİM cutoffs from Azerbaijan admission history, including full-scholarship benchmarks and uncertainty bands.",
+    titleKey: "azerbaijan",
+    descKey: "azerbaijanDescription",
     href: "/azerbaijan",
-    state: "available" as const,
+    state: "available",
     icon: LineChart
   },
   {
-    title: "Application assistant",
-    description: "Exercise the current agent workflow, document checklist, application stage, and motivation-letter demonstration.",
+    titleKey: "applicationAssistant",
+    descKey: "applicationAssistantDesc",
     href: "/application",
-    state: "demo" as const,
+    state: "demo",
     icon: FileCheck2
   }
 ];
@@ -42,6 +50,7 @@ const team = ["Fariz Əkbərzadə", "Əli İskəndərli", "Turan Əlizadə", "Ir
 
 export default function HomePage() {
   const { t } = useLanguage();
+
   return (
     <>
       <section className="relative isolate min-h-[700px] overflow-hidden bg-[#0c0d1b] text-white">
@@ -54,7 +63,7 @@ export default function HomePage() {
           className="-z-20 object-cover object-center opacity-30 brightness-75"
         />
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#0c0d1b]/60 via-[#0c0d1b]/80 to-[#0c0d1b]" />
-        
+
         {/* Ambient luminous glow in hero */}
         <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -z-10 h-[450px] w-[750px] rounded-full bg-gradient-to-r from-purple-600/20 via-pink-600/15 to-orange-500/15 blur-3xl animate-float-slow" />
 
@@ -66,31 +75,31 @@ export default function HomePage() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
                 </span>
-                AUSA prototype
+                {t("prototypeBadge")}
               </span>
-              <span className="text-sm font-medium text-slate-300">Built for Azerbaijani students</span>
+              <span className="text-sm font-medium text-slate-300">{t("builtForAzerbaijani")}</span>
             </div>
-            
+
             <h1 className="mt-8 max-w-3xl font-sans text-5xl font-extrabold leading-[1.05] tracking-[-0.035em] text-white sm:text-6xl lg:text-7xl animate-slide-up">
-              A clearer route to the{" "}
+              {t("heroHeading")}{" "}
               <span className="bg-gradient-to-r from-purple-300 via-pink-300 to-orange-400 bg-clip-text text-transparent">
-                right programme.
+                {t("heroHeadingHighlight")}
               </span>
             </h1>
-            
+
             <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl animate-slide-up animate-stagger-1">
-              Enter what you hold and what you scored. See every route it opens, what each costs in time and money, and the universities that document accepting it — quoted from their own admissions pages.
+              {t("heroSubtitle")}
             </p>
-            
+
             <div className="mt-9 flex flex-wrap items-center gap-4 sm:gap-5 animate-slide-up animate-stagger-2">
               <Link className="button-primary min-h-14 px-8 text-base shadow-[0_0_25px_rgba(255,107,0,0.35)] interactive-scale" href="/plan">
-                Plan my route
+                {t("plan")}
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <Link className="button-secondary min-h-14 px-7 text-base interactive-scale" href="/target">
-                Target University
+                {t("target")}
               </Link>
-              <span className="text-sm text-slate-400">Free, and no account needed.</span>
+              <span className="text-sm text-slate-400">{t("freeNoAccount")}</span>
             </div>
           </div>
         </div>
@@ -103,7 +112,7 @@ export default function HomePage() {
               <p className="eyebrow">{t("currentBuild")}</p>
               <h2 id="capabilities-heading" className="section-heading mt-3">{t("workingSurfaces")}</h2>
               <p className="mt-5 max-w-md text-base leading-7 text-slate-400">
-                Every area below maps to an endpoint or workflow already present in the repository. Demo and experimental states are shown openly.
+                {t("workingSurfacesDesc")}
               </p>
             </ScrollReveal>
             <div className="flex flex-col gap-4">
@@ -117,10 +126,10 @@ export default function HomePage() {
                       </div>
                       <div>
                         <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="font-sans text-xl font-bold text-white">{capability.href === "/azerbaijan" ? t("azerbaijan") : capability.title}</h3>
+                          <h3 className="font-sans text-xl font-bold text-white">{t(capability.titleKey)}</h3>
                           <FeatureTag state={capability.state} />
                         </div>
-                        <p className="mt-2 text-sm leading-6 text-slate-400">{capability.href === "/azerbaijan" ? t("azerbaijanDescription") : capability.description}</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-400">{t(capability.descKey)}</p>
                       </div>
                       <Link className="button-secondary mt-4 shrink-0 sm:mt-0 interactive-scale" href={capability.href}>
                         {t("open")}
@@ -139,15 +148,15 @@ export default function HomePage() {
         <div className="site-container">
           <ScrollReveal direction="up">
             <div className="max-w-2xl">
-              <p className="eyebrow">How it works</p>
-              <h2 id="method-heading" className="section-heading mt-3">A short, inspectable path from profile to explanation.</h2>
+              <p className="eyebrow">{t("howItWorks")}</p>
+              <h2 id="method-heading" className="section-heading mt-3">{t("howItWorksHeading")}</h2>
             </div>
           </ScrollReveal>
           <ol className="mt-12 grid gap-6 md:grid-cols-3">
             {[
-              ["01", "Enter your profile", "Provide the GPA, language result, budget, target degree, and study field used by the existing matching request."],
-              ["02", "Choose a demo programme", "Select one of the three programme records already used by the original frontend and backend demonstration."],
-              ["03", "Inspect the response", "See eligibility, the prototype percentage, every factor score, and the backend's explanation without added claims."]
+              ["01", t("step1Title"), t("step1Desc")],
+              ["02", t("step2Title"), t("step2Desc")],
+              ["03", t("step3Title"), t("step3Desc")]
             ].map(([number, title, description], idx) => (
               <ScrollReveal key={number} delay={idx * 120} direction="up" distance={30}>
                 <li className="card-hover h-full rounded-3xl border border-white/[0.08] bg-[#13152c]/60 p-8 backdrop-blur-xl shadow-xl">
@@ -163,7 +172,7 @@ export default function HomePage() {
           <ScrollReveal delay={350} direction="up">
             <div className="mt-10">
               <Link className="button-primary px-7 text-base shadow-[0_0_20px_rgba(255,107,0,0.3)] interactive-scale" href="/plan">
-                Plan my route
+                {t("plan")}
                 <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </div>
@@ -175,14 +184,14 @@ export default function HomePage() {
         <div className="site-container grid gap-10 lg:grid-cols-2 lg:gap-20">
           <ScrollReveal direction="left">
             <div>
-              <p className="eyebrow">Transparent by design</p>
-              <h2 id="trust-heading" className="section-heading mt-3">The interface never disguises a missing service as a result.</h2>
+              <p className="eyebrow">{t("transparentEyebrow")}</p>
+              <h2 id="trust-heading" className="section-heading mt-3">{t("transparentHeading")}</h2>
             </div>
           </ScrollReveal>
           <ScrollReveal direction="right" delay={150}>
             <div className="space-y-6 text-base leading-7 text-slate-300">
-              <p>Prototype scores are identified as prototype scores. Demo programme records are identified as demo data. AI answers retain the sources returned by retrieval.</p>
-              <p>If the backend is offline, an endpoint is absent, a session has expired, or a request times out, the responsible page states that directly and keeps the rest of the interface usable.</p>
+              <p>{t("transparentP1")}</p>
+              <p>{t("transparentP2")}</p>
             </div>
           </ScrollReveal>
         </div>
@@ -192,17 +201,17 @@ export default function HomePage() {
         <div className="site-container grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
           <ScrollReveal direction="up">
             <div>
-              <p className="eyebrow">About AUSA</p>
-              <h2 id="about-heading" className="section-heading mt-3">University guidance that explains its limits.</h2>
+              <p className="eyebrow">{t("aboutEyebrow")}</p>
+              <h2 id="about-heading" className="section-heading mt-3">{t("aboutHeading")}</h2>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-                AUSA is an evolving university and scholarship advisory platform. This frontend concentrates on the capabilities already represented in the repository while the catalogue, data, and models continue to develop.
+                {t("aboutDesc")}
               </p>
             </div>
           </ScrollReveal>
           <ScrollReveal direction="up" delay={200} distance={32}>
             <div className="rounded-3xl border border-white/10 bg-[#13152c]/85 p-6 backdrop-blur-2xl shadow-2xl sm:p-8">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] bg-gradient-to-r from-purple-400 to-orange-400 bg-clip-text text-transparent">
-                Project team
+                {t("projectTeam")}
               </p>
               <ul className="mt-5 divide-y divide-white/[0.08] border-y border-white/[0.08]">
                 {team.map((member) => (

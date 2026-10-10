@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Notice } from "@/components/Notice";
 import { ServiceStatus } from "@/components/ServiceStatus";
 import { getUserFacingError, registerStudent, UserFacingError } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { DegreeLevel, RegisterPayload } from "@/types";
 
 const initialProfile: RegisterPayload = {
@@ -29,6 +30,7 @@ function optionalNumber(value: string): number | undefined {
 
 export function RegisterForm() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { status } = useSession();
   const [profile, setProfile] = useState(initialProfile);
   const [confirmation, setConfirmation] = useState("");
@@ -103,7 +105,7 @@ export function RegisterForm() {
         <ServiceStatus />
       </div>
 
-      <form className="panel-strong mx-auto mt-10 max-w-4xl p-6 sm:p-8" onSubmit={submit} aria-label="Create account">
+      <form className="panel-strong mx-auto mt-10 max-w-4xl p-6 sm:p-8" onSubmit={submit} aria-label={t("createAccount")}>
         {error && (
           <div className="mb-7">
             <Notice title={error.title} tone={created ? "warning" : "error"} live>
@@ -182,9 +184,14 @@ export function RegisterForm() {
         </fieldset>
 
         <div className="mt-8 flex flex-col-reverse gap-4 border-t border-quiet pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted">Already registered? <Link className="text-link" href="/sign-in">Sign in.</Link></p>
+          <p className="text-sm text-muted">
+            {t("alreadyHaveAccount")}{" "}
+            <Link className="text-link" href="/sign-in">
+              {t("signInHere")}
+            </Link>
+          </p>
           <button type="submit" className="button-primary" disabled={submitting || status === "loading"}>
-            {submitting ? "Creating account" : "Create account"}
+            {submitting ? t("creatingAccount", "Creating account") : t("createAccount")}
             {!submitting && <ArrowRight size={17} aria-hidden="true" />}
           </button>
         </div>
