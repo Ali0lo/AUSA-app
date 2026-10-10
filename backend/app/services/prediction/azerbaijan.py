@@ -176,5 +176,10 @@ class AzerbaijanPredictionService:
                 else:
                     latest = latest[latest["university_name"].str.contains(university, case=False, na=False)]
         if group:
-            latest = latest[latest["score_type"].astype(str).str.contains(group, case=False, na=False)]
+            # Exact first: "I qrup" is a substring of "II qrup" and "III qrup".
+            exact = latest["score_type"].astype(str).str.lower() == group.strip().lower()
+            if exact.any():
+                latest = latest[exact]
+            else:
+                latest = latest[latest["score_type"].astype(str).str.contains(group, case=False, na=False)]
         return [self._prediction(str(code)) for code in latest["program_key"]]

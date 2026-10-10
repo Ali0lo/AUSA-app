@@ -10,11 +10,20 @@ def _service(rows):
     return AzerbaijanPredictionService(raw=raw, prepared=None, artifact=None, metrics={})
 
 
-def _row(code, university):
+def _row(code, university, score_type="I qrup"):
     return {
         "source_program_code": code, "university_name": university, "department_name": "Informatika",
-        "score_type": "I qrup", "intake_year": 2025, "cutoff_value": 600.0,
+        "score_type": score_type, "intake_year": 2025, "cutoff_value": 600.0,
     }
+
+
+def test_group_filter_returns_only_that_group():
+    # The page sends "I qrup" for Group 1; as a substring it is also inside "II qrup" and "III qrup".
+    service = _service([_row("a", "UNEC", "I qrup"), _row("b", "UNEC", "II qrup"), _row("c", "UNEC", "III qrup")])
+
+    groups = {p["score_type"] for p in service.list_predictions(group="I qrup")}
+
+    assert groups == {"I qrup"}
 
 
 def test_university_filter_matching_an_abbreviation_exactly_does_not_pull_in_longer_ones():
