@@ -15,6 +15,12 @@ if [ ! -f /app/models/cutoff_coldstart_AZ.joblib ]; then
     python -m scripts.train_cutoff_models --country AZ || echo "Notice: Cutoff model training skipped."
 fi
 
+# Index RAG documents if OPENAI_API_KEY is configured
+if [ -n "$OPENAI_API_KEY" ]; then
+    echo "Checking and indexing RAG university documents..."
+    python -m scripts.index_documents --if-empty || echo "Notice: Document indexing skipped or completed."
+fi
+
 PORT="${PORT:-8000}"
 echo "Launching Uvicorn on 0.0.0.0:${PORT}..."
 exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT}"

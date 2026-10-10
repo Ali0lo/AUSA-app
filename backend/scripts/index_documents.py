@@ -166,7 +166,14 @@ async def _embed(texts: List[str]) -> List[List[float]]:
 
 
 async def main() -> None:
+    if_empty = "--if-empty" in sys.argv
     async with AsyncSessionLocal() as session:
+        if if_empty:
+            existing_doc = (await session.execute(select(UniversityDocument).limit(1))).scalars().first()
+            if existing_doc is not None:
+                print("RAG university documents already indexed; skipping.")
+                return
+
         requirements = (await session.execute(select(ProgramRequirement))).scalars().all()
         catalogue = (await session.execute(select(DPCatalogueEntry))).scalars().all()
 
