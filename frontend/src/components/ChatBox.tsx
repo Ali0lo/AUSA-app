@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUp, ExternalLink, Paperclip, RefreshCw, X } from "lucide-react";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { getUserFacingError, sendChatMessage, uploadDocumentAndChat, UserFacingError } from "@/lib/api";
 import { safeExternalUrl, timestamp } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n";
@@ -14,6 +14,45 @@ interface ChatBoxProps {
   token?: string;
   onStateUpdate?: (stage: string, missingDocs: string[], draftedLetter?: string) => void;
   onProfileUpdate?: (updatedProfile: Partial<StudentProfile>) => void;
+}
+
+// The models answer in markdown. Render its three common forms (headings, bold, links) so the
+// student never sees '###' or '**'. A link opens only when it is a web address; the agent
+// sometimes cites a repository path, which is shown as its label alone.
+const INLINE_MARKDOWN = /\*\*(.+?)\*\*|\[([^\]]+)\]\(([^)\s]+)\)/g;
+
+function renderInline(line: string, key: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  let last = 0;
+  for (const match of line.matchAll(INLINE_MARKDOWN)) {
+    parts.push(line.slice(last, match.index));
+    const [, bold, label, href] = match;
+    const url = href ? safeExternalUrl(href) : undefined;
+    if (bold !== undefined) {
+      parts.push(<strong key={`${key}-${match.index}`} className="font-semibold text-white">{bold}</strong>);
+    } else if (url) {
+      parts.push(
+        <a key={`${key}-${match.index}`} href={url} target="_blank" rel="noreferrer" className="text-accent underline underline-offset-2">
+          {label}
+        </a>
+      );
+    } else {
+      parts.push(label);
+    }
+    last = match.index + match[0].length;
+  }
+  parts.push(line.slice(last));
+  return parts;
+}
+
+function renderChatMarkdown(text: string): ReactNode[] {
+  return text.split("\n").map((line, index) => {
+    const heading = /^#{1,6}\s+(.*)$/.exec(line);
+    const content = heading
+      ? <strong className="font-semibold text-white">{renderInline(heading[1], `h${index}`)}</strong>
+      : renderInline(line, `l${index}`);
+    return <span key={index}>{index > 0 && "\n"}{content}</span>;
+  });
 }
 
 function StreamingMessageContent({
@@ -54,7 +93,7 @@ function StreamingMessageContent({
 
   return (
     <div className="whitespace-pre-wrap text-sm leading-6">
-      {displayedText}
+      {renderChatMarkdown(displayedText)}
       {!isDone && (
         <span
           className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-accent align-middle"

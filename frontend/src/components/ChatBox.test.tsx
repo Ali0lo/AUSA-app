@@ -33,6 +33,24 @@ describe("ChatBox", () => {
     expect(screen.queryByRole("link", { name: "Open source" })).not.toBeInTheDocument();
   });
 
+  it("renders the model's markdown instead of showing its symbols, and links only web addresses", async () => {
+    const user = userEvent.setup();
+    api.sendChatMessage.mockResolvedValue({
+      reply: "### Open routes\n1. **Germany**: see [Anabin](https://anabin.kmk.org/) and [spec](docs/specs/design.md)",
+      sources: []
+    });
+    render(<ChatBox lockedMode="rag" />);
+
+    await user.type(screen.getByRole("textbox", { name: "Question" }), "Routes?");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(await screen.findByText("Germany")).toBeInTheDocument();
+    expect(screen.getByText("Open routes")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Anabin" })).toHaveAttribute("href", "https://anabin.kmk.org/");
+    expect(screen.queryByRole("link", { name: "spec" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/\*\*|###|\]\(/)).not.toBeInTheDocument();
+  });
+
   it("shows a retry action without duplicating the failed user message", async () => {
     const user = userEvent.setup();
     api.sendChatMessage
