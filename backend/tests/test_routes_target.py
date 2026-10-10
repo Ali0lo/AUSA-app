@@ -187,3 +187,32 @@ async def test_catalog_answers_from_the_database_when_one_is_available(catalogue
     assert "Database Only University" in names, (
         "the database branch did not answer; the CSV fallback masked it"
     )
+
+
+@pytest.mark.asyncio
+async def test_target_gap_reports_an_unpublished_deadline_as_absent_not_as_text(catalogue_db):
+    # str(None) is "None": the page then showed "Application deadline: None" as if it were a date.
+    catalogue_db.add(
+        ProgramRequirement(
+            university_name="Database Only University",
+            program_name="No Published Deadline",
+            level="bachelor",
+            intake_year=2026,
+            country_code="GB",
+            source_url="https://example.edu/admissions",
+            retrieved_at=datetime(2026, 9, 15, tzinfo=timezone.utc),
+        )
+    )
+    await catalogue_db.commit()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        res = await client.post(
+            "/api/v1/routes/target-gap",
+            json={"university_name": "Database Only University", "level": "bachelor", "qualification_held": "attestat"},
+        )
+
+    assert res.status_code == 200
+    data = res.json()
+    assert data["found"] is True
+    assert data["application_deadline"] is None
+    assert data["last_checked"] is None

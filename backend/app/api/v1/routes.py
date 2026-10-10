@@ -980,14 +980,14 @@ async def assess_target_gap(
         unlock_cost_azn_high=cost_high,
         checklist=checklist,
         application_portal=getattr(row, "application_portal", None),
-        application_deadline=str(getattr(row, "application_deadline", "")) or None,
+        application_deadline=str(getattr(row, "application_deadline", None) or "") or None,
         application_fee=getattr(row, "application_fee", None),
         currency=getattr(row, "currency", None),
         documents_required=getattr(row, "documents_required", None),
         alternatives=alternatives,
         provenance=getattr(row, "provenance", "claude-extracted"),
         source_url=getattr(row, "source_url", ""),
-        last_checked=str(getattr(row, "last_checked", "")) or None,
+        last_checked=str(getattr(row, "last_checked", None) or "") or None,
         notes=getattr(row, "notes", None),
     )
 
