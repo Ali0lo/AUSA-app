@@ -199,9 +199,9 @@ export default function ApplicationPage() {
               {copyStatus === "failed" && <p className="mt-4 text-sm font-semibold text-danger" role="alert">Clipboard access failed. Select the draft manually and copy it.</p>}
 
               {draftedLetter ? (
-                <pre className="mt-6 overflow-x-auto whitespace-pre-wrap border border-quiet bg-[#f8f5ef] p-5 font-sans text-sm leading-7 text-ink">{draftedLetter}</pre>
+                <pre className="mt-6 overflow-x-auto whitespace-pre-wrap border border-quiet bg-white/[0.04] p-5 font-sans text-sm leading-7 text-ink">{draftedLetter}</pre>
               ) : (
-                <div className="mt-6 border border-quiet bg-[#f8f5ef] p-6">
+                <div className="mt-6 border border-quiet bg-white/[0.04] p-6">
                   <p className="font-semibold">No draft is currently loaded.</p>
                   <p className="mt-2 text-sm leading-6 text-muted">Ask the application assistant to draft a motivation letter. If the backend returns one, it will appear here.</p>
                 </div>

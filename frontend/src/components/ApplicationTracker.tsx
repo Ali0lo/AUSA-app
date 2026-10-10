@@ -12,10 +12,10 @@ interface ApplicationTrackerProps {
 }
 
 const STAGE_COLUMNS = [
-  { id: "shortlisted", label: "Shortlisted", color: "border-quiet bg-[#fcfbfa]" },
-  { id: "preparing_documents", label: "Docs in Progress", color: "border-accent/40 bg-[#fbf9f4]" },
-  { id: "submitted", label: "Submitted", color: "border-info/40 bg-[#f4f7fb]" },
-  { id: "decision", label: "Decision Received", color: "border-success/40 bg-[#f3f9f4]" }
+  { id: "shortlisted", label: "Shortlisted", color: "border-quiet" },
+  { id: "preparing_documents", label: "Docs in Progress", color: "border-accent/40" },
+  { id: "submitted", label: "Submitted", color: "border-info/40" },
+  { id: "decision", label: "Decision Received", color: "border-success/40" }
 ];
 
 export function ApplicationTracker({ initialApplications, token, onRefresh }: ApplicationTrackerProps) {
@@ -75,16 +75,19 @@ export function ApplicationTracker({ initialApplications, token, onRefresh }: Ap
                   colApps.map((app) => (
                     <article key={app.id} className="border border-quiet bg-paper p-4 shadow-sm hover:border-accent transition-colors">
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-[0.68rem] font-semibold uppercase tracking-wider text-accent border border-accent/30 px-1.5 py-0.5">
-                          {app.degree_level || "Master"}
-                        </span>
+                        {/* No saved level means we do not know it; guessing "Master" mislabelled bachelor's rows. */}
+                        {app.degree_level ? (
+                          <span className="text-[0.68rem] font-semibold uppercase tracking-wider text-accent border border-accent/30 px-1.5 py-0.5">
+                            {app.degree_level}
+                          </span>
+                        ) : <span />}
                         {app.is_urgent ? (
                           <span className="inline-flex items-center gap-1 text-[0.65rem] font-bold uppercase tracking-wider bg-danger text-paper px-2 py-0.5">
                             <AlertCircle size={10} />
                             {app.days_remaining}d left
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[0.65rem] font-semibold text-muted bg-[#f4efe6] px-2 py-0.5">
+                          <span className="inline-flex items-center gap-1 text-[0.65rem] font-semibold text-muted bg-white/[0.06] px-2 py-0.5">
                             <Clock size={10} />
                             {app.days_remaining} days
                           </span>

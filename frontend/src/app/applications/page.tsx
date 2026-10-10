@@ -108,7 +108,7 @@ export default function ApplicationsTrackerPage() {
       </div>
 
       {showAddForm && (
-        <form onSubmit={handleAddProgram} className="mt-6 panel-strong p-6 bg-[#fbf9f4] border border-accent/40 space-y-4 max-w-2xl">
+        <form onSubmit={handleAddProgram} className="mt-6 panel-strong p-6 border border-accent/40 space-y-4 max-w-2xl">
           <h3 className="font-serif text-xl font-semibold">Track New Program Application</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
