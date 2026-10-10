@@ -17,6 +17,8 @@ services:
           property: connectionString
       - key: BACKEND_CORS_ORIGINS
         value: '["https://ausa-app-gamma.vercel.app","http://localhost:3000"]'
+      - key: OPENAI_API_KEY
+        sync: false
 
 databases:
   - name: ausa-db
@@ -24,3 +26,4 @@ databases:
     region: frankfurt
     databaseName: ausa_db
     user: ausa_user
+

@@ -45,7 +45,7 @@ export interface UserFacingError {
   message: string;
 }
 
-const REQUEST_TIMEOUT_MS = 12000;
+const REQUEST_TIMEOUT_MS = 45000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -131,7 +131,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   } catch (error) {
     if (error instanceof ApiError) throw error;
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new ApiError("The backend did not respond within 12 seconds.", "timeout");
+      throw new ApiError("The backend did not respond within 45 seconds.", "timeout");
     }
     throw new ApiError("The AUSA backend could not be reached.", "offline");
   } finally {

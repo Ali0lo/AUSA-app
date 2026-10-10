@@ -53,7 +53,7 @@ providers.push(
             "Content-Type": "application/json"
           },
           body: JSON.stringify({ email, password }),
-          signal: AbortSignal.timeout(12000)
+          signal: AbortSignal.timeout(30000)
         });
       } catch {
         throw new Error("The AUSA backend could not be reached. Start it and try again.");
@@ -77,7 +77,7 @@ providers.push(
             Accept: "application/json",
             Authorization: `Bearer ${tokenData.access_token}`
           },
-          signal: AbortSignal.timeout(12000)
+          signal: AbortSignal.timeout(30000)
         });
       } catch {
         throw new Error("Login succeeded, but the student profile could not be loaded.");
