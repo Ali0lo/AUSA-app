@@ -168,19 +168,23 @@ export function ChatBox({
   }
 
   return (
-    <section className="panel-strong flex min-h-[620px] flex-col" aria-label={activeMode === "rag" ? "AI advisor conversation" : "Application assistant conversation"}>
-      <div className="flex flex-col gap-4 border-b border-line p-5 sm:flex-row sm:items-center sm:justify-between">
+    <section className="panel-strong flex min-h-[620px] flex-col overflow-hidden shadow-2xl" aria-label={activeMode === "rag" ? "AI advisor conversation" : "Application assistant conversation"}>
+      <div className="flex flex-col gap-4 border-b border-white/10 bg-[#13152c]/90 p-5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-serif text-2xl font-semibold">{activeMode === "rag" ? "Ask the document advisor" : "Application assistant"}</h2>
-          <p className="mt-1 text-sm text-muted">
+          <h2 className="font-serif text-2xl font-semibold text-white">{activeMode === "rag" ? "Ask the document advisor" : "Application assistant"}</h2>
+          <p className="mt-1 text-sm text-slate-400">
             {activeMode === "rag" ? "Answers depend on retrieved university documents." : "Upload academic documents (PDFs, transcripts) to parse metrics and update your profile."}
           </p>
         </div>
         {!lockedMode && (
-          <div className="flex border border-line" aria-label="Conversation mode">
+          <div className="flex rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-md" aria-label="Conversation mode">
             <button
               type="button"
-              className={`min-h-11 px-3 text-sm font-semibold ${mode === "rag" ? "bg-ink text-paper" : "bg-paper text-ink"}`}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                mode === "rag"
+                  ? "bg-gradient-to-r from-[#FF7A00] to-[#FF4500] text-white shadow-md shadow-orange-500/20"
+                  : "text-slate-300 hover:text-white"
+              }`}
               onClick={() => changeMode("rag")}
               aria-pressed={mode === "rag"}
             >
@@ -188,7 +192,11 @@ export function ChatBox({
             </button>
             <button
               type="button"
-              className={`min-h-11 border-l border-line px-3 text-sm font-semibold ${mode === "agent" ? "bg-ink text-paper" : "bg-paper text-ink"}`}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                mode === "agent"
+                  ? "bg-gradient-to-r from-[#FF7A00] to-[#FF4500] text-white shadow-md shadow-orange-500/20"
+                  : "text-slate-300 hover:text-white"
+              }`}
               onClick={() => changeMode("agent")}
               aria-pressed={mode === "agent"}
             >
@@ -198,20 +206,27 @@ export function ChatBox({
         )}
       </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto bg-[#f8f5ef] p-5" role="log" aria-live="polite" aria-relevant="additions">
+      <div className="flex-1 space-y-5 overflow-y-auto bg-[#0a0c1a]/70 p-5 backdrop-blur-sm" role="log" aria-live="polite" aria-relevant="additions">
         {messages.length === 0 && (
-          <div className="max-w-2xl border-l-4 border-accent bg-paper p-5">
-            <p className="font-serif text-xl font-semibold">Start with one precise question or upload a document.</p>
-            <p className="mt-2 text-sm leading-6 text-muted">
+          <div className="max-w-2xl rounded-2xl border border-white/10 border-l-4 border-l-accent bg-white/[0.03] p-5 backdrop-blur-md">
+            <p className="font-serif text-xl font-semibold text-white">Start with one precise question or upload a document.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-400">
               {activeMode === "rag"
-                ? "If no document supports the answer, the backend should return that it does not have the information."
+                ? "Answers are grounded strictly in official university admission and scholarship guidelines."
                 : "Ask about missing documents, deadlines, or attach your transcript/certificate PDF to auto-update your profile."}
             </p>
           </div>
         )}
 
         {messages.map((message) => (
-          <article key={message.id} className={`max-w-[92%] border p-4 sm:max-w-[82%] ${message.role === "user" ? "ml-auto border-ink bg-ink text-paper" : "border-quiet bg-paper text-ink"}`}>
+          <article
+            key={message.id}
+            className={`max-w-[92%] rounded-2xl p-4 sm:max-w-[82%] ${
+              message.role === "user"
+                ? "ml-auto border border-orange-500/30 bg-gradient-to-r from-[#FF7A00] to-[#FF4500] text-white shadow-lg shadow-orange-500/10"
+                : "border border-white/10 bg-white/[0.05] text-slate-100 shadow-xl backdrop-blur-md"
+            }`}
+          >
             {message.role === "assistant" ? (
               <StreamingMessageContent
                 content={message.content}
@@ -222,22 +237,22 @@ export function ChatBox({
               <div className="whitespace-pre-wrap text-sm leading-6">{message.content}</div>
             )}
             {message.sources && message.sources.length > 0 && (
-              <div className="mt-4 border-t border-quiet pt-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Sources returned · {message.sources.length}</p>
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Sources returned · {message.sources.length}</p>
                 <ul className="mt-3 space-y-3">
                   {message.sources.map((source, index) => {
                     const sourceUrl = safeExternalUrl(source.source_url);
                     return (
-                      <li key={`${message.id}-${index}`} className="border-l-2 border-accent pl-3 text-xs leading-5 text-muted">
+                      <li key={`${message.id}-${index}`} className="rounded-xl border border-white/10 border-l-2 border-l-accent bg-white/[0.02] p-3 text-xs leading-5 text-slate-300">
                         <p>{source.content_snippet}</p>
-                        {source.page !== undefined && source.page !== null && <p className="mt-1">Page {source.page}</p>}
+                        {source.page !== undefined && source.page !== null && <p className="mt-1 font-mono text-[0.7rem] text-slate-400">Page {source.page}</p>}
                         {sourceUrl && (
-                          <a className="mt-2 inline-flex items-center gap-1 font-semibold text-accent underline underline-offset-4" href={sourceUrl} target="_blank" rel="noopener noreferrer">
+                          <a className="mt-2 inline-flex items-center gap-1 font-semibold text-accent underline underline-offset-4 hover:text-orange-400" href={sourceUrl} target="_blank" rel="noopener noreferrer">
                             Open source
                             <ExternalLink size={12} aria-hidden="true" />
                           </a>
                         )}
-                        {source.source_url && !sourceUrl && <p className="mt-2 font-semibold text-danger">The returned source URL is not a safe web address.</p>}
+                        {source.source_url && !sourceUrl && <p className="mt-2 font-semibold text-rose-400">The returned source URL is not a safe web address.</p>}
                       </li>
                     );
                   })}
@@ -245,21 +260,21 @@ export function ChatBox({
               </div>
             )}
             {message.missing_documents && message.missing_documents.length > 0 && (
-              <div className="mt-4 border-t border-quiet pt-3 text-xs leading-5">
+              <div className="mt-4 border-t border-white/10 pt-3 text-xs leading-5 text-slate-300">
                 Missing documents: {message.missing_documents.join(", ")}
               </div>
             )}
-            <time className={`mt-3 block text-[0.68rem] ${message.role === "user" ? "text-[#d8d7d2]" : "text-muted"}`}>{message.timestamp}</time>
+            <time className={`mt-3 block text-[0.68rem] ${message.role === "user" ? "text-orange-100/75" : "text-slate-400"}`}>{message.timestamp}</time>
           </article>
         ))}
 
         {isLoading && (
-          <div className="max-w-[92%] border border-quiet bg-paper p-4 text-ink sm:max-w-[82%]" role="status">
+          <div className="max-w-[92%] rounded-2xl border border-white/10 bg-white/[0.05] p-4 text-slate-200 backdrop-blur-md sm:max-w-[82%]" role="status">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-accent animate-bounce [animation-delay:-0.3s]" />
               <span className="h-2 w-2 rounded-full bg-accent animate-bounce [animation-delay:-0.15s]" />
               <span className="h-2 w-2 rounded-full bg-accent animate-bounce" />
-              <span className="ml-2 text-xs font-semibold uppercase tracking-wider text-muted">
+              <span className="ml-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 AI Advisor is analyzing...
               </span>
             </div>
@@ -267,11 +282,11 @@ export function ChatBox({
         )}
 
         {error && (
-          <div className="border border-danger bg-paper p-5" role="alert">
-            <p className="font-semibold text-danger">{error.title}</p>
-            <p className="mt-2 text-sm leading-6 text-muted">{error.message}</p>
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 backdrop-blur-md" role="alert">
+            <p className="font-semibold text-rose-400">{error.title}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{error.message}</p>
             {lastSubmitted && (
-              <button type="button" className="button-secondary mt-4" onClick={() => void send(lastSubmitted, false)} disabled={isLoading}>
+              <button type="button" className="button-secondary mt-4 border-rose-500/30 hover:border-rose-500/50" onClick={() => void send(lastSubmitted, false)} disabled={isLoading}>
                 <RefreshCw size={15} aria-hidden="true" />
                 Retry message
               </button>
@@ -281,17 +296,17 @@ export function ChatBox({
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={submit} className="border-t border-line bg-paper p-4">
+      <form onSubmit={submit} className="border-t border-white/10 bg-[#13152c]/90 p-4 backdrop-blur-xl">
         {selectedFile && (
-          <div className="mb-3 flex items-center justify-between border border-accent bg-[#f4efe6] px-3 py-1.5 text-xs font-semibold text-ink">
+          <div className="mb-3 flex items-center justify-between rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs font-semibold text-white">
             <div className="flex items-center gap-2">
               <Paperclip size={14} className="text-accent" />
               <span>{selectedFile.name}</span>
-              <span className="text-muted">({Math.round(selectedFile.size / 1024)} KB)</span>
+              <span className="text-slate-400">({Math.round(selectedFile.size / 1024)} KB)</span>
             </div>
             <button
               type="button"
-              className="text-muted hover:text-danger"
+              className="text-slate-400 hover:text-rose-400"
               onClick={() => {
                 setSelectedFile(null);
                 if (fileInputRef.current) fileInputRef.current.value = "";
@@ -309,7 +324,7 @@ export function ChatBox({
         <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
           <textarea
             id={`chat-input-${activeMode}`}
-            className="field min-h-24 resize-y"
+            className="field min-h-24 resize-y bg-white/[0.04] text-white placeholder:text-slate-500"
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder={
