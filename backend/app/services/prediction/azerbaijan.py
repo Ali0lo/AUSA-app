@@ -169,7 +169,12 @@ class AzerbaijanPredictionService:
                     )
                 ]
             else:
-                latest = latest[latest["university_name"].str.contains(university, case=False, na=False)]
+                # An exact name wins, so "ada" does not also return ADAU (a different university).
+                exact = latest["university_name"].str.lower() == u_clean
+                if exact.any():
+                    latest = latest[exact]
+                else:
+                    latest = latest[latest["university_name"].str.contains(university, case=False, na=False)]
         if group:
             latest = latest[latest["score_type"].astype(str).str.contains(group, case=False, na=False)]
         return [self._prediction(str(code)) for code in latest["program_key"]]
