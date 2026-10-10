@@ -24,38 +24,37 @@ function StreamingMessageContent({
   isStreaming?: boolean;
   onFinish?: () => void;
 }) {
-  const [displayedText, setDisplayedText] = useState(() => (
-    isStreaming && process.env.NODE_ENV !== "test" ? "" : content
+  const [displayedLength, setDisplayedLength] = useState(() => (
+    isStreaming && process.env.NODE_ENV !== "test" ? 0 : content.length
   ));
-  const [done, setDone] = useState(!isStreaming || process.env.NODE_ENV === "test");
 
   useEffect(() => {
-    if (!isStreaming || done || process.env.NODE_ENV === "test") {
-      setDisplayedText(content);
-      setDone(true);
+    if (!isStreaming || process.env.NODE_ENV === "test") {
       return;
     }
 
-    let currentIndex = 0;
     const interval = setInterval(() => {
-      const step = Math.max(2, Math.ceil(content.length / 50));
-      currentIndex = Math.min(content.length, currentIndex + step);
-      setDisplayedText(content.slice(0, currentIndex));
-
-      if (currentIndex >= content.length) {
-        clearInterval(interval);
-        setDone(true);
-        onFinish?.();
-      }
+      setDisplayedLength((current) => {
+        const step = Math.max(2, Math.ceil(content.length / 50));
+        const next = Math.min(content.length, current + step);
+        if (next >= content.length) {
+          clearInterval(interval);
+          onFinish?.();
+        }
+        return next;
+      });
     }, 16);
 
     return () => clearInterval(interval);
-  }, [content, isStreaming, done, onFinish]);
+  }, [content, isStreaming, onFinish]);
+
+  const isDone = !isStreaming || displayedLength >= content.length || process.env.NODE_ENV === "test";
+  const displayedText = isDone ? content : content.slice(0, displayedLength);
 
   return (
     <div className="whitespace-pre-wrap text-sm leading-6">
       {displayedText}
-      {!done && (
+      {!isDone && (
         <span
           className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-accent align-middle"
           aria-hidden="true"
